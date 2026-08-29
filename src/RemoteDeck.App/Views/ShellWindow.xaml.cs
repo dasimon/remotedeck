@@ -21,6 +21,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 {
     private RdpAxHost? _ax;
     private RdpSessionHost? _session;
+    private bool _closeConfirmed;
 
     public ShellWindow()
     {
@@ -32,6 +33,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         DomainInput.Text = Environment.GetEnvironmentVariable("REMOTEDECK_PROBE_DOMAIN") ?? "";
 
         Loaded += OnLoaded;
+        Closing += OnClosing;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -158,5 +160,46 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private void OnDisconnectClick(object sender, RoutedEventArgs e)
     {
         _session?.Disconnect();
+    }
+
+    /// <summary>
+    /// Closing the window is a two-pass affair (spec §6.5): the first pass cancels the close and
+    /// runs the graceful <c>RequestClose</c> protocol so the server is told to end the session
+    /// instead of being left with a zombie one; the second pass releases the COM objects.
+    /// <c>async void</c> is the only shape available to an event handler that must await, so the
+    /// body is fully guarded — whatever happens, the window still closes.
+    /// </summary>
+    private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_closeConfirmed || _session is null)
+        {
+            // Second pass, or nothing was ever created: let the OCX go with the window.
+            _session?.Dispose();
+            _ax?.Dispose();
+            return;
+        }
+
+        e.Cancel = true;
+        ConnectButton.IsEnabled = false;
+        DisconnectButton.IsEnabled = false;
+        ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Closing session…", "");
+
+        try
+        {
+            // A no-op that says so in the log when nothing is connected.
+            await _session.CloseAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex)
+        {
+            // A failed close must never trap the user in the window.
+            ProbeLog.Write("close", $"CloseAsync failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+
+        _closeConfirmed = true;
+        // BeginInvoke, not a direct Close(): CloseAsync can complete synchronously (nothing
+        // connected, or RequestClose answering controlCloseCanProceed), and closing from inside
+        // the Closing handler that just set e.Cancel would re-enter it. Let this pass unwind.
+        // (discarded: the returned DispatcherOperation is deliberately not awaited)
+        _ = Dispatcher.BeginInvoke(() => Close());
     }
 }

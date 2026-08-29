@@ -15,6 +15,8 @@ internal sealed class RdpSessionHost : IDisposable
     private readonly RdpAxHost _host;
     private readonly IMsRdpClient10 _client;
     private readonly IMsTscAxEvents_Event _events;
+    private readonly IMsTscAxEvents_OnConfirmCloseEventHandler _onConfirmClose;
+    private TaskCompletionSource? _closed;
     private bool _disposed;
 
     public event Action<string>? StatusChanged;
@@ -39,6 +41,17 @@ internal sealed class RdpSessionHost : IDisposable
         _events.OnLogonError += error => Sink("OnLogonError", () => ProbeLog.Write("session", $"OnLogonError lError={error}"));
         _events.OnFatalError += code => Sink("OnFatalError", () => ProbeLog.Write("session", $"OnFatalError errorCode={code}"));
         _events.OnDisconnected += OnDisconnected;
+
+        // RequestClose contract: if the user is logged on, the control asks before closing.
+        // Returning true lets it disconnect; OnDisconnected then completes the close.
+        // Kept in a field so Dispose() can unsubscribe it.
+        _onConfirmClose = () => Sink("OnConfirmClose", () =>
+        {
+            ProbeLog.Write("close", "OnConfirmClose → allowing");
+            return true;
+        }, fallback: true);
+        _events.OnConfirmClose += _onConfirmClose;
+
         ProbeLog.Write("R2", "Subscribed to IMsTscAxEvents_Event via TlbImp-generated interop");
     }
 
@@ -119,7 +132,46 @@ internal sealed class RdpSessionHost : IDisposable
 
         ProbeLog.Write("session", $"OnDisconnected reason={reason} extended={extended} \"{description}\"");
         Disconnected?.Invoke(new RdpDisconnectInfo(reason, extended, description));
+
+        // Releases a CloseAsync waiter, if any. No-op when the disconnect was not requested by us.
+        _closed?.TrySetResult();
     });
+
+    /// <summary>
+    /// Graceful shutdown per IMsRdpClient::RequestClose:
+    /// controlCloseCanProceed (0) → nothing else to do; controlCloseWaitForEvents (1) → the
+    /// control asks the session (OnConfirmClose) and disconnects, so wait for OnDisconnected up
+    /// to <paramref name="timeout"/>, then force Disconnect().
+    /// https://learn.microsoft.com/windows/win32/termserv/imsrdpclient-requestclose
+    /// </summary>
+    public async Task CloseAsync(TimeSpan timeout)
+    {
+        if (!IsConnected)
+        {
+            ProbeLog.Write("close", "Not connected; nothing to close");
+            return;
+        }
+
+        _closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var status = _client.RequestClose();
+        ProbeLog.Write("close", $"RequestClose → {status} ({(int)status})");
+
+        if (status == ControlCloseStatus.controlCloseCanProceed)
+        {
+            return;
+        }
+
+        var finished = await Task.WhenAny(_closed.Task, Task.Delay(timeout)).ConfigureAwait(true);
+        if (finished != _closed.Task)
+        {
+            ProbeLog.Write("close", $"Timed out after {timeout.TotalSeconds:F0}s; forcing Disconnect()");
+            _client.Disconnect();
+        }
+        else
+        {
+            ProbeLog.Write("close", "Closed gracefully (OnDisconnected received)");
+        }
+    }
 
     private void Raise(string status) => Sink("StatusChanged", () =>
     {
@@ -150,6 +202,17 @@ internal sealed class RdpSessionHost : IDisposable
         }
     }
 
+    /// <summary>
+    /// Same contract as <see cref="Sink(string, Action)"/> for a sink that must return a value
+    /// to the control: on failure it answers <paramref name="fallback"/> instead of unwinding.
+    /// </summary>
+    private static T Sink<T>(string name, Func<T> body, T fallback)
+    {
+        T result = fallback;
+        Sink(name, () => result = body());
+        return result;
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -159,5 +222,6 @@ internal sealed class RdpSessionHost : IDisposable
 
         _disposed = true;
         _events.OnDisconnected -= OnDisconnected;
+        _events.OnConfirmClose -= _onConfirmClose;
     }
 }
