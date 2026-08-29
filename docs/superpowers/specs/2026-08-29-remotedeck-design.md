@@ -2,7 +2,11 @@
 
 **Date** : 2026-08-29
 **Auteur** : David Simon (conception assistée)
-**Statut** : validé, prêt pour plan d'implémentation
+**Statut** : validé — **amendé le 2026-08-29 par les résultats du lot 0**
+(D2, D3, §2, §3, §5.2, §6.1, §6.4, §6.5, §6.6, §6.7, §7.1, §7.3, §11, §12, §13, §14).
+Les sondes et leurs traces sont consignées dans
+`docs/superpowers/probes/l0-probe-results.md` ; ce qui n'a pu être vérifié y est dit
+comme tel et reporté sur `docs/manual-checklist.md`.
 
 > Note de langue : ce document de conception est en français (document de travail).
 > Le code, les commentaires, l'UI par défaut et la documentation publique
@@ -38,8 +42,8 @@ Windows (`mstscax.dll`). Le projet apporte la gestion, pas le protocole.
 | # | Décision | Justification |
 |---|---|---|
 | D1 | Cible `net10.0` / `net10.0-windows` | Seuls les SDK .NET 10 (10.0.303, 10.0.400) sont installés sur le poste de développement. Aucun .NET 8. |
-| D2 | Contrôle ActiveX CLSID `{3F859AA3-C2D4-4FAA-B0E4-FD0C9C4E5E3A}` | Version la plus récente enregistrée sur le poste (libellé registre « Microsoft RDP Client Control - version 13 »). |
-| D3 | Interop par `COMReference` + `AxHost` maison | `AxImp.exe` est un outil .NET Framework ; ses assemblies référencent `System.Windows.Forms 4.0.0.0`, que .NET 10 ne résout pas. `COMReference` est géré nativement par le SDK .NET et produit un interop compatible. Bénéfice annexe : le CLSID devient une donnée, donc repli de version possible. |
+| D2 | Contrôle ActiveX choisi **à l'exécution** dans un catalogue de CLSID, du plus récent au plus ancien | ~~CLSID `{3F859AA3-…}` (version 13) en dur.~~ **Corrigé au lot 0** : cette CLSID est bien enregistrée sur le poste, mais sa fabrique de classe refuse de se créer (`CoGetClassObject` → `0x80040111` `CLASS_E_CLASSNOTAVAILABLE`). La version réellement instanciée est la **12**, CLSID `{1DF7C823-B2D4-4B54-975A-F2AC5D7CF8B8}`. La présence en base de registre ne prouve donc rien : le catalogue teste la **créabilité**, pas l'enregistrement (§6.1). |
+| D3 | Interop **généré à la compilation** par `TlbImp.exe` (cible MSBuild) + `AxHost` maison | `AxImp.exe` est un outil .NET Framework ; ses assemblies référencent `System.Windows.Forms 4.0.0.0`, que .NET 10 ne résout pas. ~~`COMReference` est géré nativement par le SDK .NET.~~ **Corrigé au lot 0** : `<COMReference>` n'est **pas** compilable par `dotnet build` (MSB4803, SDK 10.0.400) — il n'est résolu que par MSBuild.exe complet. Une cible MSBuild appelle donc directement `TlbImp.exe` (§6.1). Intention inchangée : aucun binaire d'interop n'est commité, et le CLSID reste une donnée, donc le repli de version reste possible. |
 | D4 | Secrets : DPAPI `CurrentUser` + entropie par identifiant | Chiffrement lié à la session Windows, sans clé dans le binaire. Corrige le défaut historique de mRemoteNG (clé de chiffrement en dur). |
 | D5 | Secret déchiffré → `BSTR` natif direct → effacement | Le mot de passe n'existe jamais comme chaîne managée : ni duplication par le GC, ni présence dans un dump managé. Pas de `SecureString` : sur .NET Core/.NET 5+ il n'est **pas** chiffré en mémoire (contrairement à .NET Framework) et Microsoft en déconseille l'usage pour du code neuf — il n'apporterait qu'un intermédiaire de plus à remplir puis vider. |
 | D6 | Résolution dynamique par défaut | `UpdateSessionDisplaySettings` rend l'image nette au pixel près lors d'un redimensionnement, au lieu de l'étirement flou de `SmartSizing`. |
@@ -66,9 +70,20 @@ les éléments suivants proviennent de la documentation officielle, pas de la m�
   Source : <https://learn.microsoft.com/windows/win32/termserv/imstscaxevents-ondisconnected>
 - **`SmartSizing`** modifiable alors que le contrôle est connecté.
   Source : <https://learn.microsoft.com/windows/win32/termserv/imsrdpclientadvancedsettings-smartsizing>
-- **Non vérifié à ce stade** : les valeurs de `KeyboardHookMode`
-  (`IMsRdpClientSecuredSettings`). À lire sur la page dédiée **avant** d'écrire la
-  ligne concernée, au lot 0. Aucune valeur n'est écrite dans ce document.
+- **`KeyboardHookMode` = `2`** — « appliquer les combinaisons Windows au poste distant
+  uniquement en plein écran ». Valeur lue sur la page dédiée au lot 0, puis posée dans
+  `RdpSessionHost` (`SecuredSettings2.KeyboardHookMode = 2`). C'est le comportement
+  voulu en fenêtré : les combinaisons système restent locales.
+  Source : <https://learn.microsoft.com/windows/win32/termserv/imsrdpclientsecuredsettings-keyboardhookmode>
+- **`IMsTscNonScriptable` n'est pas une interface duale** — elle est
+  `IUnknown`-derived (`InterfaceIsIUnknown` dans l'interop généré, conforme à la
+  documentation). Elle **n'expose aucun `IDispatch`** : la conception initiale du §5.2,
+  qui prévoyait `IDispatch::Invoke`, était fausse. Vérifié au lot 0.
+  Source : <https://learn.microsoft.com/windows/win32/termserv/imstscnonscriptable-interface>
+- **Une CLSID enregistrée n'est pas forcément instanciable** : sur le poste de
+  référence, la version 13 (`{3F859AA3-…}`) possède une clé `InprocServer32` complète
+  et retourne pourtant `CLASS_E_CLASSNOTAVAILABLE` (`0x80040111`) à
+  `CoGetClassObject`. Constaté au lot 0, pas supposé (voir D2 et §6.1).
 
 ---
 
@@ -96,7 +111,8 @@ remotedeck/
 │  │  ├─ Import/        RdpFileImporter           (.rdp + registre)
 │  │  └─ Diagnostics/   DisconnectReason          (code → clé de message)
 │  └─ RemoteDeck.App/                     net10.0-windows, UseWPF + UseWindowsForms
-│     ├─ Interop/       RdpAxHost, RdpEventSink, ClsidCatalog
+│     ├─ Interop/       RdpAxHost, RdpEventSink, RdpControlCatalog,
+│     │                 ClsidRegistry (créabilité, §6.1), ComSecretPut (vtable, §5.2)
 │     ├─ Rdp/           RdpSession (machine à états), SessionManager
 │     ├─ ViewModels/    ShellViewModel, ConnectionListViewModel, SessionViewModel,
 │     │                 ConnectionEditorViewModel, CommandPaletteViewModel
@@ -213,9 +229,26 @@ sans intermédiaire superflu :
 
 ```
 DPAPI Unprotect → byte[] UTF-8 → chars → SysAllocStringLen (BSTR natif)
-  → ClearTextPassword → Marshal.ZeroFreeBSTR (finally)
+  → put_ClearTextPassword (appel direct de vtable) → Marshal.ZeroFreeBSTR (finally)
   → CryptographicOperations.ZeroMemory(byte[]/chars) (finally)
 ```
+
+**Comment le `BSTR` atteint le contrôle** (vérifié au lot 0, risque R1). L'interop
+généré expose `set_ClearTextPassword(System.String)` : l'appeler forcerait une chaîne
+managée et ruinerait la garantie du D5. Le contournement n'est **pas** `IDispatch::Invoke` —
+`IMsTscNonScriptable` est `IUnknown`-derived, elle n'a pas d'`IDispatch` (§2). C'est un
+**appel direct de vtable** :
+
+1. `QueryInterface` sur l'objet du contrôle avec l'IID `IMsTscNonScriptable`
+   `{C1E6743A-41C1-4A74-832A-0DD06C1C7A0E}` ;
+2. les slots 0–2 sont `QueryInterface`/`AddRef`/`Release`, sans bloc `IDispatch` à
+   sauter ; le premier membre de l'interface est donc **le slot 3 =
+   `put_ClearTextPassword(BSTR)`** ;
+3. appel par pointeur de fonction `delegate* unmanaged[Stdcall]<nint, nint, int>`, puis
+   `Marshal.ZeroFreeBSTR` dans le `finally`.
+
+Le code est isolé dans `Interop/ComSecretPut` : c'est le seul endroit du projet qui
+manipule une vtable, et il ne fait que cela.
 
 Règles imposées par les signatures, non par la discipline :
 
@@ -256,13 +289,41 @@ sérieux et une promesse invérifiable.
 
 ### 6.1 Interop
 
-`ClsidCatalog` liste les CLSID connus, du plus récent au plus ancien, et
-sélectionne le premier instanciable sur la machine hôte. Cela évite un échec brutal
-sur un poste où la version 13 n'existe pas.
+`RdpControlCatalog` liste les CLSID connus, du plus récent au plus ancien, et
+sélectionne le premier **réellement instanciable** sur la machine hôte. « Instanciable »
+n'est pas « enregistré » : le prédicat `ClsidRegistry.IsUsable` garde la lecture du
+registre comme simple pré-filtre, puis demande la fabrique de classe
+(`CoGetClassObject`, `IID_IClassFactory`) et n'accepte la CLSID que si l'appel réussit.
+Ce n'est pas de la prudence gratuite — sur le poste de référence, la version 13 est
+enregistrée et retourne `CLASS_E_CLASSNOTAVAILABLE` ; le repli sur la version 12 est le
+chemin **normal**, pas un cas dégradé (D2).
 
-`RdpAxHost : System.Windows.Forms.AxHost` héberge le contrôle ; les interfaces
-proviennent du `COMReference` `MSTSCLib`. `RdpEventSink` s'abonne au dispinterface
-`IMsTscAxEvents` et retransmet les événements sur le thread UI.
+`RdpAxHost : System.Windows.Forms.AxHost` héberge le contrôle. `RdpEventSink` s'abonne
+au dispinterface `IMsTscAxEvents` et retransmet les événements sur le thread UI.
+
+**Génération de l'interop** (D3). `<COMReference>` n'est pas compilable par
+`dotnet build` : le SDK .NET 10.0.400 échoue en MSB4803, la tâche `ResolveComReference`
+n'existant que dans MSBuild.exe complet. L'assembly d'interop est donc produit **à
+chaque build** par une cible MSBuild (`GenerateMstscInterop`) qui appelle `TlbImp.exe`
+sur `%SystemRoot%\System32\mstscax.dll` :
+
+- **`/transform:DispRet` est obligatoire** — `ResolveComReference` appliquait la
+  transformation `[out, retval]` implicitement, `TlbImp.exe` non. Sans ce commutateur,
+  trois gestionnaires d'événements changent de forme (`OnConfirmClose`,
+  `OnReceivedTSPublicKey`, `OnAutoReconnecting` passent d'une valeur de retour à un
+  paramètre `ByRef`) et le code d'abonnement ne compile plus.
+- **`/machine:X64` et un `TlbImp.exe` x64** — un TlbImp 32 bits est redirigé par WOW64
+  vers `SysWOW64\mstscax.dll` et décrit la vue 32 bits du contrôle.
+- **`/silence:3015`** — supprime les 78 avertissements TI3015 sur
+  `get_UIParentWindowHandle` (retourne `_RemotableHandle*`, non marshalable). Build à
+  zéro avertissement.
+- **Prérequis de build** : Windows SDK ou .NET Framework 4.8 Developer Pack, pour
+  disposer de `TlbImp.exe` ; chemin surchargeable par `-p:TlbImpPath=…`. Documenté dans
+  le README.
+- Aucun binaire d'interop n'est commité : `Interop.MSTSCLib.dll` vit dans `obj/`.
+- À `/transform:DispRet` près, l'assembly produit est **identique membre par membre** à
+  celui que produisait `COMReference` : le changement est un changement d'outil, pas de
+  contrat.
 
 L'ensemble est encapsulé derrière une interface `IRdpControl` définie dans
 `RemoteDeck.App` : `RdpSession` ne manipule jamais le COM directement, ce qui rend
@@ -312,6 +373,8 @@ L'utilisateur voit d'abord **notre** message court, puis le détail :
 | 264 | `ConnectionTimedOut` | Délai de connexion dépassé |
 | 2308 | `AtClientWinsockFDCLOSE` | Connexion fermée par le réseau |
 | 2052 | `InvalidIP` | Adresse IP invalide |
+| 1 | `LocalNotError` | Déconnexion locale — **pas une erreur** (voir l'avertissement ci-dessous) |
+| 2 | `RemoteByUser` | Déconnexion par l'utilisateur distant — **pas une erreur** |
 | 3 | `ByServer` | Déconnexion demandée par le serveur — **pas une erreur** |
 | 1032 | `InternalError` | Erreur interne du client RDP |
 | 1286 / 1542 / 2310 / 2566 / 2822 / 3078 | `InvalidEncryption`, `InvalidServerSecurityInfo`, `InternalSecurityError`, `InternalSecurityError2`, `EncryptionError`, `DecryptionError` | Échec de négociation de sécurité |
@@ -322,6 +385,17 @@ La table est reprise **intégralement** depuis la page Microsoft
 commentaire du fichier `DisconnectReason.cs`. Le tableau ci-dessus est le sous-ensemble
 déjà vérifié ; **aucune valeur ne sera devinée**. Les codes inconnus tombent sur un
 message générique affichant le code brut, jamais sur une interprétation inventée.
+
+> **Le texte de `GetErrorDescription` n'est pas toujours fiable — vérifié au lot 0.**
+> Le code **1** est documenté par Microsoft comme
+> `disconnectReasonLocalNotError` (1 (0x1)) — « Local disconnection. This is not an
+> error code. » C'est le code que le contrôle lève après **notre propre**
+> `RequestClose` (§6.5). Or `GetErrorDescription(1, 0)` retourne
+> « Une erreur interne s'est produite. » : un texte d'erreur pour un non-événement.
+> Conséquence normative : les codes **0, 1, 2 et 3 ne sont jamais présentés comme des
+> erreurs**, et pour ces codes le texte de `GetErrorDescription` **n'est pas affiché**.
+> Il n'est appelé que pour les codes traités comme des échecs.
+> Source : <https://learn.microsoft.com/windows/win32/termserv/imstscaxevents-ondisconnected>
 
 L'affichage se fait dans un bandeau `InfoBar` **à l'intérieur de l'onglet** — jamais
 une `MessageBox`, qui bloque l'application entière pour un incident local à une
@@ -334,25 +408,46 @@ texte Windows, et actions contextuelles (*Reconnect*, *Change credential*,
 Mécanisme documenté, appliqué à chaque fermeture d'onglet **et** en boucle sur
 toutes les sessions à la fermeture de l'application :
 
-1. `RequestClose(out status)`.
+1. `var status = RequestClose();` — la méthode **retourne** un `ControlCloseStatus`,
+   elle n'a pas de paramètre de sortie (signature vérifiée au lot 0).
 2. Si `controlCloseWaitForEvents` (`0x0001`) : attendre `OnDisconnected` ou
    `OnConfirmClose`, timeout 5 s, puis détruire le contrôle.
 3. Si `controlCloseCanProceed` (`0x0000`) : destruction immédiate.
 4. En dernier recours après timeout : `Disconnect()` puis destruction, avec une
    entrée de log.
 
+**Observé au lot 0** : le contrôle répond systématiquement `controlCloseWaitForEvents`
+(`1`), et **`OnConfirmClose` n'est jamais levé** — c'est `OnDisconnected(reason = 1)` qui
+clôt l'attente. Attendre `OnConfirmClose` seul produirait un timeout de 5 s à chaque
+fermeture : les deux événements doivent bien rester dans la condition d'attente. Après
+fermeture puis reconnexion, `query session` côté serveur ne montre qu'une seule session,
+sans doublon ni zombie. Le code de déconnexion `1` renvoyé ici n'est **pas** une erreur
+(§6.4).
+
 ### 6.6 Certificat serveur non fiable
 
 Le contrôle ActiveX gère lui-même sa boîte de dialogue de certificat, et il
 n'existe **pas d'API documentée** pour lire l'empreinte du certificat serveur
-depuis le contrôle. La v1 promet donc ce qui est garanti :
+depuis le contrôle. **Confirmé au lot 0** (risque R5) : l'inventaire par réflexion de
+tout l'interop remonte 343 membres candidats, qui se réduisent à **deux noms
+distincts**, et aucun ne convient :
+
+- `PublisherCertificateChain` (`IMsRdpClientNonScriptable4` à `8`) est la chaîne de
+  certificats de l'**éditeur RemoteApp** — faux positif, sans rapport avec le certificat
+  du serveur ;
+- `OnAuthenticationWarningDisplayed` / `OnAuthenticationWarningDismissed` (tous deux
+  observés en vrai pendant la sonde) signalent que le contrôle a **affiché** son
+  avertissement ; ils n'exposent ni empreinte, ni sujet, ni émetteur.
+
+**Aucune surface de certificat serveur n'existe.** Le négatif est acquis, il n'est plus
+à explorer. La v1 promet donc ce qui est garanti :
 
 - `AuthenticationLevel` mémorisé **par connexion** (comportement standard mstsc,
   mais persistant — on ne recoche pas la même case à chaque session).
-- La capture d'empreinte et l'alerte au changement (`AcceptedCertThumbprint`)
-  sont **rétrogradées en « souhaitable »** : une sonde au lot 0 (risque R5)
-  déterminera si un moyen fiable existe ; sinon la colonne reste inutilisée en v1
-  (elle ne coûte rien et évite une migration).
+- La capture d'empreinte et l'alerte au changement sont **abandonnées en v1** :
+  la colonne `AcceptedCertThumbprint` reste dans le schéma, **inutilisée** (elle ne
+  coûte rien et évite une migration ultérieure). Aucun écran, aucun code ne la lit ni ne
+  l'écrit ; le lot 5 n'a plus de décision à prendre à ce sujet.
 
 ### 6.7 Compte web (Microsoft Entra ID) — expérimental
 
@@ -377,12 +472,21 @@ Traitement :
    account (Microsoft Entra ID) — experimental » dans l'éditeur de connexion.
    Lorsqu'elle est cochée, l'identifiant du coffre est ignoré et aucun
    `ClearTextPassword` n'est positionné.
-2. Sonde au lot 0 (risque R7) : `put_Property("EnableRdsAadAuth", VT_BOOL true)`
-   sur `IMsRdpExtendedSettings`, puis `Connect()` vers un poste Entra-joined ;
-   on observe si le flux web se déclenche comme dans mstsc ou si l'appel échoue.
-3. Si la sonde échoue : la case est masquée en v1 et la fonctionnalité passe au
-   §14 avec le motif. Le repli pour les postes gérés Intune/Entra reste
-   l'authentification AD classique par le coffre.
+2. **Sonde du lot 0 (risque R7) — résultat.** `set_Property("EnableRdsAadAuth", true)`
+   sur `IMsRdpExtendedSettings` **est accepté par le contrôle** : l'appel retourne sans
+   erreur, la propriété non documentée existe donc réellement dans `mstscax.dll`. Avec
+   la case cochée et **aucun mot de passe** fourni, la session s'est ouverte.
+3. **Question ouverte, à ne pas refermer trop vite.** L'essai ne prouve **pas** le flux
+   web. L'utilisateur était le **même compte de domaine que la session Windows locale**,
+   et aucun navigateur ne s'est ouvert : une SSO CredSSP explique l'observation aussi
+   bien que l'authentification Entra. Ce qui est établi : la propriété est acceptée et
+   ne casse pas la connexion. Ce qui ne l'est pas : qu'elle déclenche le flux Entra.
+   **Essai discriminant à faire** : depuis un compte **non membre du domaine** de la
+   cible, vers une machine **Entra-joined**. Tant qu'il n'est pas fait, la mention
+   « experimental » du libellé reste.
+4. **Décision v1** : la case reste **visible et cochable**, libellée « Use web account
+   (Microsoft Entra ID) — experimental ». Le repli pour les postes gérés Intune/Entra
+   reste l'authentification AD classique par le coffre.
 
 ---
 
@@ -402,6 +506,18 @@ L'étalon est explicitement mRemoteNG, et l'objectif est de s'en distinguer nett
 | Aucune palette de commandes | Palette `Ctrl+K` flottante, ombre portée, correspondance floue, navigation aux flèches |
 | `MessageBox` | `InfoBar` dans l'onglet, avec actions |
 | — | Animations 150 ms (palette, repli, changement d'onglet), grille d'espacement 4 px, état vide soigné rappelant les raccourcis |
+
+**Une exception assumée : le champ de mot de passe.** Le `PasswordBox` de WPF-UI
+n'expose que la valeur en `string` managée — inutilisable ici, il annule la garantie du
+D5 avant même que le secret n'atteigne le coffre. Tout écran saisissant un mot de passe
+utilise donc le **`PasswordBox` natif WPF**, seul à offrir `SecurePassword`. C'est la
+seule dérogation à WPF-UI, et elle a un coût visuel constaté au lot 0 : pas de texte
+indicatif (*placeholder*), et un style qui ne suit pas Fluent. **Lot 3** : restyler le
+`PasswordBox` natif par `ResourceDictionary` (mêmes bordure, rayon, couleurs et états de
+focus que les `TextBox` WPF-UI) et lui ajouter un texte indicatif par `Adorner`. Le
+contrôle reste natif ; seule son apparence est reprise. Autre correctif d'ergonomie du
+lot 3, relevé au lot 0 : les champs de saisie ne s'étirent pas quand la fenêtre
+s'élargit (`HorizontalAlignment` à corriger).
 
 ### 7.2 Disposition
 
@@ -432,17 +548,43 @@ WPF sans bordure**, `Owner` = fenêtre principale, centrées sur elle. Mica s'ap
 
 **Capture clavier.** Le contrôle ActiveX avale les frappes lorsqu'il a le focus.
 `Ctrl+K`, `Ctrl+Tab` et consorts doivent être interceptés en amont, avant que le
-contrôle ne traite le message. Trois mécanismes, à départager au lot 0 (risque R6),
-du plus simple au plus intrusif :
+contrôle ne traite le message. Le lot 0 (risque R6) a départagé les mécanismes en
+conditions réelles, et le résultat est net :
 
-1. `IMessageFilter` Windows Forms (`Application.AddMessageFilter`) — son
-   déclenchement pour un contrôle hébergé via `WindowsFormsHost` dans une boucle
-   de messages WPF **n'est pas garanti** ;
-2. `ComponentDispatcher.ThreadFilterMessage` côté WPF ;
-3. hook clavier `SetWindowsHookEx(WH_KEYBOARD)` local au thread, en dernier recours.
+| Mécanisme | Armé | A intercepté |
+|---|---|---|
+| `ComponentDispatcher.ThreadFilterMessage` (WPF) | oui | **non** |
+| `IMessageFilter` Windows Forms (`Application.AddMessageFilter`) | oui | **non** |
+| `SetWindowsHookEx(WH_KEYBOARD)` local au thread | oui | **non** |
+| `SetWindowsHookEx(WH_KEYBOARD_LL)` bas niveau, filtré sur « notre processus possède la fenêtre de premier plan » | oui | **oui** |
 
-`KeyboardHookMode` est réglé pour ne pas rediriger les touches système en mode
-fenêtré — **valeur à lire dans la documentation au lot 0**.
+Les trois mécanismes prévus s'installent sans erreur et ne voient **jamais** les frappes :
+le contrôle les consomme avant la boucle de messages du thread. **Le mécanisme retenu
+pour les lots suivants est le hook bas niveau `WH_KEYBOARD_LL`** ; les trois autres
+restent dans `ShortcutInterceptor.Mechanism` comme options de diagnostic, pas comme
+replis crédibles. Corollaire de méthode : « le hook est armé » n'est **pas** une preuve,
+seule la trace d'interception en est une.
+
+Deux réserves à traiter, écrites ici pour ne pas être redécouvertes plus tard :
+
+1. **Portée trop large.** Le hook est global au bureau et n'est filtré que sur la
+   fenêtre de premier plan. Il avale donc `Ctrl+K` et `Ctrl+Tab` **partout dans
+   l'application**, y compris dans les `TextBox`. **Lot 5** : ne pas intercepter quand
+   le focus clavier est sur un contrôle de saisie WPF.
+2. **Aucune E/S synchrone dans le callback.** Windows applique `LowLevelHooksTimeout`
+   (300 ms par défaut) et **désinstalle silencieusement** un hook trop lent. Le callback
+   décide et poste ; tout travail réel part sur le `Dispatcher`.
+
+**Repli pour les environnements verrouillés.** Une politique de sécurité (EDR, GPO) peut
+interdire l'installation d'un hook bas niveau. Dans ce cas, aucun raccourci applicatif
+n'est interceptable pendant que le contrôle a le focus, mais l'utilisateur n'est pas
+prisonnier : le contrôle lève lui-même l'événement natif **`OnFocusReleased`** sur
+`Ctrl+Alt+Gauche` / `Ctrl+Alt+Droite`, ce qui rend le focus à l'application. C'est le
+repli documenté, et il ne dépend d'aucun hook.
+
+`KeyboardHookMode` est réglé à **`2`** — combinaisons Windows appliquées au poste distant
+**en plein écran seulement**, donc conservées localement en mode fenêtré. Valeur lue dans
+la documentation au lot 0, voir §2.
 
 ### 7.4 Raccourcis
 
@@ -516,10 +658,11 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 
 - **Licence** MIT. `LICENSE`, `README.md`, `SECURITY.md`, `CONTRIBUTING.md` en anglais.
 - **CI** (`ci.yml`) : build + tests sur push et pull request, `windows-latest`.
-  Attention : la compilation du `COMReference` exige la typelib `MSTSCLib`
-  enregistrée sur le runner. `mstscax.dll` est présent sur `windows-latest`, mais
-  ce prérequis est à vérifier au premier push — c'est un échec de build franc,
-  pas un bug silencieux.
+  Attention : la génération de l'interop (§6.1) exige **deux** choses sur le runner —
+  `%SystemRoot%\System32\mstscax.dll` (présent sur `windows-latest`) **et**
+  `TlbImp.exe` x64, fourni par le Windows SDK / le .NET Framework 4.8 Developer Pack.
+  Prérequis à vérifier au premier push ; c'est un échec de build franc, pas un bug
+  silencieux.
 - **Release** (`release.yml`) : sur tag `v*`, publication d'un exécutable
   single-file self-contained x64 attaché à la GitHub Release.
 - **winget** : manifeste soumis après la première release stable.
@@ -536,29 +679,37 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 
 | Lot | Contenu | Fin de lot |
 |---|---|---|
-| **L0** | Squelette des 3 projets, `COMReference`, `RdpAxHost`, `RdpEventSink`, `FluentWindow`, connexion codée en dur | Une session RDP s'affiche et se ferme proprement. **Lève R1 à R7.** |
+| **L0** | Squelette des 3 projets, interop `TlbImp`, `RdpAxHost`, `RdpEventSink`, `FluentWindow`, connexion codée en dur | **Fait** (2026-08-29). Session RDP affichée et fermée proprement. R1–R7 tranchés : voir §13 et `docs/superpowers/probes/l0-probe-results.md`. Seul R3 (DPI mixte) est *déplacé*, pas levé : machine de test mono-DPI, vérification portée sur `docs/manual-checklist.md`. |
 | **L1** | SQLite, modèle, migrations, repositories, tests | Tests verts, base créée au premier lancement |
 | **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | Connexion réussie avec un identifiant du coffre |
-| **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion | Navigation clavier intégrale du panneau |
-| **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre | Coupure réseau simulée → reconnexion puis abandon propre |
-| **L5** | Palette `Ctrl+K`, import `.rdp`, politique de certificat (§6.6, selon issue de R5), `.resx` fr | Critères de succès du §1 tous vérifiés |
+| **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | Navigation clavier intégrale du panneau |
+| **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | Coupure réseau simulée → reconnexion puis abandon propre |
+| **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | Critères de succès du §1 tous vérifiés |
+
+La politique de certificat n'est plus un contenu de lot : R5 a fermé le sujet
+(§6.6, négatif confirmé).
 
 L0 est délibérément le premier lot : il ne produit presque aucune fonctionnalité,
-mais il lève les quatre risques. Les découvrir au lot 4 coûterait une réécriture.
+mais il lève les risques. Les découvrir au lot 4 coûterait une réécriture — et le lot 0
+a effectivement invalidé trois hypothèses de conception (`COMReference`,
+`IDispatch::Invoke`, interception clavier par filtre de thread).
 
 ---
 
 ## 13. Risques
 
-| # | Risque | Détection | Repli |
-|---|---|---|---|
-| **R1** | `ClearTextPassword` exposé uniquement en `string` par l'interop généré, ce qui casse la garantie « jamais de chaîne managée » | L0 | Affectation par `IDispatch.Invoke` avec un `BSTR` construit à la main |
-| **R2** | Abonnement au dispinterface `IMsTscAxEvents` non fonctionnel via `COMReference` | L0 | `AxImp` + retargeting de la référence `System.Windows.Forms`, isolé dans `Interop/` |
-| **R3** | DPI mixte multi-écran mal géré par le contrôle | L0 | Manifeste PerMonitorV2 ; à défaut, DPI système et mise à l'échelle assumée |
-| **R4** | `FluentWindow` (barre de titre custom) en conflit avec `WindowsFormsHost` | L0 | `ResourceDictionary` maison sur `Window` standard ; l'UI reste moderne, sans Mica |
-| **R5** | Pas d'API documentée pour lire l'empreinte du certificat serveur (§6.6) | L0 (sonde) | Fonctionnalité rétrogradée : `AuthenticationLevel` par connexion seulement ; colonne `AcceptedCertThumbprint` inutilisée en v1 |
-| **R6** | Interception clavier (`Ctrl+K`, `Ctrl+Tab`) : `IMessageFilter` non garanti pour un contrôle hébergé dans WPF (§7.3) | L0 | `ComponentDispatcher.ThreadFilterMessage`, puis hook `WH_KEYBOARD` local au thread |
-| **R7** | Compte web Entra ID : propriété `EnableRdsAadAuth` non documentée pour le contrôle ActiveX (§6.7) | L0 (sonde) | Case masquée en v1, fonctionnalité reportée au §14 ; auth AD classique par le coffre |
+Sondés au lot 0 le 2026-08-29 (Windows 11 10.0.26100, `mstscax.dll` 10.0.26100.8875,
+contrôle version 12). Détail et traces : `docs/superpowers/probes/l0-probe-results.md`.
+
+| # | Risque | Détection | Repli prévu | **Résultat (lot 0)** |
+|---|---|---|---|---|
+| **R1** | `ClearTextPassword` exposé uniquement en `string` par l'interop généré, ce qui casse la garantie « jamais de chaîne managée » | L0 | Affectation par `IDispatch.Invoke` avec un `BSTR` construit à la main | **Repli activé, mais corrigé** : le risque est réel (le setter généré est bien en `string`), et le repli prévu était **faux** — `IMsTscNonScriptable` n'est pas duale, elle n'a pas d'`IDispatch`. Retenu : appel direct **vtable slot 3** `put_ClearTextPassword(BSTR)` (§5.2). Session ouverte, `Logged on`. Garantie D5 tenue. |
+| **R2** | Abonnement au dispinterface `IMsTscAxEvents` non fonctionnel via `COMReference` | L0 | `AxImp` + retargeting de la référence `System.Windows.Forms`, isolé dans `Interop/` | **Abonnement OK, mécanisme changé.** `OnConnecting/OnConnected/OnLoginComplete/OnDisconnected` tous reçus. Mais `COMReference` n'est pas compilable par `dotnet build` (MSB4803) : remplacé par une cible MSBuild `TlbImp.exe` (`/transform:DispRet` obligatoire, x64, `/silence:3015`) — D3 et §6.1. Le repli `AxImp` n'a pas été nécessaire. |
+| **R3** | DPI mixte multi-écran mal géré par le contrôle | L0 | Manifeste PerMonitorV2 ; à défaut, DPI système et mise à l'échelle assumée | **Non observé — risque déplacé, pas levé.** Machine de test mono-DPI (`X=1,00 Y=1,00`). Manifeste PerMonitorV2 conservé ; la vérification DPI mixte passe sur `docs/manual-checklist.md`. |
+| **R4** | `FluentWindow` (barre de titre custom) en conflit avec `WindowsFormsHost` | L0 | `ResourceDictionary` maison sur `Window` standard ; l'UI reste moderne, sans Mica | **Aucun conflit.** Mica, barre de titre intégrée, glisser, maximisation, redimensionnement : OK. WPF-UI conservé (D10). Deux points d'ergonomie renvoyés au lot 3 : `PasswordBox` natif à restyler, champs qui ne s'étirent pas (§7.1). |
+| **R5** | Pas d'API documentée pour lire l'empreinte du certificat serveur (§6.6) | L0 (sonde) | Fonctionnalité rétrogradée : `AuthenticationLevel` par connexion seulement ; colonne `AcceptedCertThumbprint` inutilisée en v1 | **Négatif confirmé, repli entériné.** 343 membres inspectés, 2 noms distincts, aucun exploitable (`PublisherCertificateChain` = éditeur RemoteApp ; `OnAuthenticationWarning*` = simple notification d'affichage). `AcceptedCertThumbprint` **inutilisée en v1**, `AuthenticationLevel` par connexion seulement. Sujet clos, plus de décision au lot 5. |
+| **R6** | Interception clavier (`Ctrl+K`, `Ctrl+Tab`) : `IMessageFilter` non garanti pour un contrôle hébergé dans WPF (§7.3) | L0 | `ComponentDispatcher.ThreadFilterMessage`, puis hook `WH_KEYBOARD` local au thread | **Les trois mécanismes prévus échouent** (armés, zéro interception ; les frappes partent dans la session). Quatrième mécanisme ajouté et retenu : **`WH_KEYBOARD_LL`** filtré sur la fenêtre de premier plan → `Ctrl+K` et `Ctrl+Tab` interceptés. Par défaut au lot 3. Réserves et repli `OnFocusReleased` : §7.3. |
+| **R7** | Compte web Entra ID : propriété `EnableRdsAadAuth` non documentée pour le contrôle ActiveX (§6.7) | L0 (sonde) | Case masquée en v1, fonctionnalité reportée au §14 ; auth AD classique par le coffre | **Propriété acceptée par le contrôle**, session ouverte sans mot de passe. **Mais flux web non départagé** de la SSO CredSSP (même compte de domaine que la session locale, aucun navigateur ouvert). Case **conservée et visible** en v1, libellée « experimental » ; essai discriminant à faire depuis un compte hors domaine vers une cible Entra-joined (§6.7). |
 
 ---
 
@@ -568,6 +719,17 @@ mais il lève les quatre risques. Les découvrir au lot 4 coûterait une réécr
 réel (span), enregistrement de session, synchronisation entre postes, SSH/VNC,
 scripts avant/après connexion, import depuis mRemoteNG ou Royal TS, arborescence de
 groupes à plusieurs niveaux, tags multiples.
+
+**ARM64** — ajouté au lot 0. L'interop est généré par `TlbImp.exe` avec `/machine:X64`
+(§6.1) et la publication vise un single-file **x64** (§11). Une exécution ARM64 native
+n'est ni produite ni testée en v1 ; sur un poste ARM64, le binaire x64 passe par
+l'émulation. Rendre l'architecture paramétrable est faisable — c'est un commutateur de
+plus dans la cible MSBuild et un second job de release — mais cela demande une machine
+ARM64 pour dérouler `docs/manual-checklist.md`, qui n'existe pas ici.
+
+**Capture d'empreinte du certificat serveur** — définitivement hors v1 : le lot 0 a
+établi qu'aucune surface ne l'expose (§6.6, R5). Ce n'est pas un arbitrage de périmètre,
+c'est une impossibilité constatée.
 
 Chacun est une v2 crédible. Aucun n'est nécessaire pour remplacer Windows App au
 quotidien, et chacun ajouté maintenant retarderait le seul objectif qui compte :
