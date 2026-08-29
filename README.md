@@ -17,6 +17,19 @@ protocol itself is Microsoft's, not ours.
     dotnet build RemoteDeck.sln
     dotnet test  RemoteDeck.sln
 
+RemoteDeck talks to the Remote Desktop ActiveX control through a COM interop
+assembly that is **generated at build time** and never committed: the build runs
+`TlbImp.exe` over `%SystemRoot%\System32\mstscax.dll` and drops
+`Interop.MSTSCLib.dll` into `obj/`. `TlbImp.exe` ships with the Windows SDK, so you
+need the **Windows SDK or the .NET Framework 4.8 Developer Pack** installed in
+addition to the .NET 10 SDK. (A plain `<COMReference>` would be the idiomatic way
+to express this, but its MSBuild task exists only in .NET Framework MSBuild and
+fails under `dotnet build` with `error MSB4803`.) The build looks for the tool
+under `%ProgramFiles(x86)%\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools`;
+if yours lives elsewhere, point at it explicitly:
+
+    dotnet build RemoteDeck.sln -p:TlbImpPath="C:\path\to\TlbImp.exe"
+
 ## Security
 
 RemoteDeck stores credentials encrypted with Windows DPAPI, bound to your
