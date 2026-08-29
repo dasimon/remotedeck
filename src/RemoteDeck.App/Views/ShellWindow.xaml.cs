@@ -33,7 +33,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        var version = RdpControlCatalog.Select(ClsidRegistry.IsRegistered);
+        var version = RdpControlCatalog.Select(ClsidRegistry.IsUsable);
         if (version is null)
         {
             ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "No Remote Desktop control found",
