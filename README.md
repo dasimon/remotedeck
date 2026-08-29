@@ -30,11 +30,20 @@ if yours lives elsewhere, point at it explicitly:
 
     dotnet build RemoteDeck.sln -p:TlbImpPath="C:\path\to\TlbImp.exe"
 
+## Credentials
+
+A credential (user name, optional domain, password) is saved once and reused by
+any number of connections. The password is encrypted with Windows DPAPI in
+`CurrentUser` scope, with 32 bytes of per-credential entropy regenerated on every
+save, and stored as a blob in `%APPDATA%\RemoteDeck\connections.db`. It never
+exists as a managed string: it is lent to the Remote Desktop control as a native
+`BSTR` for the duration of one call, then zeroed.
+
 ## Security
 
 RemoteDeck stores credentials encrypted with Windows DPAPI, bound to your
-Windows user session. See `SECURITY.md` (to be published with v1) for the threat
-model — including what DPAPI does **not** protect against.
+Windows user session. See [`SECURITY.md`](SECURITY.md) for the threat model —
+including what DPAPI does **not** protect against.
 
 ## SmartScreen
 
