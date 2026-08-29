@@ -1,16 +1,24 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Services;
 using RemoteDeck.Core.Data;
+using RemoteDeck.Core.Security;
 
 namespace RemoteDeck.App;
 
 /// <summary>Application entry point. Logs a startup marker so the lot-0 probe log always
-/// starts with a run boundary, opens and migrates the local database, then hands over to
-/// the <c>StartupUri</c> shell window.</summary>
+/// starts with a run boundary, opens and migrates the local database, builds the service
+/// container, then hands over to the <c>StartupUri</c> shell window.</summary>
 // System.Windows.Application is qualified on purpose: UseWindowsForms puts
 // System.Windows.Forms.Application in scope too, which makes the short name ambiguous.
 public partial class App : System.Windows.Application
 {
+    /// <summary>The running application, typed. Hides the base <c>Current</c>, which is typed as <see cref="System.Windows.Application"/>.</summary>
+    public static new App Current => (App)System.Windows.Application.Current;
+
+    /// <summary>Composition root. Repositories and the vault are stateless singletons.</summary>
+    public IServiceProvider Services { get; private set; } = new ServiceCollection().BuildServiceProvider();
+
     /// <summary>The local database, opened and migrated at startup (spec §4). Null until <see cref="OnStartup"/> has run.</summary>
     public SqliteDatabase? Database { get; private set; }
 
@@ -38,5 +46,17 @@ public partial class App : System.Windows.Application
         {
             ProbeLog.Write("startup", $"Database initialisation failed: {ex.GetType().Name}: {ex.Message}");
         }
+
+        // The repositories are registered only when the database is usable: GetService<CredentialRepository>()
+        // then returns null and the UI disables the matching features instead of crashing.
+        var services = new ServiceCollection();
+        if (Database is not null && DatabaseReady)
+        {
+            services.AddSingleton(Database);
+            services.AddSingleton<CredentialRepository>();
+            services.AddSingleton<ConnectionRepository>();
+        }
+        services.AddSingleton<ICredentialVault, DpapiCredentialVault>();
+        Services = services.BuildServiceProvider();
     }
 }
