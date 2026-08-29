@@ -80,6 +80,20 @@ public sealed class CredentialRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Update_unknown_id_leaves_the_timestamp_untouched()
+    {
+        var c = Make("Stamped");
+        _repo.Insert(c);
+        var stamped = c.ModifiedUtc;
+        Thread.Sleep(5);
+        c.Id = 12345;
+
+        Assert.Throws<KeyNotFoundException>(() => _repo.Update(c));
+
+        Assert.Equal(stamped, c.ModifiedUtc);
+    }
+
+    [Fact]
     public void Delete_removes_row()
     {
         var c = Make("Gone");
