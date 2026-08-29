@@ -1,4 +1,5 @@
-﻿using MSTSCLib;
+﻿using System.Reflection;
+using MSTSCLib;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Services;
 
@@ -95,6 +96,52 @@ internal sealed class RdpSessionHost : IDisposable
         catch (Exception ex)
         {
             ProbeLog.Write("R7", $"set_Property(\"EnableRdsAadAuth\") failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// R5 probe: list every interop member that might expose server certificate data.
+    /// Microsoft's documentation names no thumbprint API; rather than assert that, this
+    /// measures it by enumerating the TlbImp-generated assembly. Nothing is instantiated —
+    /// only member names are read — and every failure is logged, never thrown: the probe
+    /// runs at startup and must not be able to take the shell down with it.
+    /// </summary>
+    public static void LogCertificateSurface()
+    {
+        try
+        {
+            var assembly = typeof(IMsRdpClient10).Assembly;
+
+            Type?[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // A COM interop assembly can fail to load individual types. Partial results
+                // still answer R5, so keep the types that did load and say how many were lost.
+                types = ex.Types;
+                ProbeLog.Write("R5", $"GetTypes() partially failed: {types.Count(t => t is null)} of {types.Length} type(s) unloadable; scanning the rest");
+            }
+
+            var hits = types
+                .Where(t => t is not null)
+                .SelectMany(t => t!.GetMembers().Select(m => $"{t.Name}.{m.Name}"))
+                .Where(n => n.Contains("Cert", StringComparison.OrdinalIgnoreCase)
+                         || n.Contains("Thumb", StringComparison.OrdinalIgnoreCase)
+                         || n.Contains("AuthenticationWarning", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .ToArray();
+
+            ProbeLog.Write("R5", hits.Length == 0
+                ? "No interop member mentions Cert/Thumb/AuthenticationWarning"
+                : $"{hits.Length} candidate member(s): {string.Join(", ", hits)}");
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("R5", $"Certificate-surface scan failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
     }
 
