@@ -17,7 +17,18 @@ namespace RemoteDeck.App.Rdp;
 /// and no interception was ever logged. All three are scoped to the UI thread's message
 /// retrieval, and mstscax appears to service keyboard input on its own input window/thread, so
 /// the messages never pass through them. <see cref="Mechanism.LowLevelKeyboardHook"/> is the
-/// candidate that follows: WH_KEYBOARD_LL runs system-wide, ahead of any thread's queue.
+/// one that works — WH_KEYBOARD_LL runs system-wide, ahead of any thread's queue — and is
+/// therefore the default mechanism; the other three are kept as diagnostic options, not as
+/// credible fallbacks.
+/// <para>
+/// The §7.3 rule "no synchronous I/O in the low-level callback" is honoured: Windows enforces
+/// <c>LowLevelHooksTimeout</c> (300 ms by default) and silently uninstalls a hook that overruns
+/// it. <see cref="LowLevelHookCallback"/> only computes the swallow/pass decision — a few
+/// <c>GetAsyncKeyState</c> calls, no file access — and posts the log write and the
+/// <see cref="Triggered"/> notification to the WPF dispatcher before returning. The other three
+/// mechanisms run inside the message pump, where a synchronous write is harmless, and are
+/// unchanged.
+/// </para>
 /// </remarks>
 // System.Windows.Forms.* is qualified on purpose: this file lives in a project with
 // UseWindowsForms on, and a bare `using System.Windows.Forms;` would collide with the
@@ -135,7 +146,7 @@ internal sealed class ShortcutInterceptor : IDisposable
             if (code >= 0 && (int)wParam is WmKeyDown or WmSysKeyDown && IsForegroundOurs())
             {
                 // KBDLLHOOKSTRUCT starts with DWORD vkCode.
-                if (Handle(Marshal.ReadInt32(lParam)))
+                if (HandleLowLevel(Marshal.ReadInt32(lParam)))
                 {
                     return 1; // swallow
                 }
@@ -144,15 +155,9 @@ internal sealed class ShortcutInterceptor : IDisposable
         catch (Exception ex)
         {
             // Same rule as Handle: nothing escapes a reverse-P/Invoke callback. Falling through
-            // to CallNextHookEx leaves the keystroke and the hook chain untouched.
-            try
-            {
-                ProbeLog.Write("R6", $"LowLevelHookCallback failed: {ex.GetType().Name}: {ex.Message}");
-            }
-            catch
-            {
-                // Nowhere left to report to.
-            }
+            // to CallNextHookEx leaves the keystroke and the hook chain untouched. This is the
+            // one path that still writes synchronously — it cannot happen on a normal keystroke.
+            LogSwallowed("LowLevelHookCallback", ex);
         }
 
         return CallNextHookEx(_hook, code, wParam, lParam);
@@ -185,12 +190,33 @@ internal sealed class ShortcutInterceptor : IDisposable
         : (GetKeyState(virtualKey) & 0x8000) != 0;
 
     /// <summary>
+    /// Names the shortcut a key-down maps to, or <c>null</c> when the key is not ours. Pure
+    /// decision: a couple of keyboard-state reads, no logging, no event, no I/O — this is what
+    /// the low-level callback is allowed to do before it must return.
+    /// </summary>
+    private string? Decide(int virtualKey)
+    {
+        if (!IsDown(VkControl))
+        {
+            return null;
+        }
+
+        return virtualKey switch
+        {
+            VkK => "Ctrl+K",
+            VkTab => IsDown(VkShift) ? "Ctrl+Shift+Tab" : "Ctrl+Tab",
+            _ => null,
+        };
+    }
+
+    /// <summary>
     /// Decides whether a key-down belongs to the application and, if so, raises
-    /// <see cref="Triggered"/>. Returns <c>true</c> when the key was consumed.
+    /// <see cref="Triggered"/> synchronously. Returns <c>true</c> when the key was consumed.
+    /// Used by the three message-pump mechanisms, which run while the pump dispatches the very
+    /// message that carried the key; the low-level hook uses <see cref="HandleLowLevel"/> instead.
     /// </summary>
     /// <remarks>
-    /// Nothing may escape this method. With <see cref="Mechanism.KeyboardHook"/> and
-    /// <see cref="Mechanism.LowLevelKeyboardHook"/> it runs inside a
+    /// Nothing may escape this method. With <see cref="Mechanism.KeyboardHook"/> it runs inside a
     /// reverse-P/Invoke callback the OS calls directly, where an unhandled exception does not
     /// unwind into managed code — it terminates the process. Both the log write (synchronous file
     /// I/O) and the <see cref="Triggered"/> subscribers can throw, so the whole body is guarded.
@@ -201,40 +227,89 @@ internal sealed class ShortcutInterceptor : IDisposable
     {
         try
         {
-            bool ctrl = IsDown(VkControl);
-            if (!ctrl)
-            {
-                return false;
-            }
-
-            string? shortcut = virtualKey switch
-            {
-                VkK => "Ctrl+K",
-                VkTab => IsDown(VkShift) ? "Ctrl+Shift+Tab" : "Ctrl+Tab",
-                _ => null,
-            };
+            string? shortcut = Decide(virtualKey);
             if (shortcut is null)
             {
                 return false;
             }
 
-            ProbeLog.Write("R6", $"{shortcut} intercepted by {_mechanism}");
-            Triggered?.Invoke(shortcut);
+            Announce(shortcut);
             return true;
         }
         catch (Exception ex)
         {
-            try
+            LogSwallowed("Handle", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Low-level-hook counterpart of <see cref="Handle"/>: computes the decision synchronously and
+    /// returns, having only <i>posted</i> the side effects. Returns <c>true</c> to swallow the key.
+    /// </summary>
+    /// <remarks>
+    /// Windows uninstalls a WH_KEYBOARD_LL hook that exceeds <c>LowLevelHooksTimeout</c> (300 ms),
+    /// so the log write and the <see cref="Triggered"/> subscribers — arbitrary work, file I/O
+    /// included — go to the WPF dispatcher instead of running here. With no dispatcher (the
+    /// application is shutting down, or none was ever created) there is nowhere to post to, so the
+    /// key is passed through rather than swallowed with nothing to show for it.
+    /// </remarks>
+    private bool HandleLowLevel(int virtualKey)
+    {
+        try
+        {
+            string? shortcut = Decide(virtualKey);
+            if (shortcut is null)
             {
-                ProbeLog.Write("R6", $"Handle failed: {ex.GetType().Name}: {ex.Message}");
-            }
-            catch
-            {
-                // The logger is the very thing that may have failed; there is nowhere left to
-                // report to, and reporting is not worth killing the process over.
+                return false;
             }
 
+            // Fully qualified: UseWindowsForms puts System.Windows.Forms.Application in scope too.
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is null)
+            {
+                return false;
+            }
+
+            _ = dispatcher.BeginInvoke(() =>
+            {
+                try
+                {
+                    Announce(shortcut);
+                }
+                catch (Exception ex)
+                {
+                    // On the UI thread an escaping exception is a crash all the same.
+                    LogSwallowed("HandleLowLevel(dispatched)", ex);
+                }
+            });
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogSwallowed("HandleLowLevel", ex);
             return false;
+        }
+    }
+
+    /// <summary>Records the interception and notifies subscribers. Never called from the LL callback itself.</summary>
+    private void Announce(string shortcut)
+    {
+        ProbeLog.Write("R6", $"{shortcut} intercepted by {_mechanism}");
+        Triggered?.Invoke(shortcut);
+    }
+
+    private static void LogSwallowed(string origin, Exception ex)
+    {
+        try
+        {
+            ProbeLog.Write("R6", $"{origin} failed: {ex.GetType().Name}: {ex.Message}");
+        }
+        catch
+        {
+            // The logger is the very thing that may have failed; there is nowhere left to
+            // report to, and reporting is not worth killing the process over.
         }
     }
 

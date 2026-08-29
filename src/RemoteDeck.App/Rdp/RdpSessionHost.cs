@@ -215,16 +215,23 @@ internal sealed class RdpSessionHost : IDisposable
             return;
         }
 
-        _closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _closed = closed;
         var status = _client.RequestClose();
         ProbeLog.Write("close", $"RequestClose → {status} ({(int)status})");
 
         if (status == ControlCloseStatus.controlCloseCanProceed)
         {
+            // Nothing will complete this waiter — the control is not going to raise
+            // OnDisconnected for a close it just told us can proceed. Leaving it pending would
+            // make the *next* CloseAsync take the "already running" branch and wait out the full
+            // timeout on a close that already happened.
+            closed.TrySetResult();
+            _closed = null;
             return;
         }
 
-        if (await WaitForCloseAsync(_closed.Task, timeout).ConfigureAwait(true))
+        if (await WaitForCloseAsync(closed.Task, timeout).ConfigureAwait(true))
         {
             ProbeLog.Write("close", "Closed gracefully (OnDisconnected received)");
         }
@@ -232,6 +239,13 @@ internal sealed class RdpSessionHost : IDisposable
         {
             ProbeLog.Write("close", $"Timed out after {timeout.TotalSeconds:F0}s; forcing Disconnect()");
             _client.Disconnect();
+        }
+
+        // Either way this close is over: clear the field so a later CloseAsync starts a fresh
+        // one instead of joining a waiter nobody owns any more.
+        if (ReferenceEquals(_closed, closed))
+        {
+            _closed = null;
         }
     }
 
