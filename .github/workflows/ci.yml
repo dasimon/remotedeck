@@ -1,0 +1,19 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    # COMReference MSTSCLib needs mstscax.dll's type library registered: Windows only.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore RemoteDeck.sln
+      - run: dotnet build RemoteDeck.sln --configuration Release --no-restore
+      - run: dotnet test RemoteDeck.sln --configuration Release --no-build

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>RemoteDeck.App</RootNamespace>
+    <AssemblyName>RemoteDeck</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFO0003 tells WinForms apps to declare DPI awareness via ApplicationHighDpiMode /
+         ApplicationConfiguration.Initialize(). That path only runs through the WinForms
+         bootstrap, which this WPF-entry-point app never executes: UseWindowsForms is on
+         solely for WindowsFormsHost/AxHost interop. The manifest is the only mechanism
+         that actually applies here, so keep it and silence the WinForms-only diagnostic. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteDeck.Core\RemoteDeck.Core.csproj" />
+  </ItemGroup>
+</Project>
