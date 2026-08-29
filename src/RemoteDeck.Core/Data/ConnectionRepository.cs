@@ -14,7 +14,7 @@ public sealed class ConnectionRepository(SqliteDatabase db)
 
     public long Insert(Connection x)
     {
-        x.CreatedUtc = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         using var c = db.Open();
         var cmd = c.Cmd("""
             INSERT INTO Connection (Name, Host, Port, GroupName, CredentialId, IsFavorite, DisplayMode, FixedWidth, FixedHeight,
@@ -26,8 +26,9 @@ public sealed class ConnectionRepository(SqliteDatabase db)
             SELECT last_insert_rowid();
             """);
         Bind(cmd, x);
-        cmd.Add("$created", x.CreatedUtc.ToDb());
+        cmd.Add("$created", now.ToDb());
         x.Id = (long)cmd.ExecuteScalar()!;
+        x.CreatedUtc = now; // only once the row is known to exist: a rejected insert leaves the object untouched
         return x.Id;
     }
 
@@ -47,6 +48,7 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException($"Connection {x.Id} does not exist.");
     }
 
+    /// <summary>Idempotent by design: deleting an id that is already gone is a no-op, unlike <see cref="Update"/>.</summary>
     public void Delete(long id)
     {
         using var c = db.Open();

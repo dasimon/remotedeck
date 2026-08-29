@@ -103,7 +103,7 @@ remotedeck/
 ├─ src/
 │  ├─ RemoteDeck.Core/                    net10.0, nullable enable
 │  │  ├─ Model/         Connection, Credential, DisplayMode, SessionState
-│  │  ├─ Data/          SqliteFactory, SchemaMigrator,
+│  │  ├─ Data/          SqliteDatabase, SchemaMigrator,
 │  │  │                 ConnectionRepository, CredentialRepository
 │  │  ├─ Security/      ICredentialVault, DpapiCredentialVault
 │  │  ├─ Search/        ConnectionFilter          (correspondance floue + plages de surlignage)

@@ -61,7 +61,7 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void Defaults_match_the_schema()
+    public void New_connection_defaults_match_the_model()
     {
         var id = _repo.Insert(Make("Plain"));
 
@@ -72,6 +72,32 @@ public sealed class ConnectionRepositoryTests : IDisposable
         Assert.True(b.RedirectClipboard);
         Assert.False(b.RedirectDrives);
         Assert.False(b.UseWebAccount);
+        Assert.Null(b.AuthenticationLevel);
+    }
+
+    [Fact]
+    public void Sql_defaults_match_the_spec()
+    {
+        // Deliberately bypasses the repository: this pins the DEFAULT clauses of the V1 script,
+        // which every row not written by Insert relies on.
+        using var raw = _tmp.Db.Open();
+        var cmd = raw.Cmd(
+            "INSERT INTO Connection (Name, Host, CreatedUtc) VALUES ('raw', 'raw', '2026-01-01T00:00:00.0000000Z');"
+            + " SELECT last_insert_rowid();");
+        var id = (long)cmd.ExecuteScalar()!;
+
+        var b = _repo.Get(id)!;
+        Assert.Equal(3389, b.Port);
+        Assert.Equal("", b.GroupName);
+        Assert.Equal(DisplayMode.Dynamic, b.DisplayMode);
+        Assert.True(b.RedirectClipboard);
+        Assert.False(b.RedirectDrives);
+        Assert.False(b.RedirectPrinters);
+        Assert.False(b.RedirectAudio);
+        Assert.False(b.AdminSession);
+        Assert.False(b.UseWebAccount);
+        Assert.False(b.IsFavorite);
+        Assert.Equal("", b.Notes);
         Assert.Null(b.AuthenticationLevel);
     }
 
@@ -96,6 +122,7 @@ public sealed class ConnectionRepositoryTests : IDisposable
         var x = Make("Uses cred");
         x.CredentialId = cred.Id;
         _repo.Insert(x);
+        Assert.Equal(cred.Id, _repo.Get(x.Id)!.CredentialId);
 
         _credentials.Delete(cred.Id);
 
@@ -110,6 +137,17 @@ public sealed class ConnectionRepositoryTests : IDisposable
         x.CredentialId = 4242;
 
         Assert.Throws<Microsoft.Data.Sqlite.SqliteException>(() => _repo.Insert(x));
+    }
+
+    [Fact]
+    public void Insert_rejected_by_the_database_leaves_CreatedUtc_unset()
+    {
+        var x = Make("Bad ref");
+        x.CredentialId = 4242;
+
+        Assert.Throws<Microsoft.Data.Sqlite.SqliteException>(() => _repo.Insert(x));
+
+        Assert.Equal(default, x.CreatedUtc);
     }
 
     [Fact]

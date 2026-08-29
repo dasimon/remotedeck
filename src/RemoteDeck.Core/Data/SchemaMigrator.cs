@@ -5,7 +5,8 @@ namespace RemoteDeck.Core.Data;
 /// <summary>Numbered, forward-only migrations. Each script runs once inside a transaction.</summary>
 public static class SchemaMigrator
 {
-    public const int CurrentVersion = 1;
+    /// <summary>Highest version this build can migrate to; derived from the script table, so adding a script bumps it.</summary>
+    public static int CurrentVersion => Scripts.Length;
 
     // Index = version - 1. Never edit a shipped script; add a new one.
     private static readonly string[] Scripts =

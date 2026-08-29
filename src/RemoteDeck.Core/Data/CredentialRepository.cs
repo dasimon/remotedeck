@@ -10,7 +10,7 @@ public sealed class CredentialRepository(SqliteDatabase db)
 
     public long Insert(Credential credential)
     {
-        credential.ModifiedUtc = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         using var c = db.Open();
         var cmd = c.Cmd("""
             INSERT INTO Credential (Label, Domain, UserName, SecretBlob, Entropy, ModifiedUtc)
@@ -18,8 +18,9 @@ public sealed class CredentialRepository(SqliteDatabase db)
             SELECT last_insert_rowid();
             """);
         Bind(cmd, credential);
-        cmd.Add("$modified", credential.ModifiedUtc.ToDb());
+        cmd.Add("$modified", now.ToDb());
         credential.Id = (long)cmd.ExecuteScalar()!;
+        credential.ModifiedUtc = now; // only once the row is known to exist: a rejected insert leaves the object untouched
         return credential.Id;
     }
 

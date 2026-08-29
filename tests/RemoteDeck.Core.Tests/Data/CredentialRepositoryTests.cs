@@ -51,6 +51,29 @@ public sealed class CredentialRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Insert_rejected_by_the_database_leaves_the_timestamp_unset()
+    {
+        _repo.Insert(Make("Same"));
+        var clash = Make("Same");
+
+        Assert.Throws<SqliteException>(() => _repo.Insert(clash));
+
+        Assert.Equal(default, clash.ModifiedUtc);
+    }
+
+    [Fact]
+    public void Update_to_an_existing_label_throws()
+    {
+        _repo.Insert(Make("A"));
+        var b = Make("B");
+        _repo.Insert(b);
+
+        b.Label = "A";
+
+        Assert.Throws<SqliteException>(() => _repo.Update(b));
+    }
+
+    [Fact]
     public void Update_changes_fields_and_timestamp()
     {
         var c = Make("Old");
