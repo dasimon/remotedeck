@@ -21,19 +21,66 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Generated at build time by tlbimp from the registered type library. No binary is committed. -->
-    <COMReference Include="MSTSCLib">
-      <Guid>{8C11EFA1-92C3-11D1-BC1E-00C04FA31489}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>false</Isolated>
-      <EmbedInteropTypes>false</EmbedInteropTypes>
-    </COMReference>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\RemoteDeck.Core\RemoteDeck.Core.csproj" />
   </ItemGroup>
+
+  <!-- ===================================================================================
+       MSTSCLib interop.
+
+       An <COMReference> would be the natural way to express this, but the MSBuild task it
+       needs (ResolveComReference) exists only in the .NET Framework MSBuild: `dotnet build`
+       fails outright with "error MSB4803: The task ResolveComReference is not supported on
+       the .NET Core version of MSBuild". Since `dotnet build` is what CI runs, the interop
+       assembly is instead generated here by invoking TlbImp.exe directly. Same tool that
+       ResolveComReference would have called, same output; no binary is committed, the
+       assembly is produced into obj/ at build time.
+       ================================================================================== -->
+  <PropertyGroup>
+    <!-- The registered Remote Desktop ActiveX type library. -->
+    <MstscAxTypeLib Condition="'$(MstscAxTypeLib)' == ''">$(SystemRoot)\System32\mstscax.dll</MstscAxTypeLib>
+
+    <WindowsSdkNetFxTools Condition="'$(WindowsSdkNetFxTools)' == ''">$(MSBuildProgramFiles32)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools</WindowsSdkNetFxTools>
+    <!-- Prefer the 64-bit TlbImp: the 32-bit one is subject to WOW64 file-system
+         redirection and would silently read %SystemRoot%\SysWOW64\mstscax.dll instead. -->
+    <TlbImpPath Condition="'$(TlbImpPath)' == '' And Exists('$(WindowsSdkNetFxTools)\x64\TlbImp.exe')">$(WindowsSdkNetFxTools)\x64\TlbImp.exe</TlbImpPath>
+    <TlbImpPath Condition="'$(TlbImpPath)' == ''">$(WindowsSdkNetFxTools)\TlbImp.exe</TlbImpPath>
+  </PropertyGroup>
+
+  <Target Name="GenerateMstscInterop"
+          Inputs="$(MstscAxTypeLib);$(MSBuildProjectFullPath)"
+          Outputs="$(IntermediateOutputPath)Interop.MSTSCLib.dll">
+    <Error Condition="!Exists('$(TlbImpPath)')"
+           Text="TlbImp.exe not found at '$(TlbImpPath)' - install the Windows SDK / .NET Framework 4.8 developer pack, or set TlbImpPath (e.g. dotnet build -p:TlbImpPath=&quot;C:\path\to\TlbImp.exe&quot;)." />
+    <Error Condition="!Exists('$(MstscAxTypeLib)')"
+           Text="The Remote Desktop ActiveX type library was not found at '$(MstscAxTypeLib)'. RemoteDeck requires the Windows Remote Desktop client (mstscax.dll); set MstscAxTypeLib to override the path." />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <!-- /transform:DispRet turns the [out, retval] parameter of a dispinterface method into
+         a return value. ResolveComReference applies it implicitly; TlbImp.exe does not, and
+         without it three IMsTscAxEvents handlers change shape (OnConfirmClose becomes
+         void(ref bool) instead of bool(), likewise OnReceivedTSPublicKey and
+         OnAutoReconnecting). Keeping it makes this target produce exactly the assembly a
+         <COMReference> would have produced.
+
+         /silence:3015 drops TlbImp's TI3015 "cannot be marshaled by the runtime marshaler"
+         warnings. All 78 of them concern a single member of Microsoft's own type library,
+         IMsRdpClientNonScriptable*.get_UIParentWindowHandle, which returns a
+         _RemotableHandle* and which RemoteDeck never calls. There is nothing to fix on our
+         side and they would otherwise drown every build. -->
+    <Exec Command="&quot;$(TlbImpPath)&quot; &quot;$(MstscAxTypeLib)&quot; /namespace:MSTSCLib /machine:X64 /transform:DispRet /silence:3015 /out:&quot;$(IntermediateOutputPath)Interop.MSTSCLib.dll&quot;"
+          StandardOutputImportance="low" />
+  </Target>
+
+  <!-- Separate target: GenerateMstscInterop carries Inputs/Outputs and is skipped when the
+       assembly is up to date, which would also skip the Reference item if they were merged. -->
+  <Target Name="AddMstscInteropReference"
+          BeforeTargets="ResolveAssemblyReferences"
+          DependsOnTargets="GenerateMstscInterop">
+    <ItemGroup>
+      <Reference Include="Interop.MSTSCLib">
+        <HintPath>$(IntermediateOutputPath)Interop.MSTSCLib.dll</HintPath>
+        <Private>true</Private>
+        <EmbedInteropTypes>false</EmbedInteropTypes>
+      </Reference>
+    </ItemGroup>
+  </Target>
 </Project>
