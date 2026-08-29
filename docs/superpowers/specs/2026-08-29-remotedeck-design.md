@@ -41,13 +41,14 @@ Windows (`mstscax.dll`). Le projet apporte la gestion, pas le protocole.
 | D2 | Contrôle ActiveX CLSID `{3F859AA3-C2D4-4FAA-B0E4-FD0C9C4E5E3A}` | Version la plus récente enregistrée sur le poste (libellé registre « Microsoft RDP Client Control - version 13 »). |
 | D3 | Interop par `COMReference` + `AxHost` maison | `AxImp.exe` est un outil .NET Framework ; ses assemblies référencent `System.Windows.Forms 4.0.0.0`, que .NET 10 ne résout pas. `COMReference` est géré nativement par le SDK .NET et produit un interop compatible. Bénéfice annexe : le CLSID devient une donnée, donc repli de version possible. |
 | D4 | Secrets : DPAPI `CurrentUser` + entropie par identifiant | Chiffrement lié à la session Windows, sans clé dans le binaire. Corrige le défaut historique de mRemoteNG (clé de chiffrement en dur). |
-| D5 | `SecureString` → `BSTR` natif → effacement | Le mot de passe n'existe jamais comme chaîne managée : ni duplication par le GC, ni présence dans un dump managé. |
+| D5 | Secret déchiffré → `BSTR` natif direct → effacement | Le mot de passe n'existe jamais comme chaîne managée : ni duplication par le GC, ni présence dans un dump managé. Pas de `SecureString` : sur .NET Core/.NET 5+ il n'est **pas** chiffré en mémoire (contrairement à .NET Framework) et Microsoft en déconseille l'usage pour du code neuf — il n'apporterait qu'un intermédiaire de plus à remplir puis vider. |
 | D6 | Résolution dynamique par défaut | `UpdateSessionDisplaySettings` rend l'image nette au pixel près lors d'un redimensionnement, au lieu de l'étirement flou de `SmartSizing`. |
 | D7 | Projet public, licence MIT | Aucune dépendance interne : base locale, aucun service distant. |
 | D8 | Anglais dans le code et l'UI, localisation `.resx` | Condition d'adoption et de contribution sur un projet public. Le français est livré comme première traduction. |
 | D9 | Nom `RemoteDeck` | Vérifié : 22 dépôts homonymes sur GitHub, le plus étoilé à 4★, aucun dans le domaine du bureau distant ; identifiant NuGet libre. (`RdpDeck` était occupé par un homonyme du même créneau.) |
 | D10 | UI bâtie sur WPF-UI (lepoco) 4.3.0, MIT | Rendu WinUI 3 sans quitter WPF, donc sans renoncer à `WindowsFormsHost` — l'hébergement ActiveX en WinUI 3 est nettement plus coûteux. |
 | D11 | Distribution GitHub Releases + winget, non signée | Coût nul. Le message SmartScreen est documenté dans le README ; la réputation s'accumule avec les téléchargements. Une signature EV (300–600 €/an) n'est pas justifiable avant d'avoir des utilisateurs. |
+| D12 | Onglets : barre d'onglets custom + panneau de sessions persistant — **pas** de `TabControl` WPF pour le contenu | Un `TabControl` ne garde vivant que le contenu de l'onglet actif : changer d'onglet décharge l'arbre visuel, détruit le `WindowsFormsHost` et donc **coupe la session RDP**. Les hôtes vivent tous dans un `Grid` commun, basculés par `Visibility` ; la barre d'onglets est un simple `ItemsControl` stylé. |
 
 ### Vérifications effectuées
 
@@ -103,7 +104,7 @@ remotedeck/
 │     │                 CommandPaletteWindow, ConnectionEditorWindow,
 │     │                 CredentialEditorWindow
 │     ├─ Resources/     Strings.resx (en) · Strings.fr.resx · Theme/
-│     └─ Services/      FileLogger, DialogService
+│     └─ Services/      FileLogger, DialogService, SettingsStore (settings.json, §7.2)
 └─ tests/
    └─ RemoteDeck.Core.Tests/              xUnit
 ```
@@ -163,7 +164,9 @@ CREATE TABLE Connection (
   RedirectPrinters       INTEGER NOT NULL DEFAULT 0,
   RedirectAudio          INTEGER NOT NULL DEFAULT 0,
   AdminSession           INTEGER NOT NULL DEFAULT 0,
-  AcceptedCertThumbprint TEXT    NULL,
+  UseWebAccount          INTEGER NOT NULL DEFAULT 0,  -- §6.7 ; expérimental (R7)
+  AuthenticationLevel    INTEGER NULL,                -- §6.6 ; NULL = défaut système
+  AcceptedCertThumbprint TEXT    NULL,                -- réservé, inutilisée en v1 (R5, §6.6)
   Notes                  TEXT    NOT NULL DEFAULT '',
   LastConnectedUtc       TEXT    NULL,
   CreatedUtc             TEXT    NOT NULL);
@@ -204,19 +207,25 @@ et le fichier `.db` seul, sans le profil Windows, reste inexploitable.
 
 ### 5.2 Chaîne du secret
 
+Pas de `SecureString` (voir D5 : non chiffré en mémoire sur .NET moderne,
+usage déconseillé par Microsoft). Le secret passe du blob DPAPI au `BSTR` natif
+sans intermédiaire superflu :
+
 ```
-DPAPI Unprotect → byte[] UTF-8 → SecureString → (byte[] effacé)
-SecureString → Marshal.SecureStringToBSTR → ClearTextPassword → Marshal.ZeroFreeBSTR (finally)
+DPAPI Unprotect → byte[] UTF-8 → chars → SysAllocStringLen (BSTR natif)
+  → ClearTextPassword → Marshal.ZeroFreeBSTR (finally)
+  → CryptographicOperations.ZeroMemory(byte[]/chars) (finally)
 ```
 
 Règles imposées par les signatures, non par la discipline :
 
 - `ICredentialVault` **n'expose aucune méthode acceptant ou retournant un `string`**
-  pour un secret. Uniquement `SecureString`.
-- Tout `byte[]` intermédiaire est effacé par `CryptographicOperations.ZeroMemory`
-  dans un `finally`.
-- Le `BSTR` est libéré par `Marshal.ZeroFreeBSTR` dans un `finally`, y compris si
-  l'affectation COM lève.
+  pour un secret. Il expose un pattern de portée fermée :
+  `void UseSecret(long credentialId, Action<nint> useBstr)` — le `BSTR` est
+  alloué, prêté au callback, puis libéré et écrasé dans le `finally`, y compris si
+  le callback ou l'affectation COM lève.
+- Tout tampon intermédiaire (`byte[]`, `char[]`) est effacé par
+  `CryptographicOperations.ZeroMemory` dans un `finally`.
 - Le modèle `Credential` ne porte pas le secret déchiffré. Il n'a donc rien à fuir
   s'il est sérialisé ou journalisé.
 
@@ -285,6 +294,10 @@ utilisateur. `RdpSession` expose son état ; l'onglet s'y lie.
 - Backoff : **2 s, 5 s, 10 s, 30 s, 60 s**, puis état `Failed` avec un bouton
   *Reconnect*. Cinq tentatives, pas de boucle infinie.
 - Annulable à tout instant ; un compte à rebours visible indique la prochaine tentative.
+- **Le secret est re-fourni à chaque tentative** : `Connect()` exige que
+  `ClearTextPassword` soit repositionné. `RdpSession` porte le `CredentialId`,
+  jamais le secret ; chaque tentative repasse par `ICredentialVault.UseSecret`
+  (§5.2). Aucun secret n'est retenu entre deux tentatives.
 
 ### 6.4 Erreurs explicites
 
@@ -328,6 +341,49 @@ toutes les sessions à la fermeture de l'application :
 4. En dernier recours après timeout : `Disconnect()` puis destruction, avec une
    entrée de log.
 
+### 6.6 Certificat serveur non fiable
+
+Le contrôle ActiveX gère lui-même sa boîte de dialogue de certificat, et il
+n'existe **pas d'API documentée** pour lire l'empreinte du certificat serveur
+depuis le contrôle. La v1 promet donc ce qui est garanti :
+
+- `AuthenticationLevel` mémorisé **par connexion** (comportement standard mstsc,
+  mais persistant — on ne recoche pas la même case à chaque session).
+- La capture d'empreinte et l'alerte au changement (`AcceptedCertThumbprint`)
+  sont **rétrogradées en « souhaitable »** : une sonde au lot 0 (risque R5)
+  déterminera si un moyen fiable existe ; sinon la colonne reste inutilisée en v1
+  (elle ne coûte rien et évite une migration).
+
+### 6.7 Compte web (Microsoft Entra ID) — expérimental
+
+La case mstsc « Utiliser un compte web pour vous connecter à l'ordinateur
+distant » correspond à la propriété RDP `enablerdsaadauth` : authentification
+Entra ID par navigateur (MFA, sans mot de passe transmis au serveur), pour les
+machines Entra-joined ou hybrid-joined. Contraintes documentées : **pas d'adresse
+IP** (le nom doit correspondre au hostname Entra) ; le verrouillage d'écran distant
+déconnecte la session.
+Source : <https://learn.microsoft.com/windows-server/remote/remote-desktop-services/remotepc/remote-desktop-connection-single-sign-on>
+
+**Vérifié** : la liste documentée des propriétés nommées du contrôle ActiveX
+(`IMsRdpExtendedSettings::Property`) ne contient **aucune** propriété
+`EnableRdsAadAuth`. mstsc l'implémente au-dessus du même moteur (`mstscax.dll`),
+le mécanisme existe donc probablement en interne, mais rien n'est documenté ni
+garanti pour un contrôle embarqué.
+Source : <https://learn.microsoft.com/windows/win32/termserv/imsrdpextendedsettings-property>
+
+Traitement :
+
+1. Colonne `UseWebAccount` présente dès le schéma initial ; case « Use web
+   account (Microsoft Entra ID) — experimental » dans l'éditeur de connexion.
+   Lorsqu'elle est cochée, l'identifiant du coffre est ignoré et aucun
+   `ClearTextPassword` n'est positionné.
+2. Sonde au lot 0 (risque R7) : `put_Property("EnableRdsAadAuth", VT_BOOL true)`
+   sur `IMsRdpExtendedSettings`, puis `Connect()` vers un poste Entra-joined ;
+   on observe si le flux web se déclenche comme dans mstsc ou si l'appel échoue.
+3. Si la sonde échoue : la case est masquée en v1 et la fonctionnalité passe au
+   §14 avec le motif. Le repli pour les postes gérés Intune/Entra reste
+   l'authentification AD classique par le coffre.
+
 ---
 
 ## 7. Interface
@@ -352,6 +408,20 @@ L'étalon est explicitement mRemoteNG, et l'objectif est de s'en distinguer nett
 `Grid` à deux colonnes, `GridSplitter`, panneau gauche repliable (`Ctrl+B`,
 largeur mémorisée). À droite, la zone d'onglets.
 
+**Onglets (D12)** : pas de `TabControl` WPF pour héberger les sessions — son
+`ContentPresenter` décharge le contenu des onglets inactifs, ce qui détruirait le
+`WindowsFormsHost` et couperait la session à chaque changement d'onglet. À la
+place : une barre d'onglets custom (`ItemsControl` stylé, pastilles d'état,
+réordonnancement au glisser) au-dessus d'un `Grid` où **tous** les
+`WindowsFormsHost` restent instanciés en permanence ; seul l'onglet actif est
+`Visible`, les autres `Hidden` (pas `Collapsed` — le contrôle RDP doit conserver
+sa surface pour ne pas renégocier l'affichage).
+
+**Réglages d'interface** : persistés dans `%APPDATA%\RemoteDeck\settings.json`
+(largeur du panneau, état replié, taille/position/état de la fenêtre). Les données
+métier restent dans `connections.db` ; les préférences d'affichage n'ont rien à
+faire dans un schéma migré.
+
 ### 7.3 Deux contraintes structurelles
 
 **Airspace.** `WindowsFormsHost` se dessine toujours au-dessus du contenu WPF : un
@@ -361,10 +431,18 @@ WPF sans bordure**, `Owner` = fenêtre principale, centrées sur elle. Mica s'ap
 à la barre de titre et au panneau gauche ; la zone RDP est opaque de toute façon.
 
 **Capture clavier.** Le contrôle ActiveX avale les frappes lorsqu'il a le focus.
-`Ctrl+K`, `Ctrl+Tab` et consorts sont donc interceptés en amont par un
-`IMessageFilter` Windows Forms enregistré sur le thread UI, avant que le contrôle ne
-traite le message. `KeyboardHookMode` est réglé pour ne pas rediriger les touches
-système en mode fenêtré — **valeur à lire dans la documentation au lot 0**.
+`Ctrl+K`, `Ctrl+Tab` et consorts doivent être interceptés en amont, avant que le
+contrôle ne traite le message. Trois mécanismes, à départager au lot 0 (risque R6),
+du plus simple au plus intrusif :
+
+1. `IMessageFilter` Windows Forms (`Application.AddMessageFilter`) — son
+   déclenchement pour un contrôle hébergé via `WindowsFormsHost` dans une boucle
+   de messages WPF **n'est pas garanti** ;
+2. `ComponentDispatcher.ThreadFilterMessage` côté WPF ;
+3. hook clavier `SetWindowsHookEx(WH_KEYBOARD)` local au thread, en dernier recours.
+
+`KeyboardHookMode` est réglé pour ne pas rediriger les touches système en mode
+fenêtré — **valeur à lire dans la documentation au lot 0**.
 
 ### 7.4 Raccourcis
 
@@ -438,6 +516,10 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 
 - **Licence** MIT. `LICENSE`, `README.md`, `SECURITY.md`, `CONTRIBUTING.md` en anglais.
 - **CI** (`ci.yml`) : build + tests sur push et pull request, `windows-latest`.
+  Attention : la compilation du `COMReference` exige la typelib `MSTSCLib`
+  enregistrée sur le runner. `mstscax.dll` est présent sur `windows-latest`, mais
+  ce prérequis est à vérifier au premier push — c'est un échec de build franc,
+  pas un bug silencieux.
 - **Release** (`release.yml`) : sur tag `v*`, publication d'un exécutable
   single-file self-contained x64 attaché à la GitHub Release.
 - **winget** : manifeste soumis après la première release stable.
@@ -454,12 +536,12 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 
 | Lot | Contenu | Fin de lot |
 |---|---|---|
-| **L0** | Squelette des 3 projets, `COMReference`, `RdpAxHost`, `RdpEventSink`, `FluentWindow`, connexion codée en dur | Une session RDP s'affiche et se ferme proprement. **Lève R1, R2, R3, R4.** |
+| **L0** | Squelette des 3 projets, `COMReference`, `RdpAxHost`, `RdpEventSink`, `FluentWindow`, connexion codée en dur | Une session RDP s'affiche et se ferme proprement. **Lève R1 à R7.** |
 | **L1** | SQLite, modèle, migrations, repositories, tests | Tests verts, base créée au premier lancement |
 | **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | Connexion réussie avec un identifiant du coffre |
 | **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion | Navigation clavier intégrale du panneau |
 | **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre | Coupure réseau simulée → reconnexion puis abandon propre |
-| **L5** | Palette `Ctrl+K`, import `.rdp`, politique de certificat, `.resx` fr | Critères de succès du §1 tous vérifiés |
+| **L5** | Palette `Ctrl+K`, import `.rdp`, politique de certificat (§6.6, selon issue de R5), `.resx` fr | Critères de succès du §1 tous vérifiés |
 
 L0 est délibérément le premier lot : il ne produit presque aucune fonctionnalité,
 mais il lève les quatre risques. Les découvrir au lot 4 coûterait une réécriture.
@@ -474,6 +556,9 @@ mais il lève les quatre risques. Les découvrir au lot 4 coûterait une réécr
 | **R2** | Abonnement au dispinterface `IMsTscAxEvents` non fonctionnel via `COMReference` | L0 | `AxImp` + retargeting de la référence `System.Windows.Forms`, isolé dans `Interop/` |
 | **R3** | DPI mixte multi-écran mal géré par le contrôle | L0 | Manifeste PerMonitorV2 ; à défaut, DPI système et mise à l'échelle assumée |
 | **R4** | `FluentWindow` (barre de titre custom) en conflit avec `WindowsFormsHost` | L0 | `ResourceDictionary` maison sur `Window` standard ; l'UI reste moderne, sans Mica |
+| **R5** | Pas d'API documentée pour lire l'empreinte du certificat serveur (§6.6) | L0 (sonde) | Fonctionnalité rétrogradée : `AuthenticationLevel` par connexion seulement ; colonne `AcceptedCertThumbprint` inutilisée en v1 |
+| **R6** | Interception clavier (`Ctrl+K`, `Ctrl+Tab`) : `IMessageFilter` non garanti pour un contrôle hébergé dans WPF (§7.3) | L0 | `ComponentDispatcher.ThreadFilterMessage`, puis hook `WH_KEYBOARD` local au thread |
+| **R7** | Compte web Entra ID : propriété `EnableRdsAadAuth` non documentée pour le contrôle ActiveX (§6.7) | L0 (sonde) | Case masquée en v1, fonctionnalité reportée au §14 ; auth AD classique par le coffre |
 
 ---
 
