@@ -1,10 +1,15 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
+using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Rdp;
 using RemoteDeck.App.Services;
+using RemoteDeck.Core.Data;
+using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Rdp;
+using RemoteDeck.Core.Security;
 using Wpf.Ui.Appearance;
 
 namespace RemoteDeck.App.Views;
@@ -19,6 +24,12 @@ namespace RemoteDeck.App.Views;
 // TextBox and friends ambiguous here.
 public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 {
+    /// <summary>Sentinel first item of the credential combo. <c>Id == 0</c> is never a stored row, so it also
+    /// marks "manual entry" after a reload rebuilds the list.</summary>
+    private static readonly Credential ManualEntry = new() { Label = "Type credentials manually", UserName = "", SecretBlob = [], Entropy = [] };
+
+    private CredentialRepository? _credentials;
+    private ICredentialVault? _vault;
     private RdpAxHost? _ax;
     private RdpSessionHost? _session;
     private ShortcutInterceptor? _shortcuts;
@@ -41,6 +52,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        // Filled first, and deliberately before the RDP control is picked: the two early returns
+        // below leave a window without a session, and the credential combo must still be usable
+        // there. GetService, not GetRequiredService — both are absent when the database failed to
+        // open (spec §6.6), which is a degraded mode, not a crash.
+        _credentials = App.Current.Services.GetService<CredentialRepository>();
+        _vault = App.Current.Services.GetService<ICredentialVault>();
+        ReloadCredentials();
+
         var version = RdpControlCatalog.Select(ClsidRegistry.IsUsable);
         if (version is null)
         {
@@ -157,6 +176,53 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
+    /// <summary>Rebuilds the credential combo from the repository, keeping the current selection when
+    /// that row still exists. Safe with no database: the sentinel is then the only entry.</summary>
+    private void ReloadCredentials()
+    {
+        var items = new List<Credential> { ManualEntry };
+        if (_credentials is not null)
+        {
+            items.AddRange(_credentials.GetAll());
+        }
+
+        var selectedId = (CredentialInput.SelectedItem as Credential)?.Id;
+        CredentialInput.ItemsSource = items;
+        // GetAll() hands out fresh instances, so the previous selection is matched by Id, never by
+        // reference; Id != 0 keeps the sentinel out of that match.
+        CredentialInput.SelectedItem = items.FirstOrDefault(c => c.Id == selectedId && c.Id != 0) ?? ManualEntry;
+    }
+
+    private void OnCredentialChanged(object sender, SelectionChangedEventArgs e)
+    {
+        bool manual = ReferenceEquals(CredentialInput.SelectedItem, ManualEntry) || CredentialInput.SelectedItem is null;
+        UserInput.IsEnabled = manual;
+        DomainInput.IsEnabled = manual;
+        PasswordInput.IsEnabled = manual;
+        if (!manual && CredentialInput.SelectedItem is Credential c)
+        {
+            // The boxes become a read-only echo of the stored identity; the secret itself stays
+            // sealed and is only ever borrowed at Connect time.
+            UserInput.Text = c.UserName;
+            DomainInput.Text = c.Domain ?? "";
+            PasswordInput.Clear();
+        }
+    }
+
+    private void OnManageCredentials(object sender, RoutedEventArgs e)
+    {
+        if (_credentials is null)
+        {
+            // CredentialsWindow resolves the repository with GetRequiredService: opening it without
+            // a database would throw instead of showing anything.
+            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable", "Credentials cannot be managed until the database opens.");
+            return;
+        }
+
+        new CredentialsWindow { Owner = this }.ShowDialog();
+        ReloadCredentials();
+    }
+
     private void ShowStatus(Wpf.Ui.Controls.InfoBarSeverity severity, string title, string message)
     {
         StatusBar.Severity = severity;
@@ -195,23 +261,33 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             if (!settings.UseWebAccount)
             {
-                // R1 probe: SecureString -> native BSTR -> vtable put -> zero+free. No managed string.
-                // SecurePassword hands out a fresh copy on every read; dispose it.
-                using var secure = PasswordInput.SecurePassword;
-                nint bstr = Marshal.SecureStringToBSTR(secure);
-                // The finally only frees the BSTR; PasswordInput.Clear() is deliberately left
-                // outside it, so a failing PutPassword keeps what the user typed and lets them retry.
-                try
+                if (CredentialInput.SelectedItem is Credential stored && !ReferenceEquals(stored, ManualEntry) && _vault is not null)
                 {
-                    _session.PutPassword(bstr);
-                    ProbeLog.Write("R1", "ClearTextPassword set through IMsTscNonScriptable vtable with a native BSTR");
+                    // Vault path: DPAPI blob -> UTF-8 bytes -> native BSTR lent to the control -> zeroed.
+                    // No managed string; the vault owns the lifetime of both buffers.
+                    _vault.UseSecret(stored, bstr => _session.PutPassword(bstr));
+                    ProbeLog.Write("vault", $"Password supplied from credential '{stored.Label}'");
                 }
-                finally
+                else
                 {
-                    Marshal.ZeroFreeBSTR(bstr);
-                }
+                    // R1 probe: SecureString -> native BSTR -> vtable put -> zero+free. No managed string.
+                    // SecurePassword hands out a fresh copy on every read; dispose it.
+                    using var secure = PasswordInput.SecurePassword;
+                    nint bstr = Marshal.SecureStringToBSTR(secure);
+                    // The finally only frees the BSTR; PasswordInput.Clear() is deliberately left
+                    // outside it, so a failing PutPassword keeps what the user typed and lets them retry.
+                    try
+                    {
+                        _session.PutPassword(bstr);
+                        ProbeLog.Write("R1", "ClearTextPassword set through IMsTscNonScriptable vtable with a native BSTR");
+                    }
+                    finally
+                    {
+                        Marshal.ZeroFreeBSTR(bstr);
+                    }
 
-                PasswordInput.Clear();
+                    PasswordInput.Clear();
+                }
             }
 
             ConnectButton.IsEnabled = false;
