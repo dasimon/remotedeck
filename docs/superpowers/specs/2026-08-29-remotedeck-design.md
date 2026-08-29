@@ -105,7 +105,8 @@ remotedeck/
 │  │  ├─ Model/         Connection, Credential, DisplayMode, SessionState
 │  │  ├─ Data/          SqliteDatabase, SchemaMigrator,
 │  │  │                 ConnectionRepository, CredentialRepository
-│  │  ├─ Security/      ICredentialVault, DpapiCredentialVault
+│  │  ├─ Security/      SecretBytes, ICredentialVault, DpapiCredentialVault,
+│  │  │                 CredentialRules
 │  │  ├─ Search/        ConnectionFilter          (correspondance floue + plages de surlignage)
 │  │  ├─ Sessions/      ReconnectPolicy           (backoff, décision de reconnexion)
 │  │  ├─ Import/        RdpFileImporter           (.rdp + registre)
@@ -115,10 +116,11 @@ remotedeck/
 │     │                 ClsidRegistry (créabilité, §6.1), ComSecretPut (vtable, §5.2)
 │     ├─ Rdp/           RdpSession (machine à états), SessionManager
 │     ├─ ViewModels/    ShellViewModel, ConnectionListViewModel, SessionViewModel,
-│     │                 ConnectionEditorViewModel, CommandPaletteViewModel
+│     │                 ConnectionEditorViewModel, CredentialEditorViewModel,
+│     │                 CommandPaletteViewModel
 │     ├─ Views/         ShellWindow, ConnectionPane, SessionView,
 │     │                 CommandPaletteWindow, ConnectionEditorWindow,
-│     │                 CredentialEditorWindow
+│     │                 CredentialsWindow, CredentialEditorWindow
 │     ├─ Resources/     Strings.resx (en) · Strings.fr.resx · Theme/
 │     └─ Services/      FileLogger, DialogService, SettingsStore (settings.json, §7.2)
 └─ tests/
@@ -253,10 +255,12 @@ manipule une vtable, et il ne fait que cela.
 Règles imposées par les signatures, non par la discipline :
 
 - `ICredentialVault` **n'expose aucune méthode acceptant ou retournant un `string`**
-  pour un secret. Il expose un pattern de portée fermée :
-  `void UseSecret(long credentialId, Action<nint> useBstr)` — le `BSTR` est
-  alloué, prêté au callback, puis libéré et écrasé dans le `finally`, y compris si
-  le callback ou l'affectation COM lève.
+  pour un secret. Il expose deux membres, et un pattern de portée fermée :
+  `void Seal(Credential credential, nint secretBstr)` — le `BSTR` fourni par
+  l'appelant (qui en garde la propriété) est chiffré dans `SecretBlob` avec une
+  entropie neuve ; et `void UseSecret(Credential credential, Action<nint> useBstr)`
+  — le `BSTR` est alloué, prêté au callback, puis libéré et écrasé dans le
+  `finally`, y compris si le callback ou l'affectation COM lève.
 - Tout tampon intermédiaire (`byte[]`, `char[]`) est effacé par
   `CryptographicOperations.ZeroMemory` dans un `finally`.
 - Le modèle `Credential` ne porte pas le secret déchiffré. Il n'a donc rien à fuir
@@ -695,7 +699,7 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 |---|---|---|
 | **L0** | Squelette des 3 projets, interop `TlbImp`, `RdpAxHost`, `RdpEventSink`, `FluentWindow`, connexion codée en dur | **Fait** (2026-08-29). Session RDP affichée et fermée proprement. R1–R7 tranchés : voir §13 et `docs/superpowers/probes/l0-probe-results.md`. Seul R3 (DPI mixte) est *déplacé*, pas levé : machine de test mono-DPI, vérification portée sur `docs/manual-checklist.md`. |
 | **L1** | SQLite, modèle, migrations, repositories, tests | Tests verts, base créée au premier lancement |
-| **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | Connexion réussie avec un identifiant du coffre |
+| **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | **Fait** (2026-08-29). `Seal`/`UseSecret` sur DPAPI CurrentUser + entropie de 32 octets par identifiant, `CredentialsWindow` / `CredentialEditorWindow`, secret jamais matérialisé en `string` (test de réflexion sur `ICredentialVault`), fourniture du mot de passe au contrôle depuis le coffre. Modèle de menace du §5.4 publié dans `SECURITY.md`. La sonde humaine de fin de lot (connexion réelle avec un identifiant du coffre) reste à jouer par David. |
 | **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | Navigation clavier intégrale du panneau |
 | **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | Coupure réseau simulée → reconnexion puis abandon propre |
 | **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | Critères de succès du §1 tous vérifiés |
