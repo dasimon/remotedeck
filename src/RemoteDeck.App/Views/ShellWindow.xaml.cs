@@ -21,6 +21,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 {
     private RdpAxHost? _ax;
     private RdpSessionHost? _session;
+    private ShortcutInterceptor? _shortcuts;
     private bool _closeInProgress;
     private bool _reentrantCloseLogged;
     private bool _closeConfirmed;
@@ -87,6 +88,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 : Wpf.Ui.Controls.InfoBarSeverity.Error;
             ShowStatus(severity, $"Disconnected (reason {info.Reason}, extended {info.ExtendedReason})", info.Description);
         });
+
+        // R6 probe: which of the three §7.3 mechanisms actually sees Ctrl+K / Ctrl+Tab while the
+        // remote session holds keyboard focus. REMOTEDECK_PROBE_SHORTCUTS switches between them;
+        // WpfThreadFilter is the default because it is the native WPF message pump, the one
+        // WindowsFormsHost already routes through.
+        var mechanismName = Environment.GetEnvironmentVariable("REMOTEDECK_PROBE_SHORTCUTS") ?? "WpfThreadFilter";
+        var mechanism = Enum.Parse<ShortcutInterceptor.Mechanism>(mechanismName, ignoreCase: true);
+        _shortcuts = new ShortcutInterceptor(mechanism);
+        // BeginInvoke for the same reason as the session events: never block the thread that
+        // raised the notification, here the message pump itself.
+        _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() =>
+            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted", $"via {mechanism} — command palette arrives in lot 5"));
 
         ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready", "Enter a host and press Connect.");
     }
@@ -193,6 +206,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             try
             {
                 // Second pass, or nothing was ever created: let the OCX go with the window.
+                // The graceful path reaches this branch on its second pass, so unhooking here
+                // covers both routes out of the window.
+                _shortcuts?.Dispose();
                 _session?.Dispose();
                 _ax?.Dispose();
             }
