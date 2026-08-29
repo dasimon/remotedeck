@@ -23,6 +23,8 @@
         <WrapPanel Grid.Row="1" Margin="12,4" ItemHeight="36">
             <ui:TextBox x:Name="HostInput" Width="220" Margin="0,0,8,0" PlaceholderText="host" />
             <ui:NumberBox x:Name="PortInput" Width="90" Margin="0,0,8,0" Value="3389" Minimum="1" Maximum="65535" SpinButtonPlacementMode="Hidden" />
+            <ComboBox x:Name="CredentialInput" Width="200" Margin="0,0,8,0" DisplayMemberPath="Label" SelectionChanged="OnCredentialChanged" />
+            <ui:Button Content="Credentials…" Margin="0,0,8,0" Click="OnManageCredentials" />
             <ui:TextBox x:Name="UserInput" Width="160" Margin="0,0,8,0" PlaceholderText="user" />
             <ui:TextBox x:Name="DomainInput" Width="120" Margin="0,0,8,0" PlaceholderText="domain (optional)" />
             <!-- Native WPF PasswordBox on purpose: Wpf.Ui.Controls.PasswordBox exposes only a managed
