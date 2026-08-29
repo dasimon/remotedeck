@@ -23,4 +23,14 @@ public sealed class CredentialRulesTests
     [Fact]
     public void Label_is_limited_to_64_characters()
         => Assert.Single(CredentialRules.Validate(new string('a', 65), "u", []));
+
+    [Fact]
+    public void Null_other_labels_is_rejected()
+        => Assert.Throws<ArgumentNullException>(() => { _ = CredentialRules.Validate("Admin", "u", null!); });
+
+    /// <summary>The editor trims the label it saves, so a stored row that kept its surrounding
+    /// whitespace must still be recognised as the same label.</summary>
+    [Fact]
+    public void Existing_labels_are_compared_trimmed()
+        => Assert.Single(CredentialRules.Validate("admin", "u", [" Admin "]));
 }

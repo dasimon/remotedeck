@@ -48,7 +48,10 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
     private void OnSave(object sender, RoutedEventArgs e)
     {
         var others = _repository.GetAll().Where(c => c.Id != (_existing?.Id ?? 0)).Select(c => c.Label);
-        bool hasPassword = PasswordInput.SecurePassword.Length > 0;
+        // SecurePassword hands out a fresh copy on every read: read it exactly once, own it for the
+        // whole handler, and let the using dispose it on every exit path.
+        using var secure = PasswordInput.SecurePassword;
+        bool hasPassword = secure.Length > 0;
         if (!_vm.Validate(others) || (_vm.IsNew && !hasPassword))
         {
             if (_vm.IsNew && !hasPassword) _vm.Errors = string.Join("\n", new[] { _vm.Errors, "Password is required." }.Where(s => s.Length > 0));
@@ -64,7 +67,6 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
         if (hasPassword)
         {
             // SecureString -> native BSTR -> vault (UTF-8 bytes -> DPAPI) -> zero+free. No managed string.
-            using var secure = PasswordInput.SecurePassword;
             nint bstr = Marshal.SecureStringToBSTR(secure);
             try { _vault.Seal(credential, bstr); }
             finally { Marshal.ZeroFreeBSTR(bstr); }

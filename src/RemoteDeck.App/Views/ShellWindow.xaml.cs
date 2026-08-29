@@ -238,6 +238,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        // Copied out of the field: the vault callback below is a lambda, and capturing the nullable
+        // field would carry its nullability past the check above.
+        var session = _session;
+
         var settings = new RdpConnectionProbeSettings(
             Host: HostInput.Text.Trim(),
             Port: (int)(PortInput.Value ?? 3389),
@@ -257,7 +261,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         try
         {
-            _session.Configure(settings, width, height);
+            session.Configure(settings, width, height);
 
             if (!settings.UseWebAccount)
             {
@@ -265,7 +269,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 {
                     // Vault path: DPAPI blob -> UTF-8 bytes -> native BSTR lent to the control -> zeroed.
                     // No managed string; the vault owns the lifetime of both buffers.
-                    _vault.UseSecret(stored, bstr => _session.PutPassword(bstr));
+                    _vault.UseSecret(stored, bstr => session.PutPassword(bstr));
                     ProbeLog.Write("vault", $"Password supplied from credential '{stored.Label}'");
                 }
                 else
@@ -278,7 +282,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                     // outside it, so a failing PutPassword keeps what the user typed and lets them retry.
                     try
                     {
-                        _session.PutPassword(bstr);
+                        session.PutPassword(bstr);
                         ProbeLog.Write("R1", "ClearTextPassword set through IMsTscNonScriptable vtable with a native BSTR");
                     }
                     finally
@@ -292,7 +296,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             ConnectButton.IsEnabled = false;
             DisconnectButton.IsEnabled = true;
-            _session.Connect();
+            session.Connect();
         }
         catch (Exception ex)
         {
