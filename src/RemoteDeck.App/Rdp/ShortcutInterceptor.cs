@@ -102,28 +102,57 @@ internal sealed class ShortcutInterceptor : IDisposable
         return CallNextHookEx(_hook, code, wParam, lParam);
     }
 
+    /// <summary>
+    /// Decides whether a key-down belongs to the application and, if so, raises
+    /// <see cref="Triggered"/>. Returns <c>true</c> when the key was consumed.
+    /// </summary>
+    /// <remarks>
+    /// Nothing may escape this method. With <see cref="Mechanism.KeyboardHook"/> it runs inside a
+    /// reverse-P/Invoke callback the OS calls directly, where an unhandled exception does not
+    /// unwind into managed code — it terminates the process. Both the log write (synchronous file
+    /// I/O) and the <see cref="Triggered"/> subscribers can throw, so the whole body is guarded.
+    /// The two message-pump mechanisms are protected the same way, for one behaviour everywhere:
+    /// on failure the shortcut is dropped and the key passes through to the session untouched.
+    /// </remarks>
     private bool Handle(int virtualKey)
     {
-        bool ctrl = (GetKeyState(VkControl) & 0x8000) != 0;
-        if (!ctrl)
+        try
         {
+            bool ctrl = (GetKeyState(VkControl) & 0x8000) != 0;
+            if (!ctrl)
+            {
+                return false;
+            }
+
+            string? shortcut = virtualKey switch
+            {
+                VkK => "Ctrl+K",
+                VkTab => (GetKeyState(VkShift) & 0x8000) != 0 ? "Ctrl+Shift+Tab" : "Ctrl+Tab",
+                _ => null,
+            };
+            if (shortcut is null)
+            {
+                return false;
+            }
+
+            ProbeLog.Write("R6", $"{shortcut} intercepted by {_mechanism}");
+            Triggered?.Invoke(shortcut);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                ProbeLog.Write("R6", $"Handle failed: {ex.GetType().Name}: {ex.Message}");
+            }
+            catch
+            {
+                // The logger is the very thing that may have failed; there is nowhere left to
+                // report to, and reporting is not worth killing the process over.
+            }
+
             return false;
         }
-
-        string? shortcut = virtualKey switch
-        {
-            VkK => "Ctrl+K",
-            VkTab => (GetKeyState(VkShift) & 0x8000) != 0 ? "Ctrl+Shift+Tab" : "Ctrl+Tab",
-            _ => null,
-        };
-        if (shortcut is null)
-        {
-            return false;
-        }
-
-        ProbeLog.Write("R6", $"{shortcut} intercepted by {_mechanism}");
-        Triggered?.Invoke(shortcut);
-        return true;
     }
 
     public void Dispose()
