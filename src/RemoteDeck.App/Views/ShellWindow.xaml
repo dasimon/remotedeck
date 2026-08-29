@@ -1,0 +1,40 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.ShellWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="RemoteDeck"
+                 Width="1280" Height="800"
+                 MinWidth="800" MinHeight="500"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="RemoteDeck" />
+
+        <!-- Lot 0 probe toolbar. Replaced by the connection pane in lot 3. -->
+        <WrapPanel Grid.Row="1" Margin="12,4" ItemHeight="36">
+            <ui:TextBox x:Name="HostInput" Width="220" Margin="0,0,8,0" PlaceholderText="host" />
+            <ui:NumberBox x:Name="PortInput" Width="90" Margin="0,0,8,0" Value="3389" Minimum="1" Maximum="65535" SpinButtonPlacementMode="Hidden" />
+            <ui:TextBox x:Name="UserInput" Width="160" Margin="0,0,8,0" PlaceholderText="user" />
+            <ui:TextBox x:Name="DomainInput" Width="120" Margin="0,0,8,0" PlaceholderText="domain (optional)" />
+            <ui:PasswordBox x:Name="PasswordInput" Width="160" Margin="0,0,8,0" PlaceholderText="password" />
+            <CheckBox x:Name="WebAccountInput" Margin="0,0,8,0" VerticalAlignment="Center" Content="Use web account (experimental)" />
+            <ui:Button x:Name="ConnectButton" Margin="0,0,8,0" Appearance="Primary" Content="Connect" IsDefault="True" Click="OnConnectClick" />
+            <ui:Button x:Name="DisconnectButton" Content="Disconnect" IsEnabled="False" Click="OnDisconnectClick" />
+        </WrapPanel>
+
+        <ui:InfoBar Grid.Row="2" x:Name="StatusBar" Margin="12,0,12,4" IsOpen="False" IsClosable="True" />
+
+        <Border Grid.Row="3" Margin="12,0,12,12" CornerRadius="6" Background="#FF000000">
+            <WindowsFormsHost x:Name="RdpHost" />
+        </Border>
+    </Grid>
+</ui:FluentWindow>
