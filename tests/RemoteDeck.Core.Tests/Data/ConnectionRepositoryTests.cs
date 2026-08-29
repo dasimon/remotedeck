@@ -141,4 +141,19 @@ public sealed class ConnectionRepositoryTests : IDisposable
         Assert.NotNull(last);
         Assert.True((DateTime.UtcNow - last.Value).Duration() < TimeSpan.FromMinutes(1));
     }
+
+    [Fact]
+    public void Update_does_not_rewrite_CreatedUtc()
+    {
+        var x = Make("Immutable");
+        _repo.Insert(x);
+        var created = _repo.Get(x.Id)!.CreatedUtc;
+
+        // A caller that rebuilds the object from a form has no CreatedUtc to give back.
+        var edited = new Connection { Id = x.Id, Name = x.Name, Host = x.Host };
+        Assert.Equal(default, edited.CreatedUtc);
+        _repo.Update(edited);
+
+        Assert.Equal(created, _repo.Get(x.Id)!.CreatedUtc);
+    }
 }

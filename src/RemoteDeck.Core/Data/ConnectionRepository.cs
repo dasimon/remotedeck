@@ -26,6 +26,7 @@ public sealed class ConnectionRepository(SqliteDatabase db)
             SELECT last_insert_rowid();
             """);
         Bind(cmd, x);
+        cmd.Add("$created", x.CreatedUtc.ToDb());
         x.Id = (long)cmd.ExecuteScalar()!;
         return x.Id;
     }
@@ -38,7 +39,7 @@ public sealed class ConnectionRepository(SqliteDatabase db)
                 IsFavorite = $fav, DisplayMode = $mode, FixedWidth = $fw, FixedHeight = $fh,
                 RedirectClipboard = $clip, RedirectDrives = $drives, RedirectPrinters = $printers, RedirectAudio = $audio,
                 AdminSession = $admin, UseWebAccount = $web, AuthenticationLevel = $auth, AcceptedCertThumbprint = $thumb,
-                Notes = $notes, LastConnectedUtc = $last, CreatedUtc = $created
+                Notes = $notes, LastConnectedUtc = $last
             WHERE Id = $id
             """);
         Bind(cmd, x);
@@ -81,6 +82,7 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>Every column an update may touch. <c>CreatedUtc</c> is deliberately absent: it is written once, by <see cref="Insert"/>.</summary>
     private static void Bind(SqliteCommand cmd, Connection x)
     {
         cmd.Add("$name", x.Name);
@@ -102,7 +104,6 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         cmd.Add("$thumb", x.AcceptedCertThumbprint);
         cmd.Add("$notes", x.Notes);
         cmd.Add("$last", x.LastConnectedUtc?.ToDb());
-        cmd.Add("$created", x.CreatedUtc.ToDb());
     }
 
     private static Connection Read(SqliteDataReader r) => new()

@@ -18,13 +18,14 @@ public sealed class CredentialRepository(SqliteDatabase db)
             SELECT last_insert_rowid();
             """);
         Bind(cmd, credential);
+        cmd.Add("$modified", credential.ModifiedUtc.ToDb());
         credential.Id = (long)cmd.ExecuteScalar()!;
         return credential.Id;
     }
 
     public void Update(Credential credential)
     {
-        credential.ModifiedUtc = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         using var c = db.Open();
         var cmd = c.Cmd("""
             UPDATE Credential SET Label = $label, Domain = $domain, UserName = $user,
@@ -32,8 +33,10 @@ public sealed class CredentialRepository(SqliteDatabase db)
             WHERE Id = $id
             """);
         Bind(cmd, credential);
+        cmd.Add("$modified", now.ToDb());
         cmd.Add("$id", credential.Id);
         if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException($"Credential {credential.Id} does not exist.");
+        credential.ModifiedUtc = now; // only once the row is known to exist: a failed update leaves the object untouched
     }
 
     public void Delete(long id)
@@ -62,6 +65,7 @@ public sealed class CredentialRepository(SqliteDatabase db)
         return list;
     }
 
+    /// <summary>Everything but <c>$modified</c>, which each caller stamps itself.</summary>
     private static void Bind(SqliteCommand cmd, Credential x)
     {
         cmd.Add("$label", x.Label);
@@ -69,7 +73,6 @@ public sealed class CredentialRepository(SqliteDatabase db)
         cmd.Add("$user", x.UserName);
         cmd.Add("$blob", x.SecretBlob);
         cmd.Add("$entropy", x.Entropy);
-        cmd.Add("$modified", x.ModifiedUtc.ToDb());
     }
 
     private static Credential Read(SqliteDataReader r) => new()
