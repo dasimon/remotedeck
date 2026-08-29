@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -8,6 +9,7 @@ namespace RemoteDeck.Core.Security;
 /// Conversions between a native BSTR and UTF-8 bytes that never create a managed string.
 /// Every intermediate buffer is zeroed in a finally block.
 /// </summary>
+[SupportedOSPlatform("windows")]
 internal static class SecretBytes
 {
     /// <summary>Copies the BSTR's UTF-16 payload into UTF-8 bytes. Caller zeroes the result.</summary>
@@ -48,6 +50,6 @@ internal static class SecretBytes
 
     public static void Zero(byte[] bytes) => CryptographicOperations.ZeroMemory(bytes);
 
-    [DllImport("oleaut32.dll")]
+    [DllImport("oleaut32.dll", ExactSpelling = true)]
     private static extern nint SysAllocStringLen(nint source, uint length);
 }

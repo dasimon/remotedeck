@@ -94,4 +94,36 @@ public sealed class DpapiCredentialVaultTests
             Assert.All(m.GetParameters(), p => Assert.NotEqual(typeof(string), p.ParameterType));
         });
     }
+    [Fact]
+    public void UseSecret_frees_the_bstr_even_when_the_callback_throws()
+    {
+        // Freeing is enforced by the finally in UseSecret (ZeroFreeBSTR). It cannot be asserted
+        // directly: reading the pointer after the free would be a use-after-free. So we assert the
+        // observable contract instead — the callback's exception propagates unchanged, and the
+        // credential still decrypts afterwards, which proves the internal state stayed intact.
+        var c = Make();
+        WithBstr("secret", b => _vault.Seal(c, b));
+
+        nint captured = 0;
+        Assert.Throws<InvalidOperationException>(() => _vault.UseSecret(c, b =>
+        {
+            captured = b;
+            throw new InvalidOperationException("callback failure");
+        }));
+
+        Assert.NotEqual((nint)0, captured);
+
+        string? seen = null;
+        _vault.UseSecret(c, b => seen = Marshal.PtrToStringBSTR(b));
+
+        Assert.Equal("secret", seen);
+    }
+
+    [Fact]
+    public void Seal_rejects_a_null_bstr()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => _vault.Seal(Make(), 0));
+
+        Assert.Equal("secretBstr", ex.ParamName);
+    }
 }

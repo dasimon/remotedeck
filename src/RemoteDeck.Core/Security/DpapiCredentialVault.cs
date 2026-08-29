@@ -18,6 +18,7 @@ public sealed class DpapiCredentialVault : ICredentialVault
     public void Seal(Credential credential, nint secretBstr)
     {
         ArgumentNullException.ThrowIfNull(credential);
+        if (secretBstr == 0) throw new ArgumentException("BSTR must not be null.", nameof(secretBstr));
         var entropy = RandomNumberGenerator.GetBytes(EntropyLength);
         var utf8 = SecretBytes.Utf8FromBstr(secretBstr);
         try
