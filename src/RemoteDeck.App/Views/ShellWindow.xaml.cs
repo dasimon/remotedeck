@@ -70,9 +70,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         ProbeLog.Write("R3", $"Window DPI scale X={dpi.DpiScaleX:F2} Y={dpi.DpiScaleY:F2}");
 
         _session = new RdpSessionHost(_ax);
-        _session.StatusChanged += status => Dispatcher.Invoke(() =>
+        // BeginInvoke, not Invoke: these are raised from a COM event sink, and a synchronous
+        // marshal back to the UI thread would deadlock if the control ever raised off-thread.
+        _session.StatusChanged += status => Dispatcher.BeginInvoke(() =>
             ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, status, ""));
-        _session.Disconnected += info => Dispatcher.Invoke(() =>
+        _session.Disconnected += info => Dispatcher.BeginInvoke(() =>
         {
             ConnectButton.IsEnabled = true;
             DisconnectButton.IsEnabled = false;
@@ -123,12 +125,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             if (!settings.UseWebAccount)
             {
-                // R1 probe: SecureString -> native BSTR -> IDispatch put -> zero+free. No managed string.
-                nint bstr = Marshal.SecureStringToBSTR(PasswordInput.SecurePassword);
+                // R1 probe: SecureString -> native BSTR -> vtable put -> zero+free. No managed string.
+                // SecurePassword hands out a fresh copy on every read; dispose it.
+                using var secure = PasswordInput.SecurePassword;
+                nint bstr = Marshal.SecureStringToBSTR(secure);
                 try
                 {
                     _session.PutPassword(bstr);
-                    ProbeLog.Write("R1", "ClearTextPassword set through IDispatch::Invoke with a native BSTR");
+                    ProbeLog.Write("R1", "ClearTextPassword set through IMsTscNonScriptable vtable with a native BSTR");
                 }
                 finally
                 {

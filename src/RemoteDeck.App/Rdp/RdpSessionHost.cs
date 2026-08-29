@@ -1,4 +1,4 @@
-using MSTSCLib;
+﻿using MSTSCLib;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Services;
 
@@ -29,13 +29,15 @@ internal sealed class RdpSessionHost : IDisposable
         _events = (IMsTscAxEvents_Event)host.Ocx;
 
         // R2 probe: does subscribing to the COM event interface work through the generated interop?
-        _events.OnConnecting += () => Raise("Connecting…");
-        _events.OnConnected += () => Raise("Connected");
-        _events.OnLoginComplete += () => Raise("Logged on");
-        _events.OnAuthenticationWarningDisplayed += () => ProbeLog.Write("R5", "OnAuthenticationWarningDisplayed fired (certificate warning shown by the control)");
-        _events.OnAuthenticationWarningDismissed += () => ProbeLog.Write("R5", "OnAuthenticationWarningDismissed fired");
-        _events.OnLogonError += error => ProbeLog.Write("session", $"OnLogonError lError={error}");
-        _events.OnFatalError += code => ProbeLog.Write("session", $"OnFatalError errorCode={code}");
+        // Every sink body goes through Sink(): an exception escaping into the control's callback
+        // is undefined behaviour, so it is logged and swallowed instead.
+        _events.OnConnecting += () => Sink("OnConnecting", () => Raise("Connecting…"));
+        _events.OnConnected += () => Sink("OnConnected", () => Raise("Connected"));
+        _events.OnLoginComplete += () => Sink("OnLoginComplete", () => Raise("Logged on"));
+        _events.OnAuthenticationWarningDisplayed += () => Sink("OnAuthenticationWarningDisplayed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDisplayed fired (certificate warning shown by the control)"));
+        _events.OnAuthenticationWarningDismissed += () => Sink("OnAuthenticationWarningDismissed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDismissed fired"));
+        _events.OnLogonError += error => Sink("OnLogonError", () => ProbeLog.Write("session", $"OnLogonError lError={error}"));
+        _events.OnFatalError += code => Sink("OnFatalError", () => ProbeLog.Write("session", $"OnFatalError errorCode={code}"));
         _events.OnDisconnected += OnDisconnected;
         ProbeLog.Write("R2", "Subscribed to IMsTscAxEvents_Event via TlbImp-generated interop");
     }
@@ -99,27 +101,53 @@ internal sealed class RdpSessionHost : IDisposable
         }
     }
 
-    private void OnDisconnected(int reason)
+    private void OnDisconnected(int reason) => Sink("OnDisconnected", () =>
     {
-        int extended = (int)_client.ExtendedDisconnectReason;
+        // Both reads are inside the try: a COM throw here must not skip the log line nor the
+        // Disconnected event, or the UI would stay stuck with Connect disabled forever.
+        int extended = 0;
         string description;
         try
         {
+            extended = (int)_client.ExtendedDisconnectReason;
             description = _client.GetErrorDescription((uint)reason, (uint)extended);
         }
         catch (Exception ex)
         {
-            description = $"(GetErrorDescription failed: {ex.Message})";
+            description = $"(error details unavailable: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message})";
         }
 
         ProbeLog.Write("session", $"OnDisconnected reason={reason} extended={extended} \"{description}\"");
         Disconnected?.Invoke(new RdpDisconnectInfo(reason, extended, description));
-    }
+    });
 
-    private void Raise(string status)
+    private void Raise(string status) => Sink("StatusChanged", () =>
     {
         ProbeLog.Write("session", status);
         StatusChanged?.Invoke(status);
+    });
+
+    /// <summary>
+    /// Runs one COM event sink body. Letting an exception unwind into the control's callback is
+    /// undefined behaviour, so anything thrown here is logged and swallowed.
+    /// </summary>
+    private static void Sink(string name, Action body)
+    {
+        try
+        {
+            body();
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                ProbeLog.Write("sink", $"{name} handler threw {ex.GetType().Name} 0x{ex.HResult:X8}: {ex.Message}");
+            }
+            catch
+            {
+                // Logging must never turn a swallowed sink exception back into a crash.
+            }
+        }
     }
 
     public void Dispose()
