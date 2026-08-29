@@ -21,6 +21,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 {
     private RdpAxHost? _ax;
     private RdpSessionHost? _session;
+    private bool _closeInProgress;
+    private bool _reentrantCloseLogged;
     private bool _closeConfirmed;
 
     public ShellWindow()
@@ -171,15 +173,41 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // The window stays interactive for up to the CloseAsync timeout, so the close box can be
+        // clicked again while the protocol runs. Re-entering the first pass would start a second
+        // RequestClose, orphan the first waiter and let Dispose run under the pending await.
+        if (_closeInProgress && !_closeConfirmed)
+        {
+            e.Cancel = true;
+            if (!_reentrantCloseLogged)
+            {
+                _reentrantCloseLogged = true;
+                ProbeLog.Write("close", "Close already in progress; ignoring");
+            }
+
+            return;
+        }
+
         if (_closeConfirmed || _session is null)
         {
-            // Second pass, or nothing was ever created: let the OCX go with the window.
-            _session?.Dispose();
-            _ax?.Dispose();
+            try
+            {
+                // Second pass, or nothing was ever created: let the OCX go with the window.
+                _session?.Dispose();
+                _ax?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                // Same rule as below: a failure on the way out must not keep the window open.
+                ProbeLog.Write("close", $"Dispose failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            }
+
             return;
         }
 
         e.Cancel = true;
+        // Set synchronously, before the first await: this is what the guard above tests.
+        _closeInProgress = true;
         ConnectButton.IsEnabled = false;
         DisconnectButton.IsEnabled = false;
         ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Closing session…", "");

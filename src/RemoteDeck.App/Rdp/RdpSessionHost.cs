@@ -152,6 +152,22 @@ internal sealed class RdpSessionHost : IDisposable
             return;
         }
 
+        // Defence in depth: the UI already refuses a second close while one is pending, but a
+        // second RequestClose() would orphan the first waiter (spurious timeout + extra
+        // Disconnect). Join the close already running instead of starting another one.
+        var pending = _closed;
+        if (pending is not null && !pending.Task.IsCompleted)
+        {
+            ProbeLog.Write("close", "CloseAsync already running; awaiting the existing one");
+            if (!await WaitForCloseAsync(pending.Task, timeout).ConfigureAwait(true))
+            {
+                // No second Disconnect() here: the call that owns this waiter forces it.
+                ProbeLog.Write("close", $"Timed out after {timeout.TotalSeconds:F0}s waiting for the close in flight");
+            }
+
+            return;
+        }
+
         _closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var status = _client.RequestClose();
         ProbeLog.Write("close", $"RequestClose → {status} ({(int)status})");
@@ -161,16 +177,22 @@ internal sealed class RdpSessionHost : IDisposable
             return;
         }
 
-        var finished = await Task.WhenAny(_closed.Task, Task.Delay(timeout)).ConfigureAwait(true);
-        if (finished != _closed.Task)
+        if (await WaitForCloseAsync(_closed.Task, timeout).ConfigureAwait(true))
+        {
+            ProbeLog.Write("close", "Closed gracefully (OnDisconnected received)");
+        }
+        else
         {
             ProbeLog.Write("close", $"Timed out after {timeout.TotalSeconds:F0}s; forcing Disconnect()");
             _client.Disconnect();
         }
-        else
-        {
-            ProbeLog.Write("close", "Closed gracefully (OnDisconnected received)");
-        }
+    }
+
+    /// <summary>Waits for <paramref name="closed"/>; true if it completed within the timeout.</summary>
+    private static async Task<bool> WaitForCloseAsync(Task closed, TimeSpan timeout)
+    {
+        var finished = await Task.WhenAny(closed, Task.Delay(timeout)).ConfigureAwait(true);
+        return finished == closed;
     }
 
     private void Raise(string status) => Sink("StatusChanged", () =>
