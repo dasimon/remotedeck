@@ -1,7 +1,7 @@
 namespace RemoteDeck.Core.Rdp;
 
 /// <summary>One registered flavour of the Remote Desktop ActiveX control (mstscax.dll).</summary>
-/// <param name="Clsid">CLSID of the <c>MsRdpClientNNotSafeForScripting</c> coclass.</param>
+/// <param name="Clsid">CLSID of the nonscriptable coclass. Its number trails the registry label by one: label "13" is <c>MsRdpClient12NotSafeForScripting</c>.</param>
 /// <param name="Label">Registry label suffix ("Microsoft RDP Client Control - version {Label}").</param>
 public sealed record RdpControlVersion(Guid Clsid, string Label);
 
