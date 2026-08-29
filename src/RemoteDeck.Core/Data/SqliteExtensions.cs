@@ -24,6 +24,19 @@ internal static class SqliteExtensions
 
     public static DateTime? GetUtcOrNull(this SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetUtc(i);
 
-    /// <summary>ISO-8601 round-trip text; the only date format written to the database.</summary>
-    public static string ToDb(this DateTime utc) => utc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+    /// <summary>
+    /// ISO-8601 round-trip text; the only date format written to the database.
+    /// Every DateTime in the model is UTC by contract, so a <see cref="DateTimeKind.Unspecified"/> value is
+    /// stamped as UTC rather than converted — converting it would shift it by the machine's offset.
+    /// </summary>
+    public static string ToDb(this DateTime value)
+    {
+        var utc = value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc), // Unspecified: the model contract says it is already UTC
+        };
+        return utc.ToString("O", CultureInfo.InvariantCulture);
+    }
 }
