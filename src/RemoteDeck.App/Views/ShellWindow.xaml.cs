@@ -101,6 +101,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() =>
             ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted", $"via {mechanism} — command palette arrives in lot 5"));
 
+        // R5 probe: one reflection pass over the interop assembly, once per launch, to record
+        // whether any member at all could hand us the server certificate.
+        RdpSessionHost.LogCertificateSurface();
+
         ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready", "Enter a host and press Connect.");
     }
 
