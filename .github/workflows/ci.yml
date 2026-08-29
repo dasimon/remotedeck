@@ -5,10 +5,20 @@ on:
     branches: [main]
   pull_request:
 
+# Read-only by default: nothing in this workflow writes back to the repository.
+permissions:
+  contents: read
+
+# One run per ref; pushing again supersedes the run still in flight.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     # COMReference MSTSCLib needs mstscax.dll's type library registered: Windows only.
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

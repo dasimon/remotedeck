@@ -298,6 +298,13 @@ Ce n'est pas de la prudence gratuite — sur le poste de référence, la version
 enregistrée et retourne `CLASS_E_CLASSNOTAVAILABLE` ; le repli sur la version 12 est le
 chemin **normal**, pas un cas dégradé (D2).
 
+Le catalogue contient **trois** candidats — **13, 12, 11** — et s'arrête là. Le plancher
+supporté est Windows 10 20H2 (README), dont le `mstscax.dll` livre déjà la version 11 : un
+candidat plus ancien ne serait jamais sélectionné sur une machine supportée. La version 10
+(`{8B918B82-…}`) a d'ailleurs été **retirée au lot 0** parce qu'elle serait nuisible et non
+inerte : ce coclass n'implémente pas `IMsRdpClient10`, donc le sélectionner remplacerait le
+message « aucun contrôle trouvé » par un échec de transtypage au démarrage.
+
 `RdpAxHost : System.Windows.Forms.AxHost` héberge le contrôle. `RdpEventSink` s'abonne
 au dispinterface `IMsTscAxEvents` et retransmet les événements sur le thread UI.
 
@@ -560,9 +567,12 @@ conditions réelles, et le résultat est net :
 
 Les trois mécanismes prévus s'installent sans erreur et ne voient **jamais** les frappes :
 le contrôle les consomme avant la boucle de messages du thread. **Le mécanisme retenu
-pour les lots suivants est le hook bas niveau `WH_KEYBOARD_LL`** ; les trois autres
-restent dans `ShortcutInterceptor.Mechanism` comme options de diagnostic, pas comme
-replis crédibles. Corollaire de méthode : « le hook est armé » n'est **pas** une preuve,
+pour les lots suivants est le hook bas niveau `WH_KEYBOARD_LL`**, et c'est **le mécanisme
+par défaut** depuis le lot 0 : `ShortcutInterceptor` s'arme sur `LowLevelKeyboardHook` sans
+qu'aucune variable d'environnement soit nécessaire. Les trois autres restent dans
+`ShortcutInterceptor.Mechanism` comme options de diagnostic (`REMOTEDECK_PROBE_SHORTCUTS`),
+pas comme replis crédibles ; une valeur inconnue dans cette variable retombe sur le défaut
+au lieu de faire échouer le démarrage. Corollaire de méthode : « le hook est armé » n'est **pas** une preuve,
 seule la trace d'interception en est une.
 
 Deux réserves à traiter, écrites ici pour ne pas être redécouvertes plus tard :
@@ -571,9 +581,13 @@ Deux réserves à traiter, écrites ici pour ne pas être redécouvertes plus ta
    fenêtre de premier plan. Il avale donc `Ctrl+K` et `Ctrl+Tab` **partout dans
    l'application**, y compris dans les `TextBox`. **Lot 5** : ne pas intercepter quand
    le focus clavier est sur un contrôle de saisie WPF.
-2. **Aucune E/S synchrone dans le callback.** Windows applique `LowLevelHooksTimeout`
-   (300 ms par défaut) et **désinstalle silencieusement** un hook trop lent. Le callback
-   décide et poste ; tout travail réel part sur le `Dispatcher`.
+2. **Aucune E/S synchrone dans le callback — règle tenue.** Windows applique
+   `LowLevelHooksTimeout` (300 ms par défaut) et **désinstalle silencieusement** un hook
+   trop lent. `LowLevelHookCallback` ne fait plus que **décider** (quelques
+   `GetAsyncKeyState`, aucun accès fichier) puis **poster** : l'écriture du journal et la
+   notification `Triggered` partent sur le `Dispatcher` WPF, et le callback rend la main
+   immédiatement. Les trois mécanismes de boucle de messages, eux, notifient de façon
+   synchrone — sans hook à désinstaller, la contrainte ne s'y applique pas.
 
 **Repli pour les environnements verrouillés.** Une politique de sécurité (EDR, GPO) peut
 interdire l'installation d'un hook bas niveau. Dans ce cas, aucun raccourci applicatif
@@ -698,7 +712,7 @@ a effectivement invalidé trois hypothèses de conception (`COMReference`,
 
 ## 13. Risques
 
-Sondés au lot 0 le 2026-08-29 (Windows 11 10.0.26100, `mstscax.dll` 10.0.26100.8875,
+Sondés au lot 0 le 2026-08-29 (Windows 11 10.0.26200, `mstscax.dll` 10.0.26100.8875,
 contrôle version 12). Détail et traces : `docs/superpowers/probes/l0-probe-results.md`.
 
 | # | Risque | Détection | Repli prévu | **Résultat (lot 0)** |
@@ -720,8 +734,11 @@ réel (span), enregistrement de session, synchronisation entre postes, SSH/VNC,
 scripts avant/après connexion, import depuis mRemoteNG ou Royal TS, arborescence de
 groupes à plusieurs niveaux, tags multiples.
 
-**ARM64** — ajouté au lot 0. L'interop est généré par `TlbImp.exe` avec `/machine:X64`
-(§6.1) et la publication vise un single-file **x64** (§11). Une exécution ARM64 native
+**ARM64 (y compris en compilation depuis les sources : `PlatformTarget` x64)** — ajouté au
+lot 0. L'interop est généré par `TlbImp.exe` avec `/machine:X64` (§6.1) et la publication
+vise un single-file **x64** (§11) ; `RemoteDeck.App.csproj` fixe donc `PlatformTarget` à
+**x64** plutôt que d'hériter d'AnyCPU, faute de quoi une compilation depuis les sources sur
+un poste ARM64 produirait un hôte incapable de charger son propre interop. Une exécution ARM64 native
 n'est ni produite ni testée en v1 ; sur un poste ARM64, le binaire x64 passe par
 l'émulation. Rendre l'architecture paramétrable est faisable — c'est un commutateur de
 plus dans la cible MSBuild et un second job de release — mais cela demande une machine

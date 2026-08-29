@@ -64,7 +64,7 @@
 
 - [ ] **Step 1: Créer la solution et les projets**
 
-Depuis `C:\Users\david.simon\source\repos\remotedeck` :
+Depuis `<repo-root>` :
 
 ```powershell
 dotnet new sln -n RemoteDeck -f sln
@@ -1539,7 +1539,7 @@ Remplir chaque cellule « Observé » avec ce que `probe-l0.log` et les tests ma
 # Lot 0 — résultats des sondes de risque
 
 Date d'exécution : (date)
-Machine : Windows 11 10.0.26100, mstscax.dll 10.0.26100.8875
+Machine : Windows 11 10.0.26200, mstscax.dll 10.0.26100.8875
 Contrôle retenu : version (label) — CLSID (guid)
 
 | Risque | Question | Observé | Décision pour les lots suivants |

@@ -1,8 +1,8 @@
 # Lot 0 — résultats des sondes de risque
 
 **Date d'exécution** : 2026-08-29
-**Machine** : Windows 11 10.0.26100, `mstscax.dll` 10.0.26100.8875, SDK .NET 10.0.400
-**Hôte distant de test** : `FDC-VM-WIN07` (VM du domaine, compte AD `david.simon`)
+**Machine** : Windows 11 10.0.26200, `mstscax.dll` 10.0.26100.8875, SDK .NET 10.0.400
+**Hôte distant de test** : `TEST-VM` (VM du domaine, compte AD `testuser`)
 **Journal** : `%APPDATA%\RemoteDeck\logs\probe-l0.log` (écrit par `Services/ProbeLog`)
 
 **Contrôle retenu** : *version 12* — CLSID `1df7c823-b2d4-4b54-975a-f2ac5d7cf8b8`
@@ -146,8 +146,8 @@ TlbImp `/machine:X64` depuis `System32`).
   (`disconnectReasonByServer`) est bien une déconnexion normale, et que
   `ExtendedDisconnectReason` porte l'information utile.
 
-**Côté serveur, après fermeture puis reconnexion** : `query session` sur `FDC-VM-WIN07`
-montre **une seule** ligne `rdp-tcp#0  david.simon  ID 2  Actif`. **Aucune session
+**Côté serveur, après fermeture puis reconnexion** : `query session` sur `TEST-VM`
+montre **une seule** ligne `rdp-tcp#0  testuser  ID 2  Actif`. **Aucune session
 dupliquée ni zombie.** Le protocole du §6.5 est validé.
 
 ---
@@ -201,7 +201,7 @@ ce qui suffit pour ne jamais rester prisonnier de la session.
 
 > Une session RDP s'affiche et se ferme proprement ; R1 à R7 ont chacun une décision écrite.
 
-**Atteint.** Session ouverte sur `FDC-VM-WIN07`, affichée dans la `FluentWindow`, fermée par
+**Atteint.** Session ouverte sur `TEST-VM`, affichée dans la `FluentWindow`, fermée par
 le protocole `RequestClose` sans session résiduelle côté serveur. Les sept risques ont une
 décision ci-dessus, reportée dans la colonne « Résultat (lot 0) » du §13 de la spec.
 

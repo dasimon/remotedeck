@@ -9,7 +9,7 @@ public sealed class RdpControlCatalogTests
     {
         var labels = RdpControlCatalog.Candidates.Select(c => c.Label).ToArray();
 
-        Assert.Equal(new[] { "13", "12", "11", "10" }, labels);
+        Assert.Equal(new[] { "13", "12", "11" }, labels);
     }
 
     [Fact]
@@ -24,9 +24,9 @@ public sealed class RdpControlCatalogTests
     public void Select_returns_newest_registered_candidate()
     {
         var v12 = RdpControlCatalog.Candidates[1].Clsid;
-        var v10 = RdpControlCatalog.Candidates[3].Clsid;
+        var v11 = RdpControlCatalog.Candidates[2].Clsid;
 
-        var chosen = RdpControlCatalog.Select(g => g == v12 || g == v10);
+        var chosen = RdpControlCatalog.Select(g => g == v12 || g == v11);
 
         Assert.NotNull(chosen);
         Assert.Equal("12", chosen.Label);

@@ -8,6 +8,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Pinned, not inherited: the MSTSCLib interop below is generated with /machine:X64, so an
+         AnyCPU host would fail to load it whenever the process happens not to be x64 — which is
+         exactly what a source build on an ARM64 machine produces. x64 also matches the published
+         single-file target (spec §11). -->
+    <PlatformTarget>x64</PlatformTarget>
     <!-- WFO0003 tells WinForms apps to declare DPI awareness via ApplicationHighDpiMode /
          ApplicationConfiguration.Initialize(). That path only runs through the WinForms
          bootstrap, which this WPF-entry-point app never executes: UseWindowsForms is on

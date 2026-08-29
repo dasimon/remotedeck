@@ -74,38 +74,87 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         ProbeLog.Write("R4", $"FluentWindow + WindowsFormsHost created; control version {version.Label} ({version.Clsid:D})");
         ProbeLog.Write("R3", $"Window DPI scale X={dpi.DpiScaleX:F2} Y={dpi.DpiScaleY:F2}");
 
-        _session = new RdpSessionHost(_ax);
-        // BeginInvoke, not Invoke: these are raised from a COM event sink, and a synchronous
-        // marshal back to the UI thread would deadlock if the control ever raised off-thread.
-        _session.StatusChanged += status => Dispatcher.BeginInvoke(() =>
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, status, ""));
-        _session.Disconnected += info => Dispatcher.BeginInvoke(() =>
+        // The control is hosted; from here nothing may take the shell down. Creating the session
+        // façade casts the OCX to IMsRdpClient10, which an older-than-expected control would
+        // refuse, and arming the interceptor calls SetWindowsHookEx, which EDR or a GPO is
+        // allowed to deny (spec §7.3 names that an expected outcome). Both are reported in the
+        // InfoBar and leave a usable — if reduced — window behind.
+        try
         {
-            ConnectButton.IsEnabled = true;
-            DisconnectButton.IsEnabled = false;
-            var severity = info.Reason == 3 // disconnectReasonByServer: not an error (spec §6.4)
-                ? Wpf.Ui.Controls.InfoBarSeverity.Informational
-                : Wpf.Ui.Controls.InfoBarSeverity.Error;
-            ShowStatus(severity, $"Disconnected (reason {info.Reason}, extended {info.ExtendedReason})", info.Description);
-        });
+            _session = new RdpSessionHost(_ax);
+            // BeginInvoke, not Invoke: these are raised from a COM event sink, and a synchronous
+            // marshal back to the UI thread would deadlock if the control ever raised off-thread.
+            _session.StatusChanged += status => Dispatcher.BeginInvoke(() =>
+                ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, status, ""));
+            _session.Disconnected += info => Dispatcher.BeginInvoke(() =>
+            {
+                ConnectButton.IsEnabled = true;
+                DisconnectButton.IsEnabled = false;
+                // 0/1/2/3 = disconnectReasonNoInfo / LocalNotError / RemoteByUser / ByServer:
+                // none of them is an error (spec §6.4). GetErrorDescription() answers "an internal
+                // error has occurred" for those codes, so its text is deliberately not shown.
+                bool normal = info.Reason is 0 or 1 or 2 or 3;
+                var severity = normal
+                    ? Wpf.Ui.Controls.InfoBarSeverity.Informational
+                    : Wpf.Ui.Controls.InfoBarSeverity.Error;
+                ShowStatus(severity, $"Disconnected (reason {info.Reason}, extended {info.ExtendedReason})",
+                    normal ? "" : info.Description);
+            });
+        }
+        catch (Exception ex)
+        {
+            _session = null;
+            ProbeLog.Write("startup", $"Session host creation failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "RDP session unavailable",
+                $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}. See {ProbeLog.Path}.");
+        }
 
-        // R6 probe: which of the three §7.3 mechanisms actually sees Ctrl+K / Ctrl+Tab while the
+        // Connect needs a session; without one the window stays open for the log path and the
+        // control version report, but cannot start anything.
+        ConnectButton.IsEnabled = _session is not null;
+
+        // R6 probe: which of the four §7.3 mechanisms actually sees Ctrl+K / Ctrl+Tab while the
         // remote session holds keyboard focus. REMOTEDECK_PROBE_SHORTCUTS switches between them;
-        // WpfThreadFilter is the default because it is the native WPF message pump, the one
-        // WindowsFormsHost already routes through.
-        var mechanismName = Environment.GetEnvironmentVariable("REMOTEDECK_PROBE_SHORTCUTS") ?? "WpfThreadFilter";
-        var mechanism = Enum.Parse<ShortcutInterceptor.Mechanism>(mechanismName, ignoreCase: true);
-        _shortcuts = new ShortcutInterceptor(mechanism);
-        // BeginInvoke for the same reason as the session events: never block the thread that
-        // raised the notification, here the message pump itself.
-        _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() =>
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted", $"via {mechanism} — command palette arrives in lot 5"));
+        // LowLevelKeyboardHook is the default because it is the only one the lot-0 probe found to
+        // intercept anything — the three thread-scoped ones never see the keystrokes.
+        // TryParse, not Parse: a typo in the environment variable must not cost the shell.
+        var mechanismName = Environment.GetEnvironmentVariable("REMOTEDECK_PROBE_SHORTCUTS");
+        if (!Enum.TryParse<ShortcutInterceptor.Mechanism>(mechanismName, ignoreCase: true, out var mechanism))
+        {
+            if (!string.IsNullOrWhiteSpace(mechanismName))
+            {
+                ProbeLog.Write("startup", $"REMOTEDECK_PROBE_SHORTCUTS=\"{mechanismName}\" is not a known mechanism; falling back to LowLevelKeyboardHook");
+            }
+
+            mechanism = ShortcutInterceptor.Mechanism.LowLevelKeyboardHook;
+        }
+
+        try
+        {
+            _shortcuts = new ShortcutInterceptor(mechanism);
+            // BeginInvoke for the same reason as the session events: never block the thread that
+            // raised the notification, here the message pump itself.
+            _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() =>
+                ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted", $"via {mechanism} — command palette arrives in lot 5"));
+        }
+        catch (Exception ex)
+        {
+            // A locked-down machine can refuse the hook. Documented outcome (spec §7.3): carry on
+            // without application shortcuts; OnFocusReleased remains the way out of the session.
+            _shortcuts = null;
+            ProbeLog.Write("startup", $"ShortcutInterceptor({mechanism}) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "Keyboard shortcuts unavailable",
+                $"{ex.Message} Ctrl+Alt+Left / Ctrl+Alt+Right still release the focus. See {ProbeLog.Path}.");
+        }
 
         // R5 probe: one reflection pass over the interop assembly, once per launch, to record
         // whether any member at all could hand us the server certificate.
         RdpSessionHost.LogCertificateSurface();
 
-        ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready", "Enter a host and press Connect.");
+        if (_session is not null && _shortcuts is not null)
+        {
+            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready", "Enter a host and press Connect.");
+        }
     }
 
     private void ShowStatus(Wpf.Ui.Controls.InfoBarSeverity severity, string title, string message)
@@ -150,6 +199,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 // SecurePassword hands out a fresh copy on every read; dispose it.
                 using var secure = PasswordInput.SecurePassword;
                 nint bstr = Marshal.SecureStringToBSTR(secure);
+                // The finally only frees the BSTR; PasswordInput.Clear() is deliberately left
+                // outside it, so a failing PutPassword keeps what the user typed and lets them retry.
                 try
                 {
                     _session.PutPassword(bstr);

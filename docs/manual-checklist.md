@@ -15,7 +15,7 @@ Probe evidence for the lot 0 items lives in
 - [ ] App starts on a machine **without** the newest control (or with the CLSID list
       temporarily reordered): an older version is picked, no crash.
 - [ ] **Registered-but-not-creatable fallback.** On the reference machine (Windows 11
-      10.0.26100) the version-13 CLSID `3f859aa3-c2d4-4faa-b0e4-fd0c9c4e5e3a` has a
+      10.0.26200) the version-13 CLSID `3f859aa3-c2d4-4faa-b0e4-fd0c9c4e5e3a` has a
       complete `InprocServer32` key yet `CoGetClassObject` returns `0x80040111`
       (`CLASS_E_CLASSNOTAVAILABLE`). Confirm the log contains
       `[R4] CLSID … is registered but not creatable` **and** that the app then hosts
