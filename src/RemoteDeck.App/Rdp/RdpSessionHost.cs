@@ -20,9 +20,14 @@ internal sealed class RdpSessionHost : IDisposable
     private readonly IMsTscAxEvents_OnConfirmCloseEventHandler _onConfirmClose;
     private TaskCompletionSource? _closed;
     private bool _disposed;
+    // See LogDisplayFailureOnce: one [display] line per session, not one per failed resize.
+    private bool _displayFailureLogged;
 
     public event Action<string>? StatusChanged;
     public event Action<RdpDisconnectInfo>? Disconnected;
+
+    /// <summary>Raised from the OnConnected sink, for the state machine. StatusChanged is unaffected.</summary>
+    public event Action? Connected;
 
     public bool IsConnected => _client.Connected != 0;
 
@@ -36,7 +41,13 @@ internal sealed class RdpSessionHost : IDisposable
         // Every sink body goes through Sink(): an exception escaping into the control's callback
         // is undefined behaviour, so it is logged and swallowed instead.
         _events.OnConnecting += () => Sink("OnConnecting", () => Raise("Connecting…"));
-        _events.OnConnected += () => Sink("OnConnected", () => Raise("Connected"));
+        _events.OnConnected += () => Sink("OnConnected", () =>
+        {
+            // Each new session is entitled to its own single [display] failure line.
+            _displayFailureLogged = false;
+            Raise("Connected");
+            Connected?.Invoke();
+        });
         _events.OnLoginComplete += () => Sink("OnLoginComplete", () => Raise("Logged on"));
         _events.OnAuthenticationWarningDisplayed += () => Sink("OnAuthenticationWarningDisplayed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDisplayed fired (certificate warning shown by the control)"));
         _events.OnAuthenticationWarningDismissed += () => Sink("OnAuthenticationWarningDismissed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDismissed fired"));
@@ -63,8 +74,14 @@ internal sealed class RdpSessionHost : IDisposable
     /// they are the requested remote resolution unless the connection pins one.
     /// </summary>
     /// <remarks>
-    /// The resolution is decided once, here. Following the window as it is resized
-    /// (<c>UpdateSessionDisplaySettings</c>) is lot 4's job, deliberately not done here.
+    /// The initial resolution is decided here; following the window as it is resized afterwards
+    /// is <see cref="UpdateDisplay"/>'s job.
+    /// <para>
+    /// Safe to call again before a reconnect: it only assigns properties. The two that may be set
+    /// on a disconnected control only — <c>SecuredSettings2.KeyboardHookMode</c> and
+    /// <c>SecuredSettings2.AudioRedirectionMode</c> — are fine here, because that is exactly the
+    /// state the control is in between two connection attempts.
+    /// </para>
     /// </remarks>
     public void Configure(RdpConnectionSettings settings, int hostWidth, int hostHeight)
     {
@@ -129,6 +146,88 @@ internal sealed class RdpSessionHost : IDisposable
         {
             ProbeLog.Write("R7", $"set_Property(\"EnableRdsAadAuth\") failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Resizes the running session to <paramref name="width"/> × <paramref name="height"/> physical
+    /// pixels without reconnecting; <paramref name="scalePercent"/> is the host surface's DPI scale
+    /// (100, 125, 150…). Returns false — and never throws — when the control is not connected or the
+    /// call is refused, so the caller can fall back to <see cref="EnableSmartSizingFallback"/>.
+    /// </summary>
+    /// <remarks>
+    /// <c>IMsRdpClient9::UpdateSessionDisplaySettings(ulDesktopWidth, ulDesktopHeight,
+    /// ulPhysicalWidth, ulPhysicalHeight, ulOrientation, ulDesktopScaleFactor, ulDeviceScaleFactor)</c>
+    /// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/mt703457(v=vs.85)
+    /// The TlbImp-generated wrapper returns void, so a failing HRESULT arrives as a COMException —
+    /// hence the try/catch rather than a status check. <c>_client</c> is <c>IMsRdpClient10</c>, which
+    /// derives from <c>IMsRdpClient9</c>, so the call is direct and needs no cast.
+    /// Orientation is 0 (landscape); both scale factors carry the same host scale.
+    /// </remarks>
+    public bool UpdateDisplay(int width, int height, uint scalePercent)
+    {
+        try
+        {
+            if (!IsConnected)
+            {
+                LogDisplayFailureOnce($"UpdateDisplay({width}x{height} @ {scalePercent}%) skipped: not connected");
+                return false;
+            }
+
+            _client.UpdateSessionDisplaySettings(
+                (uint)width,
+                (uint)height,
+                ToMillimetres(width, scalePercent),
+                ToMillimetres(height, scalePercent),
+                0,
+                scalePercent,
+                scalePercent);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogDisplayFailureOnce($"UpdateDisplay({width}x{height} @ {scalePercent}%) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Physical size, in millimetres, of a surface <paramref name="pixels"/> physical pixels wide
+    /// at <paramref name="scalePercent"/> scaling: device-independent pixels = pixels ÷ (scale ÷ 100),
+    /// inches = dip ÷ 96, millimetres = inches × 25.4 — hence pixels × 25.4 ÷ (96 × scale ÷ 100).
+    /// A computed size is sent rather than 0 because the session derives its own DPI from it.
+    /// </summary>
+    private static uint ToMillimetres(int pixels, uint scalePercent)
+    {
+        // A caller with no scale information means "unscaled"; this also guards the division.
+        double scale = scalePercent == 0 ? 100.0 : scalePercent;
+        return (uint)Math.Round(Math.Max(0, pixels) * 25.4 / (96.0 * scale / 100.0));
+    }
+
+    /// <summary>
+    /// Fallback when <see cref="UpdateDisplay"/> is refused: the control scales the remote image to
+    /// the window instead of resizing the session. SmartSizing is settable while connected, so this
+    /// takes effect without a reconnect.
+    /// </summary>
+    public void EnableSmartSizingFallback()
+    {
+        _client.AdvancedSettings9.SmartSizing = true;
+        ProbeLog.Write("display", "SmartSizing fallback enabled");
+    }
+
+    /// <summary>
+    /// Writes one <c>[display]</c> line per session and stays silent afterwards: a resize that is
+    /// refused is refused again on every drag of the window, and one line each would drown the log.
+    /// Reset by the OnConnected sink, so the next session gets its own line.
+    /// </summary>
+    private void LogDisplayFailureOnce(string message)
+    {
+        if (_displayFailureLogged)
+        {
+            return;
+        }
+
+        _displayFailureLogged = true;
+        ProbeLog.Write("display", message);
     }
 
     /// <summary>
