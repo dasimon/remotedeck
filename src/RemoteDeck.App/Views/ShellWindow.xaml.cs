@@ -305,6 +305,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private void OnShortcut(string shortcut, ShortcutInterceptor.Mechanism mechanism)
     {
+        // The hook is system-wide and fires whenever *any* window of this process is foreground —
+        // the connection editor and the credentials window included. Acting there would toggle the
+        // pane behind a dialog and, worse, let Ctrl+W close a session the user cannot even see.
+        // Window.IsActive is false for the shell exactly while one of its owned windows is up.
+        if (!IsActive)
+        {
+            ProbeLog.Write("shortcuts", $"{shortcut} ignored: the shell window is not active");
+            return;
+        }
+
         switch (shortcut)
         {
             case "Ctrl+B":
@@ -522,7 +532,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         if (_sessions.Active is { } tab)
         {
             UpdateSessionInfoBar(tab);
+            return;
         }
+
+        // No tab left: the bar would otherwise keep saying "Connected to X" over the empty-area
+        // message. Hide() keeps the text in place, so nothing flashes on the next open.
+        StatusBar.Hide();
     }
 
     /// <summary>A session changed state or ticked its countdown. Only the visible one is reported;
@@ -599,8 +614,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 break;
 
             case SessionState.Interrupted:
+                // The countdown is empty for the tick between the drop and the first timer tick;
+                // the attempt then stands on its own rather than behind a leading space.
+                string progress = $"attempt {session.Attempt} of {ReconnectPolicy.MaxAttempts}";
                 StatusBar.Show(SeverityFor(disconnect), $"'{tab.Title}' interrupted — {disconnect?.Title ?? "connection lost"}",
-                    Join($"{tab.CountdownText} (attempt {session.Attempt} of {ReconnectPolicy.MaxAttempts})", WindowsWording(session)));
+                    Join(tab.CountdownText.Length == 0 ? progress : $"{tab.CountdownText} ({progress})",
+                        WindowsWording(session)));
                 break;
 
             case SessionState.Reconnecting:
@@ -874,6 +893,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         e.Cancel = true;
         // Set synchronously, before the first await: this is what the guard above tests.
         _closeInProgress = true;
+        // The cross, the middle-click and Ctrl+W all stop here: a close started now would race the
+        // close-all pass below over the same tab.
+        _sessions.CanCloseTabs = false;
         int count = _sessions.Tabs.Count;
         UpdateSessionBar();
         StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
