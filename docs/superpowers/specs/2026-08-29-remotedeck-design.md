@@ -102,27 +102,32 @@ remotedeck/
 │  └─ release.yml       publish single-file self-contained sur tag v*
 ├─ src/
 │  ├─ RemoteDeck.Core/                    net10.0, nullable enable
-│  │  ├─ Model/         Connection, Credential, DisplayMode, SessionState
+│  │  ├─ Model/         Connection, Credential, DisplayMode, SessionState,
+│  │  │                 ConnectionRules           (validation de l'éditeur, §7)
 │  │  ├─ Data/          SqliteDatabase, SchemaMigrator,
 │  │  │                 ConnectionRepository, CredentialRepository
 │  │  ├─ Security/      SecretBytes, ICredentialVault, DpapiCredentialVault,
 │  │  │                 CredentialRules
-│  │  ├─ Search/        ConnectionFilter          (correspondance floue + plages de surlignage)
+│  │  ├─ Search/        TextNormalizer            (repli casse + accents, un caractère pour un)
+│  │  │                 ConnectionFilter          (correspondance floue + plages de surlignage)
+│  │  ├─ Settings/      AppSettings, SettingsStore (settings.json, §7.2)
 │  │  ├─ Sessions/      ReconnectPolicy           (backoff, décision de reconnexion)
 │  │  ├─ Import/        RdpFileImporter           (.rdp + registre)
 │  │  └─ Diagnostics/   DisconnectReason          (code → clé de message)
 │  └─ RemoteDeck.App/                     net10.0-windows, UseWPF + UseWindowsForms
 │     ├─ Interop/       RdpAxHost, RdpEventSink, RdpControlCatalog,
 │     │                 ClsidRegistry (créabilité, §6.1), ComSecretPut (vtable, §5.2)
-│     ├─ Rdp/           RdpSession (machine à états), SessionManager
+│     ├─ Rdp/           RdpSession (machine à états), RdpConnectionSettings, SessionManager
+│     ├─ Controls/      InfoBarExtensions (InfoBar partagée), HighlightTextBlock
+│     │                 (surlignage des correspondances), PasswordPlaceholder (adorner, §7.1)
 │     ├─ ViewModels/    ShellViewModel, ConnectionListViewModel, SessionViewModel,
 │     │                 ConnectionEditorViewModel, CredentialEditorViewModel,
 │     │                 CommandPaletteViewModel
 │     ├─ Views/         ShellWindow, ConnectionPane, SessionView,
 │     │                 CommandPaletteWindow, ConnectionEditorWindow,
 │     │                 CredentialsWindow, CredentialEditorWindow
-│     ├─ Resources/     Strings.resx (en) · Strings.fr.resx · Theme/
-│     └─ Services/      FileLogger, DialogService, SettingsStore (settings.json, §7.2)
+│     ├─ Resources/     Strings.resx (en) · Strings.fr.resx · PasswordBox.xaml (§7.1) · Theme/
+│     └─ Services/      FileLogger, DialogService
 └─ tests/
    └─ RemoteDeck.Core.Tests/              xUnit
 ```
@@ -530,6 +535,15 @@ contrôle reste natif ; seule son apparence est reprise. Autre correctif d'ergon
 lot 3, relevé au lot 0 : les champs de saisie ne s'étirent pas quand la fenêtre
 s'élargit (`HorizontalAlignment` à corriger).
 
+**Fait au lot 3 (2026-08-30).** `Resources/PasswordBox.xaml` rejoue l'apparence de
+l'`ui:TextBox` sur le `PasswordBox` natif — bordure, rayon, `Padding` 10,6 et états
+survol/focus/désactivé, toutes les couleurs prises au thème WPF-UI par
+`DynamicResource`, donc le champ suit la bascule clair/sombre. Le texte indicatif est
+dessiné par `Controls/PasswordPlaceholder`, un `Adorner` posé **au-dessus** du contrôle :
+le contenu du `PasswordBox` n'est jamais touché et la vacuité est décidée sur
+`SecurePassword.Length`, jamais sur la propriété `Password` managée (D5 intact). Le
+contrôle reste natif. Les champs de saisie s'étirent désormais avec la fenêtre.
+
 ### 7.2 Disposition
 
 `Grid` à deux colonnes, `GridSplitter`, panneau gauche repliable (`Ctrl+B`,
@@ -547,7 +561,21 @@ sa surface pour ne pas renégocier l'affichage).
 **Réglages d'interface** : persistés dans `%APPDATA%\RemoteDeck\settings.json`
 (largeur du panneau, état replié, taille/position/état de la fenêtre). Les données
 métier restent dans `connections.db` ; les préférences d'affichage n'ont rien à
-faire dans un schéma migré.
+faire dans un schéma migré. Livré au lot 3 : `AppSettings` / `SettingsStore`
+(`RemoteDeck.Core/Settings/`), écriture atomique (fichier temporaire puis `Move`
+remplaçant), lecture qui ne lève jamais — un fichier absent, illisible ou corrompu
+retombe sur les valeurs par défaut. La géométrie n'est réappliquée que si le
+rectangle entier tient encore sur le bureau courant, sinon la fenêtre revient au
+centrage par défaut : une position enregistrée sur un écran depuis débranché ne doit
+pas ouvrir la fenêtre hors de portée.
+
+**En-têtes de groupe : non collants, décision assumée.** Le §7.1 annonçait des
+en-têtes collants. Dans une `ListView` WPF ordinaire, le seul moyen de les rendre
+réellement collants est `ScrollViewer.CanContentScroll="False"` — qui désactive la
+virtualisation entière. Entre les deux, **la virtualisation gagne** : elle tient sur quelques
+centaines de connexions, l'en-tête collant n'est qu'un confort. Le panneau du lot 3
+virtualise donc (`IsVirtualizing`, `IsVirtualizingWhenGrouping`, mode `Recycling`,
+`ScrollUnit=Pixel`) et ses en-têtes défilent avec le contenu.
 
 ### 7.3 Deux contraintes structurelles
 
@@ -700,7 +728,7 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 | **L0** | Squelette des 3 projets, interop `TlbImp`, `RdpAxHost`, `RdpEventSink`, `FluentWindow`, connexion codée en dur | **Fait** (2026-08-29). Session RDP affichée et fermée proprement. R1–R7 tranchés : voir §13 et `docs/superpowers/probes/l0-probe-results.md`. Seul R3 (DPI mixte) est *déplacé*, pas levé : machine de test mono-DPI, vérification portée sur `docs/manual-checklist.md`. |
 | **L1** | SQLite, modèle, migrations, repositories, tests | **Fait** (2026-08-29). `SqliteDatabase` (base créée au premier lancement, `Database ready` au log), migrations V1 par `SchemaMigrator` avec refus d'un schéma plus récent (`SchemaTooNewException`), `ConnectionRepository` / `CredentialRepository`, 33 tests verts à la clôture du lot. |
 | **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | **Fait** (2026-08-29). `Seal`/`UseSecret` sur DPAPI CurrentUser + entropie de 32 octets par identifiant, `CredentialsWindow` / `CredentialEditorWindow`, secret jamais matérialisé en `string` (test de réflexion sur `ICredentialVault`), fourniture du mot de passe au contrôle depuis le coffre. Modèle de menace du §5.4 publié dans `SECURITY.md`. La sonde humaine de fin de lot (connexion réelle avec un identifiant du coffre) reste à jouer par David. |
-| **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | Navigation clavier intégrale du panneau |
+| **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | **Fait** (2026-08-30). Coquille à deux colonnes (`Grid` + `GridSplitter`, panneau repliable) autour d'une zone de session unique. Panneau : liste virtualisée de 32 px, groupée (`★ Favorites` en tête, puis les groupes, puis `Ungrouped`), recherche floue insensible à la casse et aux accents avec surlignage des caractères touchés (`TextNormalizer` + `ConnectionFilter` dans `Core`, debounce 120 ms, filtrage de l'instantané mémoire — aucune requête SQL par frappe), étoile de favori, état vide rappelant les raccourcis, repli propre en « base indisponible ». Éditeur de connexion modal (`ConnectionEditorWindow`, validation par `ConnectionRules`) ; connexion depuis la liste avec l'identifiant du coffre, ou invite CredSSP du contrôle quand il n'y en a pas. Réglages d'interface dans `%APPDATA%\RemoteDeck\settings.json` (§7.2). `PasswordBox` natif restylé Fluent + texte indicatif par `Adorner`, champs qui s'étirent (§7.1) — les deux réserves d'ergonomie de R4 sont levées. Raccourcis : `Ctrl+B`, `Ctrl+F`, `F2`, `Entrée`, `Ctrl+N`, `Suppr` (suppression en deux temps dans l'`InfoBar`, désarmée après 5 s — jamais de `MessageBox`). 65 tests verts à la clôture. **Reporté** : résolution dynamique (D6) au lot 4, palette `Ctrl+K` au lot 5 ; en-têtes de groupe **non collants**, la virtualisation est conservée (§7.2). |
 | **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | Coupure réseau simulée → reconnexion puis abandon propre |
 | **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | Critères de succès du §1 tous vérifiés |
 

@@ -68,8 +68,88 @@ Probe evidence for the lot 0 items lives in
       is opaque (expected).
 - [ ] The password field is a **native WPF `PasswordBox`** (required for
       `SecurePassword`); it has no placeholder text and inputs do not stretch with the
-      window. Known lot 0 ergonomics, scheduled for restyling in lot 3 — confirm
-      nothing worse appeared.
+      window. Known lot 0 ergonomics, **fixed in lot 3** — see the lot 3 section below,
+      which supersedes this item.
+
+## Lot 3 — connection pane
+
+### Editor
+
+- [ ] `Ctrl+N` opens the connection editor. Saving with an empty name, an empty host, a
+      host containing a space, or a port outside 1–65535 is **refused**, and every reason
+      is listed at once in the editor's InfoBar — no `MessageBox`, no partial save.
+- [ ] With the display mode set to *Dynamic*, the fixed width/height fields are disabled
+      and their content never blocks saving. Switching to *Fixed* re-enables them and a
+      size below 640×480 (or above 8192) is refused.
+- [ ] A saved connection reappears in the pane immediately, in the right group, with the
+      star set if *Favorite* was ticked.
+
+### Connecting from the list
+
+- [ ] Select a connection **with** a credential attached and press `Enter`: the session
+      opens without any prompt, and the log shows `Password supplied from credential …`.
+- [ ] Select a connection **with no credential** (or one whose credential was deleted):
+      RemoteDeck puts **no** password and the control raises its own **CredSSP prompt**.
+      Typing the password there must connect. RemoteDeck itself has no manual password
+      entry any more.
+- [ ] Connect a second connection while one is live: the InfoBar announces the current
+      session is closing, and the new one opens once it is closed. Only one session at a
+      time in lot 3.
+
+### Search
+
+- [ ] Type an unaccented query for an accented name (`repl` for `Répliqué`, `SEDE` for
+      `Sédé…`): the row still matches, in either case. Same for an accented query on an
+      unaccented name.
+- [ ] The matching characters are **highlighted in the accent colour**, and the highlight
+      lands on the right letters of the *original* text, accents included.
+- [ ] The query matches on name, host **and** group name.
+- [ ] **Favorites come first**, even when a non-favorite scores higher on the query.
+- [ ] Typing fast filters once at the pause, not once per keystroke (120 ms debounce);
+      the list never flickers and the selection behaves.
+- [ ] A query matching nothing shows the empty state, which names the shortcuts.
+
+### Keyboard
+
+- [ ] `Ctrl+F` focuses the search box and selects its content, **and un-collapses the
+      pane first** if it was collapsed.
+- [ ] `F2` opens the editor on the selected connection — from the list and from the
+      search box.
+- [ ] `Delete` on a selected row **arms** the deletion (warning InfoBar, "Press Delete
+      again to confirm"); a second `Delete` on the same row deletes it.
+- [ ] Arming a row and then pressing `Delete` on a **different** row only re-arms the new
+      one — nothing is deleted.
+- [ ] Wait **5 s** after arming: the InfoBar closes on its own and the next `Delete` arms
+      again instead of deleting.
+- [ ] `Delete` inside the **search box** deletes characters; it never arms a deletion.
+- [ ] `Ctrl+B` collapses and restores the pane **while the RDP control has focus**
+      (low-level hook path, §7.3) and with the focus in the WPF chrome (`InputBinding`
+      path). It must never fire twice for one press.
+
+### Layout persistence
+
+- [ ] Drag the splitter to a new width, collapse/expand the pane, move and resize the
+      window, then close and restart: the pane width, the collapsed state and the window
+      bounds come back. `%APPDATA%\RemoteDeck\settings.json` holds them.
+- [ ] Save the geometry on a second monitor, unplug it, restart: the window opens
+      **centred on the remaining desktop**, not off-screen.
+- [ ] Corrupt `settings.json` by hand (truncate it mid-object), restart: the app starts
+      on the default layout, with no error dialog.
+
+### Degraded mode
+
+- [ ] Make `%APPDATA%\RemoteDeck\connections.db` unreadable (lock it, or point the app at
+      a directory it cannot write): the app still starts, the pane is replaced by its
+      "unavailable" message, the InfoBar says the database is unavailable, and `Ctrl+N`,
+      `F2`, `Delete` and *Manage credentials* answer with a warning instead of throwing.
+
+### Theme
+
+- [ ] Switch Windows between **light and dark** with the credential editor open: the
+      restyled `PasswordBox` follows — border, background, focus underline and the
+      placeholder text all change with the theme and stay legible in both.
+- [ ] The placeholder disappears as soon as one character is typed and comes back when
+      the field is cleared; it aligns with the text of the `ui:TextBox` above it.
 
 ## Build prerequisites (any lot)
 
