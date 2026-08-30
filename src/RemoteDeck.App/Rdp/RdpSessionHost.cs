@@ -20,14 +20,25 @@ internal sealed class RdpSessionHost : IDisposable
     private readonly IMsTscAxEvents_OnConfirmCloseEventHandler _onConfirmClose;
     private TaskCompletionSource? _closed;
     private bool _disposed;
-    // See LogDisplayFailureOnce: one [display] line per session, not one per failed resize.
+    // See LogDisplayFailure: outside the logged-on window, one [display] line per session rather
+    // than one per failed resize.
     private bool _displayFailureLogged;
+    // True between OnLoginComplete and the next OnConnected/OnDisconnected.
+    private bool _loggedOn;
 
     public event Action<string>? StatusChanged;
     public event Action<RdpDisconnectInfo>? Disconnected;
 
     /// <summary>Raised from the OnConnected sink, for the state machine. StatusChanged is unaffected.</summary>
     public event Action? Connected;
+
+    /// <summary>
+    /// Raised from the OnLoginComplete sink: the remote desktop exists from here on. It is the
+    /// earliest moment at which <see cref="UpdateDisplay"/> is accepted — asking at OnConnected
+    /// answers <c>E_UNEXPECTED</c> (0x8000FFFF), which is what made every Dynamic session fall back
+    /// to SmartSizing during the lot-4 probe.
+    /// </summary>
+    public event Action? LoggedOn;
 
     public bool IsConnected => _client.Connected != 0;
 
@@ -43,12 +54,22 @@ internal sealed class RdpSessionHost : IDisposable
         _events.OnConnecting += () => Sink("OnConnecting", () => Raise("Connecting…"));
         _events.OnConnected += () => Sink("OnConnected", () =>
         {
-            // Each new session is entitled to its own single [display] failure line.
+            // Each new session is entitled to its own single [display] failure line, and the
+            // desktop it will get is not logged on yet.
             _displayFailureLogged = false;
+            _loggedOn = false;
             Raise("Connected");
             Connected?.Invoke();
         });
-        _events.OnLoginComplete += () => Sink("OnLoginComplete", () => Raise("Logged on"));
+        _events.OnLoginComplete += () => Sink("OnLoginComplete", () =>
+        {
+            // The remote desktop is up: resolution changes start being accepted here, and the
+            // [display] budget is re-armed so the resizes that follow are all visible.
+            _loggedOn = true;
+            _displayFailureLogged = false;
+            Raise("Logged on");
+            LoggedOn?.Invoke();
+        });
         _events.OnAuthenticationWarningDisplayed += () => Sink("OnAuthenticationWarningDisplayed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDisplayed fired (certificate warning shown by the control)"));
         _events.OnAuthenticationWarningDismissed += () => Sink("OnAuthenticationWarningDismissed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDismissed fired"));
         _events.OnLogonError += error => Sink("OnLogonError", () => ProbeLog.Write("session", $"OnLogonError lError={error}"));
@@ -169,7 +190,7 @@ internal sealed class RdpSessionHost : IDisposable
         {
             if (!IsConnected)
             {
-                LogDisplayFailureOnce($"UpdateDisplay({width}x{height} @ {scalePercent}%) skipped: not connected");
+                LogDisplayFailure($"UpdateDisplay({width}x{height} @ {scalePercent}%) skipped: not connected");
                 return false;
             }
 
@@ -185,7 +206,7 @@ internal sealed class RdpSessionHost : IDisposable
         }
         catch (Exception ex)
         {
-            LogDisplayFailureOnce($"UpdateDisplay({width}x{height} @ {scalePercent}%) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            LogDisplayFailure($"UpdateDisplay({width}x{height} @ {scalePercent}%) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
             return false;
         }
     }
@@ -215,13 +236,15 @@ internal sealed class RdpSessionHost : IDisposable
     }
 
     /// <summary>
-    /// Writes one <c>[display]</c> line per session and stays silent afterwards: a resize that is
-    /// refused is refused again on every drag of the window, and one line each would drown the log.
-    /// Reset by the OnConnected sink, so the next session gets its own line.
+    /// While the session is logged on, every failure is written: the caller only ever makes two
+    /// attempts before switching to SmartSizing and the second one is the interesting one.
+    /// Outside that window — not connected, desktop not up — a refusal repeats on every drag of the
+    /// window, so one line per session is enough. The budget is re-armed by OnConnected and by
+    /// OnLoginComplete.
     /// </summary>
-    private void LogDisplayFailureOnce(string message)
+    private void LogDisplayFailure(string message)
     {
-        if (_displayFailureLogged)
+        if (!_loggedOn && _displayFailureLogged)
         {
             return;
         }
@@ -294,6 +317,8 @@ internal sealed class RdpSessionHost : IDisposable
 
     private void OnDisconnected(int reason) => Sink("OnDisconnected", () =>
     {
+        _loggedOn = false;
+
         // Both reads are inside the try: a COM throw here must not skip the log line nor the
         // Disconnected event, or the UI would stay stuck with Connect disabled forever.
         int extended = 0;
