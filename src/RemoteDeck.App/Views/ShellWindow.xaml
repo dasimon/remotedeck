@@ -2,6 +2,7 @@
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
                  Title="RemoteDeck"
                  Width="1280" Height="800"
                  MinWidth="800" MinHeight="500"
@@ -29,7 +30,8 @@
             <ui:TextBox x:Name="DomainInput" Width="120" Margin="0,0,8,0" PlaceholderText="domain (optional)" />
             <!-- Native WPF PasswordBox on purpose: Wpf.Ui.Controls.PasswordBox exposes only a managed
                  string Password and has no SecurePassword, which spec D5 forbids for the secret. -->
-            <PasswordBox x:Name="PasswordInput" Width="160" Margin="0,0,8,0" ToolTip="password" />
+            <PasswordBox x:Name="PasswordInput" Width="160" Margin="0,0,8,0" ToolTip="password"
+                         controls:PasswordPlaceholder.Text="password" />
             <CheckBox x:Name="WebAccountInput" Margin="0,0,8,0" VerticalAlignment="Center" Content="Use web account (experimental)" />
             <ui:Button x:Name="ConnectButton" Margin="0,0,8,0" Appearance="Primary" Content="Connect" IsDefault="True" Click="OnConnectClick" />
             <ui:Button x:Name="DisconnectButton" Content="Disconnect" IsEnabled="False" Click="OnDisconnectClick" />
