@@ -127,6 +127,18 @@ internal sealed class RdpSessionHost : IDisposable
         // Kept unconditionally true: with no credential attached this is what makes the control put
         // up its own CredSSP prompt instead of failing, and RemoteDeck has no manual entry any more.
         advanced.EnableCredSspSupport = true;
+        // Off, deliberately. The control ships with a reconnection loop of its own, on by default:
+        // when a session drops it puts up its "Reconnecting... 1 of 5" dialog and only reports
+        // OnDisconnected once its own five attempts are spent. Left enabled, the two mechanisms
+        // stack (5 + 5) and RemoteDeck's UI lies for the whole of the control's phase — the tab
+        // still reads "Connected" while the session is in fact down. ReconnectPolicy (spec §6.3) is
+        // therefore the single reconnection mechanism: its six retryable codes, its 2/5/10/30/60 s
+        // backoff, its visible and cancellable countdown, and — something the control's own loop
+        // cannot do — the secret re-lent by the vault for every attempt (§5.2).
+        // IMsRdpClientAdvancedSettings2::EnableAutoReconnect; settable on a disconnected control
+        // only, which is exactly the state Configure runs in.
+        // https://learn.microsoft.com/windows/win32/termserv/imsrdpclientadvancedsettings2-enableautoreconnect
+        advanced.EnableAutoReconnect = false;
         advanced.RedirectClipboard = settings.RedirectClipboard;   // IMsRdpClientAdvancedSettings5
         advanced.RedirectDrives = settings.RedirectDrives;         // IMsRdpClientAdvancedSettings
         advanced.RedirectPrinters = settings.RedirectPrinters;     // IMsRdpClientAdvancedSettings
