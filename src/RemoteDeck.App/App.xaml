@@ -8,6 +8,9 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- After ControlsDictionary: WPF-UI ships no PasswordBox style, and merging last
+                     keeps ours the winning implicit style whatever the theme brings. -->
+                <ResourceDictionary Source="pack://application:,,,/RemoteDeck;component/Resources/PasswordBox.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

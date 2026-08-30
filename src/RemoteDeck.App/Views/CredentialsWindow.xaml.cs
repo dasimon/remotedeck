@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using RemoteDeck.App.Controls;
 using RemoteDeck.App.Services;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Model;
@@ -66,7 +67,7 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         {
             _pendingDelete = c;
             DeleteButton.Content = "Confirm delete";
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Delete credential?",
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Delete credential?",
                 $"'{c.Label}' will be removed; connections using it will need a new credential. Click again to confirm.");
             return;
         }
@@ -74,20 +75,12 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         {
             _repository.Delete(c.Id);
             ProbeLog.Write("vault", $"Credential '{c.Label}' deleted");
-            StatusBar.IsOpen = false;
+            StatusBar.Hide();
             Reload();
         }
         catch (Exception ex)
         {
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "Delete failed", ex.Message);
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Delete failed", ex.Message);
         }
-    }
-
-    private void ShowStatus(Wpf.Ui.Controls.InfoBarSeverity severity, string title, string message)
-    {
-        StatusBar.Severity = severity;
-        StatusBar.Title = title;
-        StatusBar.Message = message;
-        StatusBar.IsOpen = true;
     }
 }

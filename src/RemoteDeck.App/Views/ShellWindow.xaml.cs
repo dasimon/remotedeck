@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
+using RemoteDeck.App.Controls;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Rdp;
 using RemoteDeck.App.Services;
@@ -63,7 +64,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         var version = RdpControlCatalog.Select(ClsidRegistry.IsUsable);
         if (version is null)
         {
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "No Remote Desktop control found",
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "No Remote Desktop control found",
                 "None of the known mstscax.dll CLSIDs is registered on this machine.");
             ConnectButton.IsEnabled = false;
             return;
@@ -81,7 +82,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // registers control versions its class factory then refuses
             // (CLASS_E_CLASSNOTAVAILABLE, 0x80040111). Surface it, never crash the shell.
             ProbeLog.Write("R4", $"control version {version.Label} ({version.Clsid:D}) is registered but not creatable: {ex.GetType().Name} 0x{ex.HResult:X8}");
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, $"RDP control v{version.Label} could not be created",
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, $"RDP control v{version.Label} could not be created",
                 $"The CLSID is registered but its class factory refused it (0x{ex.HResult:X8}). See {ProbeLog.Path}.");
             ConnectButton.IsEnabled = false;
             return;
@@ -104,7 +105,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // BeginInvoke, not Invoke: these are raised from a COM event sink, and a synchronous
             // marshal back to the UI thread would deadlock if the control ever raised off-thread.
             _session.StatusChanged += status => Dispatcher.BeginInvoke(() =>
-                ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, status, ""));
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, status, ""));
             _session.Disconnected += info => Dispatcher.BeginInvoke(() =>
             {
                 ConnectButton.IsEnabled = true;
@@ -116,7 +117,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 var severity = normal
                     ? Wpf.Ui.Controls.InfoBarSeverity.Informational
                     : Wpf.Ui.Controls.InfoBarSeverity.Error;
-                ShowStatus(severity, $"Disconnected (reason {info.Reason}, extended {info.ExtendedReason})",
+                StatusBar.Show(severity, $"Disconnected (reason {info.Reason}, extended {info.ExtendedReason})",
                     normal ? "" : info.Description);
             });
         }
@@ -124,7 +125,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             _session = null;
             ProbeLog.Write("startup", $"Session host creation failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "RDP session unavailable",
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "RDP session unavailable",
                 $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}. See {ProbeLog.Path}.");
         }
 
@@ -154,7 +155,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // BeginInvoke for the same reason as the session events: never block the thread that
             // raised the notification, here the message pump itself.
             _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() =>
-                ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted", $"via {mechanism} — command palette arrives in lot 5"));
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted", $"via {mechanism} — command palette arrives in lot 5"));
         }
         catch (Exception ex)
         {
@@ -162,7 +163,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // without application shortcuts; OnFocusReleased remains the way out of the session.
             _shortcuts = null;
             ProbeLog.Write("startup", $"ShortcutInterceptor({mechanism}) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "Keyboard shortcuts unavailable",
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Keyboard shortcuts unavailable",
                 $"{ex.Message} Ctrl+Alt+Left / Ctrl+Alt+Right still release the focus. See {ProbeLog.Path}.");
         }
 
@@ -172,7 +173,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (_session is not null && _shortcuts is not null)
         {
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready", "Enter a host and press Connect.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready", "Enter a host and press Connect.");
         }
     }
 
@@ -215,20 +216,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             // CredentialsWindow resolves the repository with GetRequiredService: opening it without
             // a database would throw instead of showing anything.
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable", "Credentials cannot be managed until the database opens.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable", "Credentials cannot be managed until the database opens.");
             return;
         }
 
         new CredentialsWindow { Owner = this }.ShowDialog();
         ReloadCredentials();
-    }
-
-    private void ShowStatus(Wpf.Ui.Controls.InfoBarSeverity severity, string title, string message)
-    {
-        StatusBar.Severity = severity;
-        StatusBar.Title = title;
-        StatusBar.Message = message;
-        StatusBar.IsOpen = true;
     }
 
     private void OnConnectClick(object sender, RoutedEventArgs e)
@@ -251,7 +244,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (settings.Host.Length == 0)
         {
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Host required", "Enter a host name or address.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Host required", "Enter a host name or address.");
             return;
         }
 
@@ -303,7 +296,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             ConnectButton.IsEnabled = true;
             DisconnectButton.IsEnabled = false;
             ProbeLog.Write("session", $"Connect failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Error, "Connect failed", $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Connect failed", $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}");
         }
     }
 
@@ -361,7 +354,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _closeInProgress = true;
         ConnectButton.IsEnabled = false;
         DisconnectButton.IsEnabled = false;
-        ShowStatus(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Closing session…", "");
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Closing session…", "");
 
         try
         {
