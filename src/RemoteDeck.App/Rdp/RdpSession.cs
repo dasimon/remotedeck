@@ -66,6 +66,22 @@ internal sealed class RdpSession : IDisposable
     private const int MinimumRemoteWidth = 640;
     private const int MinimumRemoteHeight = 480;
 
+    /// <summary>
+    /// Ceiling on either side of the remote desktop. Not a limit quoted from the control's
+    /// documentation — an enforced bound, so an absurd layout or a bogus DPI scale cannot ask for a
+    /// desktop no server would grant and cost the session its dynamic resolution.
+    /// </summary>
+    private const int MaximumRemoteSide = 8192;
+
+    /// <summary>
+    /// Resizes tried before giving up on dynamic resolution. One refusal is not a verdict: the
+    /// remote desktop can still be settling just after logon, so the first failure buys a retry.
+    /// </summary>
+    private const int MaxDisplayAttempts = 2;
+
+    /// <summary>Wait between a refused resize and the single retry that decides the fallback.</summary>
+    private static readonly TimeSpan DisplayRetryDelay = TimeSpan.FromSeconds(2);
+
     private readonly RdpControlVersion _version;
     private readonly Func<RdpSessionHost, Task> _supplyAndConnect;
     private readonly Dispatcher _dispatcher;
@@ -77,9 +93,23 @@ internal sealed class RdpSession : IDisposable
     private DateTime _retryDueUtc;
     private int _lastExtendedReason;
 
-    /// <summary>Set once <see cref="RdpSessionHost.UpdateDisplay"/> has been refused: from then on
-    /// the control scales the image instead, and no further resize is attempted for this session.</summary>
+    /// <summary>Set once <see cref="RdpSessionHost.UpdateDisplay"/> has been refused twice: from then
+    /// on the control scales the image instead, and no further resize is attempted for this session.</summary>
     private bool _smartSizingFallback;
+
+    /// <summary>
+    /// True between <c>OnLoginComplete</c> and the next disconnect or attempt — the only window in
+    /// which the control accepts a resolution change. Asking earlier answers <c>E_UNEXPECTED</c>.
+    /// </summary>
+    private bool _loggedOn;
+
+    /// <summary>Consecutive refused resizes; at <see cref="MaxDisplayAttempts"/> the session gives up.</summary>
+    private int _displayFailures;
+
+    /// <summary>Remote size the running attempt was configured with, so the logon can tell whether
+    /// the window has moved since — and only then spend a resize on it.</summary>
+    private int _requestedWidth;
+    private int _requestedHeight;
 
     private bool _disposed;
 
@@ -292,6 +322,9 @@ internal sealed class RdpSession : IDisposable
         }
 
         lines.Add($"Windows description : {LastWindowsDescription ?? "(none)"}");
+        lines.Add($"Logged on           : {(_loggedOn ? "yes" : "no")}");
+        lines.Add($"Requested desktop   : {_requestedWidth}x{_requestedHeight}");
+        lines.Add($"Display failures    : {_displayFailures} of {MaxDisplayAttempts}");
         lines.Add($"SmartSizing fallback: {(_smartSizingFallback ? "active" : "not needed")}");
         lines.Add($"Generated (UTC)     : {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}Z");
 
@@ -306,6 +339,14 @@ internal sealed class RdpSession : IDisposable
     private async Task RunAttemptAsync(SessionState phase)
     {
         SetState(phase);
+
+        // A new attempt means a new remote desktop: nothing known about the previous one carries
+        // over, and the geometry the shell is about to configure is recorded so the logon can tell
+        // whether the window moved in between.
+        _loggedOn = false;
+        _displayFailures = 0;
+        _resizeTimer.Stop();
+        (_requestedWidth, _requestedHeight) = TargetSize();
 
         RdpSessionHost host;
         try
@@ -342,6 +383,7 @@ internal sealed class RdpSession : IDisposable
         _ax.CreateControl();
         var host = new RdpSessionHost(_ax);
         host.Connected += OnHostConnected;
+        host.LoggedOn += OnHostLoggedOn;
         host.Disconnected += OnHostDisconnected;
         _sessionHost = host;
         ProbeLog.Write("session", $"'{Connection.Name}': control v{_version.Label} created");
@@ -371,8 +413,34 @@ internal sealed class RdpSession : IDisposable
         Attempt = 0;
         SetState(SessionState.Connected);
 
-        // The window may well have been resized while the session was down; the size the control
-        // was configured with is the one it had when the attempt started.
+        // Deliberately no resize here. At OnConnected the remote desktop does not exist yet and
+        // UpdateSessionDisplaySettings answers E_UNEXPECTED (0x8000FFFF) — observed on every single
+        // connection during the lot-4 human probe, which is what silently degraded every Dynamic
+        // session to a stretched image. OnLoginComplete is the earliest usable moment.
+    });
+
+    /// <summary>
+    /// The remote desktop is up. This — not <c>OnConnected</c> — is where the first resize is
+    /// attempted, and only if the window has actually moved since the attempt was configured: in
+    /// the common case the session already asked for the right size at connection time.
+    /// </summary>
+    private void OnHostLoggedOn() => Post(() =>
+    {
+        _loggedOn = true;
+        _displayFailures = 0;
+
+        if (_smartSizingFallback || Connection.DisplayMode != DisplayMode.Dynamic)
+        {
+            return;
+        }
+
+        var (width, height) = TargetSize();
+        if (width == _requestedWidth && height == _requestedHeight)
+        {
+            return;
+        }
+
+        ProbeLog.Write("display", $"'{Connection.Name}': window is {width}x{height}, session was asked for {_requestedWidth}x{_requestedHeight}; updating");
         ApplyDisplaySize();
     });
 
@@ -384,6 +452,7 @@ internal sealed class RdpSession : IDisposable
         LastDisconnect = description;
         _lastExtendedReason = info.ExtendedReason;
         LastWindowsDescription = info.Description;
+        _loggedOn = false;
         _resizeTimer.Stop();
 
         // Closed as well as Closing: this handler is posted, so CloseAsync's await may already have
@@ -450,12 +519,14 @@ internal sealed class RdpSession : IDisposable
     /// </summary>
     private void OnHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (_smartSizingFallback || Connection.DisplayMode != DisplayMode.Dynamic)
+        if (_smartSizingFallback || !_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic)
         {
             return;
         }
 
+        // The interval is reassigned because the same timer also serves the post-failure retry.
         _resizeTimer.Stop();
+        _resizeTimer.Interval = ResizeDebounce;
         _resizeTimer.Start();
     }
 
@@ -466,9 +537,10 @@ internal sealed class RdpSession : IDisposable
     }
 
     /// <summary>
-    /// Asks the live session to match the hosting surface. The first refusal switches the session to
-    /// SmartSizing for good: a control that refuses one resize refuses all of them, and retrying on
-    /// every drag would only produce noise.
+    /// Asks the live session to match the hosting surface. A refusal buys one retry
+    /// <see cref="DisplayRetryDelay"/> later on the same timer; only a second refusal switches the
+    /// session to SmartSizing for good, since a control that has settled and still refuses will
+    /// refuse every drag of the window afterwards.
     /// </summary>
     private void ApplyDisplaySize()
     {
@@ -477,18 +549,29 @@ internal sealed class RdpSession : IDisposable
             return;
         }
 
-        if (Connection.DisplayMode != DisplayMode.Dynamic || State != SessionState.Connected)
+        if (!_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || State != SessionState.Connected)
         {
             return;
         }
 
-        var dpi = VisualTreeHelper.GetDpi(Host);
-        int width = Math.Max(MinimumRemoteWidth, (int)Math.Round(Host.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(MinimumRemoteHeight, (int)Math.Round(Host.ActualHeight * dpi.DpiScaleY));
-        uint scalePercent = (uint)Math.Max(100, Math.Round(dpi.DpiScaleX * 100));
+        var (width, height) = TargetSize();
+        uint scalePercent = (uint)Math.Max(100, Math.Round(VisualTreeHelper.GetDpi(Host).DpiScaleX * 100));
 
         if (_sessionHost.UpdateDisplay(width, height, scalePercent))
         {
+            _displayFailures = 0;
+            _requestedWidth = width;
+            _requestedHeight = height;
+            return;
+        }
+
+        _displayFailures++;
+        if (_displayFailures < MaxDisplayAttempts)
+        {
+            ProbeLog.Write("display", $"'{Connection.Name}': display update retry in {DisplayRetryDelay.TotalSeconds:F0} s");
+            _resizeTimer.Stop();
+            _resizeTimer.Interval = DisplayRetryDelay;
+            _resizeTimer.Start();
             return;
         }
 
@@ -496,7 +579,7 @@ internal sealed class RdpSession : IDisposable
         try
         {
             _sessionHost.EnableSmartSizingFallback();
-            ProbeLog.Write("display", $"'{Connection.Name}': fallback to SmartSizing");
+            ProbeLog.Write("display", $"'{Connection.Name}': fallback to SmartSizing after {_displayFailures} failures");
         }
         catch (Exception ex)
         {
@@ -504,6 +587,35 @@ internal sealed class RdpSession : IDisposable
             // simply keeps the resolution it negotiated at connection time.
             ProbeLog.Write("display", $"'{Connection.Name}': SmartSizing fallback failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Remote size this session should ask for: the hosting surface in physical pixels, floored at
+    /// <see cref="MinimumRemoteWidth"/>×<see cref="MinimumRemoteHeight"/> (as <c>ShellWindow</c>
+    /// already does for the initial size, so a pane dragged almost shut does not become a 120×40
+    /// desktop), capped at <see cref="MaximumRemoteSide"/>, and rounded <em>down</em> to even
+    /// numbers on both sides.
+    /// </summary>
+    /// <remarks>
+    /// The even rounding is empirical, not quoted: the refusal seen during the probe asked for
+    /// 640×609, and an odd side is the one unusual thing about that request. Even sides cost
+    /// nothing; the retry above covers the case where they were not the cause.
+    /// </remarks>
+    private (int Width, int Height) TargetSize()
+    {
+        var dpi = VisualTreeHelper.GetDpi(Host);
+        return (EvenSide(Host.ActualWidth * dpi.DpiScaleX, MinimumRemoteWidth),
+                EvenSide(Host.ActualHeight * dpi.DpiScaleY, MinimumRemoteHeight));
+    }
+
+    /// <summary>Clamps one side to the allowed range and rounds it down to an even number.</summary>
+    private static int EvenSide(double physicalPixels, int minimum)
+    {
+        // A surface that has never been laid out measures NaN, which survives Math.Clamp and lands
+        // on int.MinValue through the cast: it is worth the floor, not a negative desktop.
+        int value = double.IsFinite(physicalPixels) ? (int)Math.Floor(physicalPixels) : minimum;
+        value = Math.Clamp(value, minimum, MaximumRemoteSide);
+        return value - (value % 2);
     }
 
     /// <summary>Queues <paramref name="action"/> on the session's dispatcher; see the threading note
@@ -549,6 +661,7 @@ internal sealed class RdpSession : IDisposable
         if (_sessionHost is { } host)
         {
             host.Connected -= OnHostConnected;
+            host.LoggedOn -= OnHostLoggedOn;
             host.Disconnected -= OnHostDisconnected;
             host.Dispose();
             _sessionHost = null;
