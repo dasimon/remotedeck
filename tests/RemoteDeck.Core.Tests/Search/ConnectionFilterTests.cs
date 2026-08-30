@@ -17,6 +17,16 @@ public sealed class ConnectionFilterTests
     }
 
     [Fact]
+    public void Fold_keeps_a_standalone_combining_mark()
+    {
+        // Documents the limitation: folding is char by char, so a mark that is its own character stays.
+        var folded = TextNormalizer.Fold("e\u0301");
+
+        Assert.Equal(2, folded.Length);
+        Assert.Contains('\u0301', folded);
+    }
+
+    [Fact]
     public void Empty_query_returns_all_favorites_first_then_group_then_name()
     {
         var all = new[] { C("zeta", group: "Dev"), C("alpha", group: "Prod"), C("Beta", group: "Dev"), C("omega", group: "Prod", fav: true) };

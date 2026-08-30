@@ -81,7 +81,8 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     /// <summary>Dynamic follows the window, so the fixed size is meaningless — and its boxes are disabled.</summary>
     public bool IsFixedSizeEnabled => DisplayMode != CoreDisplayMode.Dynamic;
 
-    private int PortNumber => Port is { } port ? (int)Math.Round(port) : 0;
+    // An empty box stays null all the way to the rules, which report it as missing rather than out of range.
+    private int? PortNumber => Port is { } port ? (int)Math.Round(port) : null;
     private int? FixedWidthNumber => FixedWidth is { } width ? (int)Math.Round(width) : null;
     private int? FixedHeightNumber => FixedHeight is { } height ? (int)Math.Round(height) : null;
 
@@ -100,7 +101,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
 
         connection.Name = Name.Trim();
         connection.Host = Host.Trim();
-        connection.Port = PortNumber;
+        connection.Port = PortNumber ?? DefaultPort;
         connection.GroupName = GroupName?.Trim() ?? "";
         connection.CredentialId = CredentialId;
         connection.IsFavorite = IsFavorite;
