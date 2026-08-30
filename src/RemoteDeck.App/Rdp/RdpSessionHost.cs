@@ -70,9 +70,12 @@ internal sealed class RdpSessionHost : IDisposable
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        // Fixed pins the remote resolution and scrolls; Scaled and Dynamic both start from the host
-        // surface — Scaled then lets the control letterbox it through SmartSizing.
-        bool pinned = settings.DisplayMode == DisplayMode.Fixed;
+        // Both non-Dynamic modes pin the remote resolution to the saved one — ConnectionRules
+        // already requires FixedWidth/FixedHeight there. What separates them is what happens when
+        // the window does not match: Fixed scrolls, Scaled fits the image through SmartSizing.
+        // Only Dynamic asks the host surface for its size. The fallback to the host size covers a
+        // row written before that rule existed, or one whose stored size is unusable.
+        bool pinned = settings.DisplayMode != DisplayMode.Dynamic;
 
         _client.Server = settings.Host;
         _client.UserName = settings.UserName;
