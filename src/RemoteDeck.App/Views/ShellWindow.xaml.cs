@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -11,22 +11,32 @@ using RemoteDeck.App.Rdp;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Data;
+using RemoteDeck.Core.Diagnostics;
 using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Rdp;
 using RemoteDeck.Core.Security;
+using RemoteDeck.Core.Sessions;
 using RemoteDeck.Core.Settings;
 using Wpf.Ui.Appearance;
 
 namespace RemoteDeck.App.Views;
 
 /// <summary>
-/// The application shell: a connection pane on the left, one RDP session area on the right, and a
+/// The application shell: a connection pane on the left, the session tabs on the right, and a
 /// splitter between them whose position — like the window's own geometry — survives a restart.
 ///
-/// The window owns the plumbing the pane deliberately does not: the repositories, the vault, the
-/// single <see cref="RdpSessionHost"/>, the editors, the two-step delete and the settings file.
-/// <see cref="ConnectionListViewModel"/> only raises intents; everything they cost happens here.
+/// The window owns the plumbing the pane and the tabs deliberately do not: the repositories, the
+/// vault, the RDP control version, the editors, the two-step delete and the settings file.
+/// <see cref="ConnectionListViewModel"/> only raises intents and
+/// <see cref="SessionsViewModel"/> only orchestrates sessions; everything they cost happens here.
 /// </summary>
+/// <remarks>
+/// One session per tab (lot 4). The shell no longer owns a control: each
+/// <see cref="RdpSession"/> creates its own, and the only thing this window keeps from startup is
+/// the catalog's verdict on which version to use. What the shell still owns is the visual tree —
+/// <see cref="RdpSession.Dispose"/> explicitly does not remove its host from
+/// <c>SessionsArea</c>, so <see cref="DetachSession"/> is what closes that loop.
+/// </remarks>
 // Wpf.Ui.Controls.* is qualified on purpose: UseWindowsForms puts System.Windows.Forms in
 // scope through implicit usings, and a bare `using Wpf.Ui.Controls;` would make Button,
 // TextBox and friends ambiguous here.
@@ -35,24 +45,35 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>How long an armed delete stays armed before it disarms itself.</summary>
     private static readonly TimeSpan DeleteConfirmationWindow = TimeSpan.FromSeconds(5);
 
+    /// <summary>§6.5 budget for one tab while the window is closing.</summary>
+    private static readonly TimeSpan PerTabCloseTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Ceiling on the whole close-all pass, whatever the tabs do.</summary>
+    private static readonly TimeSpan OverallCloseTimeout = TimeSpan.FromSeconds(15);
+
     /// <summary>Narrowest usable pane; mirrors <c>PaneColumn.MinWidth</c> in the XAML and is what
     /// unfolding restores when the stored width is unusable.</summary>
     private const double MinimumPaneWidth = 220;
 
+    /// <summary>Smallest remote desktop a session is ever asked for; mirrors
+    /// <c>RdpSession</c>'s own floor, so a pane dragged almost shut cannot produce a 120×40 desktop.</summary>
+    private const int MinimumRemoteWidth = 640;
+    private const int MinimumRemoteHeight = 480;
+
     private readonly SettingsStore _settingsStore = new(SettingsStore.DefaultPath());
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _deleteDisarm;
+    private readonly SessionsViewModel _sessions;
 
     private ConnectionRepository? _connections;
     private CredentialRepository? _credentials;
     private ICredentialVault? _vault;
     private ConnectionListViewModel? _list;
-    private RdpAxHost? _ax;
-    private RdpSessionHost? _session;
     private ShortcutInterceptor? _shortcuts;
 
-    /// <summary>The connection behind the session currently open, or <c>null</c> when there is none.</summary>
-    private Connection? _current;
+    /// <summary>Control version chosen from the catalog at startup, or <c>null</c> when none is
+    /// usable. Every session is created against it.</summary>
+    private RdpControlVersion? _version;
 
     /// <summary>Armed by a first Delete; a second one on the same row within
     /// <see cref="DeleteConfirmationWindow"/> performs the deletion.</summary>
@@ -81,13 +102,21 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _deleteDisarm = new DispatcherTimer { Interval = DeleteConfirmationWindow };
         _deleteDisarm.Tick += OnDeleteDisarmTick;
 
+        // The tabs are usable before OnLoaded runs: they hold no repository and no control, only
+        // the two callbacks that put a session's host in — and take it out of — SessionsArea.
+        _sessions = new SessionsViewModel(AttachSession, DetachSession);
+        _sessions.ActiveChanged += OnSessionsChanged;
+        _sessions.TabChanged += OnTabChanged;
+        TabStrip.ViewModel = _sessions;
+
         // Window-level shortcuts. They fire whenever the WPF side owns the keyboard; while the RDP
         // control has focus nothing reaches WPF at all, which is what ShortcutInterceptor is for —
-        // and why Ctrl+B is wired in both places. The two never double-fire: the low-level hook
-        // swallows the keystroke it handles, so WPF never sees it.
+        // and why Ctrl+B and Ctrl+W are wired in both places. The two never double-fire: the
+        // low-level hook swallows the keystroke it handles, so WPF never sees it.
         InputBindings.Add(new KeyBinding(new RelayCommand(FocusSearch), Key.F, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(NewConnection), Key.N, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(TogglePane), Key.B, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(new RelayCommand(CloseActiveTab), Key.W, ModifierKeys.Control));
 
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -95,81 +124,35 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Resolved first, and deliberately before the RDP control is picked: the early returns
-        // below leave a window without a session, and the pane must still be usable there.
-        // GetService, not GetRequiredService — the repositories are absent when the database
+        // Resolved first, and deliberately before the RDP control version is picked: the early
+        // return below leaves a window that can open no session, and the pane must still be usable
+        // there. GetService, not GetRequiredService — the repositories are absent when the database
         // failed to open (spec §6.6), which is a degraded mode, not a crash.
         _connections = App.Current.Services.GetService<ConnectionRepository>();
         _credentials = App.Current.Services.GetService<CredentialRepository>();
         _vault = App.Current.Services.GetService<ICredentialVault>();
         BuildPane();
+        UpdateSessionsArea();
 
-        var version = RdpControlCatalog.Select(ClsidRegistry.IsUsable);
-        if (version is null)
+        // All that remains of the old single-control startup: which version the sessions will use.
+        // Creating a control is now each RdpSession's own business, so a class factory that refuses
+        // one costs that tab and nothing else.
+        _version = RdpControlCatalog.Select(ClsidRegistry.IsUsable);
+        if (_version is null)
         {
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "No Remote Desktop control found",
                 "None of the known mstscax.dll CLSIDs is registered on this machine.");
             return;
         }
 
-        var ax = new RdpAxHost(version);
-        try
-        {
-            RdpHost.Child = ax;
-            ax.CreateControl();
-        }
-        catch (Exception ex)
-        {
-            // Being listed in HKCR\CLSID is not the same as being creatable: mstscax.dll
-            // registers control versions its class factory then refuses
-            // (CLASS_E_CLASSNOTAVAILABLE, 0x80040111). Surface it, never crash the shell.
-            ProbeLog.Write("R4", $"control version {version.Label} ({version.Clsid:D}) is registered but not creatable: {ex.GetType().Name} 0x{ex.HResult:X8}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, $"RDP control v{version.Label} could not be created",
-                $"The CLSID is registered but its class factory refused it (0x{ex.HResult:X8}). See {ProbeLog.Path}.");
-            return;
-        }
-
-        _ax = ax;
-
         var dpi = VisualTreeHelper.GetDpi(this);
-        ProbeLog.Write("R4", $"FluentWindow + WindowsFormsHost created; control version {version.Label} ({version.Clsid:D})");
+        ProbeLog.Write("R4", $"FluentWindow ready; control version {_version.Label} ({_version.Clsid:D})");
         ProbeLog.Write("R3", $"Window DPI scale X={dpi.DpiScaleX:F2} Y={dpi.DpiScaleY:F2}");
 
-        // The control is hosted; from here nothing may take the shell down. Creating the session
-        // façade casts the OCX to IMsRdpClient10, which an older-than-expected control would
-        // refuse, and arming the interceptor calls SetWindowsHookEx, which EDR or a GPO is
-        // allowed to deny (spec §7.3 names that an expected outcome). Both are reported in the
-        // InfoBar and leave a usable — if reduced — window behind.
-        try
-        {
-            _session = new RdpSessionHost(_ax);
-            // BeginInvoke, not Invoke: these are raised from a COM event sink, and a synchronous
-            // marshal back to the UI thread would deadlock if the control ever raised off-thread.
-            _session.StatusChanged += status => Dispatcher.BeginInvoke(() =>
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, status, ""));
-            _session.Disconnected += info => Dispatcher.BeginInvoke(() =>
-            {
-                _current = null;
-                UpdateSessionBar();
-                // 0/1/2/3 = disconnectReasonNoInfo / LocalNotError / RemoteByUser / ByServer:
-                // none of them is an error (spec §6.4). GetErrorDescription() answers "an internal
-                // error has occurred" for those codes, so its text is deliberately not shown.
-                bool normal = info.Reason is 0 or 1 or 2 or 3;
-                var severity = normal
-                    ? Wpf.Ui.Controls.InfoBarSeverity.Informational
-                    : Wpf.Ui.Controls.InfoBarSeverity.Error;
-                StatusBar.Show(severity, $"Disconnected (reason {info.Reason}, extended {info.ExtendedReason})",
-                    normal ? "" : info.Description);
-            });
-        }
-        catch (Exception ex)
-        {
-            _session = null;
-            ProbeLog.Write("startup", $"Session host creation failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "RDP session unavailable",
-                $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}. See {ProbeLog.Path}.");
-        }
-
+        // Arming the interceptor calls SetWindowsHookEx, which EDR or a GPO is allowed to deny
+        // (spec §7.3 names that an expected outcome). The failure is reported in the InfoBar and
+        // leaves a usable — if reduced — window behind.
+        //
         // R6 probe: which of the four §7.3 mechanisms actually sees the application shortcuts while
         // the remote session holds keyboard focus. REMOTEDECK_PROBE_SHORTCUTS switches between them;
         // LowLevelKeyboardHook is the default because it is the only one the lot-0 probe found to
@@ -189,24 +172,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             _shortcuts = new ShortcutInterceptor(mechanism);
-            // BeginInvoke for the same reason as the session events: never block the thread that
-            // raised the notification, here the message pump itself.
-            _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() =>
-            {
-                if (shortcut == "Ctrl+B")
-                {
-                    TogglePane();
-                    return;
-                }
-
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted",
-                    $"via {mechanism} — command palette arrives in lot 5");
-            });
+            // BeginInvoke, not Invoke: the notification comes off the message pump itself, and a
+            // synchronous hop back would block the thread that raised it.
+            _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() => OnShortcut(shortcut, mechanism));
         }
         catch (Exception ex)
         {
             // A locked-down machine can refuse the hook. Documented outcome (spec §7.3): carry on
-            // without application shortcuts; OnFocusReleased remains the way out of the session.
+            // without application shortcuts; Ctrl+Alt+Left / Ctrl+Alt+Right remain the way out.
             _shortcuts = null;
             ProbeLog.Write("startup", $"ShortcutInterceptor({mechanism}) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Keyboard shortcuts unavailable",
@@ -217,9 +190,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // whether any member at all could hand us the server certificate.
         RdpSessionHost.LogCertificateSurface();
 
-        if (_session is not null && _shortcuts is not null && _list is not null)
+        if (_shortcuts is not null && _list is not null)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{version.Label} ready",
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{_version.Label} ready",
                 "Pick a connection and press Enter, or press Ctrl+N to create one.");
         }
     }
@@ -324,100 +297,88 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     private void NewConnection() => OnEditRequested(null);
 
-    // ---------------------------------------------------------------- session
+    // ---------------------------------------------------------------- shortcuts
 
     /// <summary>
-    /// Opens one connection. Only one session exists at a time, so an already-connected control is
-    /// closed gracefully first — <c>async void</c> is the only shape an event handler that awaits
-    /// can take, hence the fully guarded body.
+    /// What an intercepted shortcut does. Ctrl+K keeps its probe message: the command palette is
+    /// lot 5, and until then the InfoBar is the only proof the interception happened.
+    /// </summary>
+    private void OnShortcut(string shortcut, ShortcutInterceptor.Mechanism mechanism)
+    {
+        switch (shortcut)
+        {
+            case "Ctrl+B":
+                TogglePane();
+                break;
+            case "Ctrl+Tab":
+                _sessions.Next();
+                break;
+            case "Ctrl+Shift+Tab":
+                _sessions.Previous();
+                break;
+            case "Ctrl+W":
+                CloseActiveTab();
+                break;
+            default:
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted",
+                    $"via {mechanism} — command palette arrives in lot 5");
+                break;
+        }
+    }
+
+    // ---------------------------------------------------------------- sessions
+
+    /// <summary>Puts a session's host in the sessions area. Called by
+    /// <see cref="SessionsViewModel.Open"/>, before the session is started.</summary>
+    private void AttachSession(RdpSession session) => SessionsArea.Children.Add(session.Host);
+
+    /// <summary>Takes it out again. <see cref="RdpSession.Dispose"/> deliberately leaves the host
+    /// in the tree, so this is the only thing that removes it.</summary>
+    private void DetachSession(RdpSession session) => SessionsArea.Children.Remove(session.Host);
+
+    /// <summary>
+    /// Opens one connection, or brings its tab forward when it already has one — a connection has
+    /// at most one session. <c>async void</c> is the only shape an event handler that awaits can
+    /// take, hence the fully guarded body.
     /// </summary>
     private async void OnConnectRequested(Connection connection)
     {
-        if (connection is null || _connecting)
+        if (connection is null || _connecting || _closeInProgress)
         {
             return;
         }
 
-        if (_session is null)
+        if (_sessions.Find(connection.Id) is { } existing)
+        {
+            _sessions.Activate(existing);
+            return;
+        }
+
+        if (_version is null)
         {
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "RDP session unavailable",
-                $"No usable Remote Desktop control was created at startup. See {ProbeLog.Path}.");
+                $"No usable Remote Desktop control was found at startup. See {ProbeLog.Path}.");
             return;
         }
 
-        // Copied out of the field: the vault callback below is a lambda, and capturing the nullable
-        // field would carry its nullability past the check above.
-        var session = _session;
         _connecting = true;
         try
         {
-            if (session.IsConnected)
-            {
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Closing the current session…",
-                    $"'{connection.Name}' replaces it once it is closed.");
-                await session.CloseAsync(TimeSpan.FromSeconds(5));
-            }
+            var session = new RdpSession(connection, _version, host => SupplyAndConnectAsync(connection, host));
+            _sessions.Open(session);
+            UpdateSessionsArea();
 
-            Credential? credential = null;
-            if (connection.CredentialId is long credentialId)
-            {
-                credential = _credentials?.Get(credentialId);
-                if (credential is null)
-                {
-                    ProbeLog.Write("connections", $"'{connection.Name}' points at credential {credentialId}, which no longer exists; the control will prompt");
-                }
-            }
+            // StartAsync creates the OCX, and an AxHost only produces its COM object once it owns a
+            // window handle — which WindowsFormsHost gives it during a layout pass in a *visible*
+            // container. Forcing that pass here is what makes the very first tab connectable.
+            SessionsArea.UpdateLayout();
 
-            // The connection row carries no identity of its own: the user name and domain come from
-            // the credential, and with none attached both stay empty on purpose.
-            var settings = new RdpConnectionSettings(
-                Host: connection.Host,
-                Port: connection.Port,
-                UserName: credential?.UserName ?? "",
-                Domain: credential?.Domain,
-                UseWebAccount: connection.UseWebAccount,
-                AdminSession: connection.AdminSession,
-                RedirectClipboard: connection.RedirectClipboard,
-                RedirectDrives: connection.RedirectDrives,
-                RedirectPrinters: connection.RedirectPrinters,
-                RedirectAudio: connection.RedirectAudio,
-                AuthenticationLevel: connection.AuthenticationLevel,
-                DisplayMode: connection.DisplayMode,
-                FixedWidth: connection.FixedWidth,
-                FixedHeight: connection.FixedHeight);
-
-            var dpi = VisualTreeHelper.GetDpi(this);
-            int width = Math.Max(640, (int)(RdpHost.ActualWidth * dpi.DpiScaleX));
-            int height = Math.Max(480, (int)(RdpHost.ActualHeight * dpi.DpiScaleY));
-            session.Configure(settings, width, height);
-
-            if (!settings.UseWebAccount && credential is not null && _vault is not null)
-            {
-                // Vault path: DPAPI blob -> UTF-8 bytes -> native BSTR lent to the control -> zeroed.
-                // No managed string; the vault owns the lifetime of both buffers.
-                _vault.UseSecret(credential, bstr => session.PutPassword(bstr));
-                ProbeLog.Write("vault", $"Password supplied from credential '{credential.Label}'");
-            }
-            else
-            {
-                // No secret is put at all. EnableCredSspSupport stays true, so the control raises
-                // its own credential prompt — RemoteDeck no longer has any manual entry of its own.
-                ProbeLog.Write("session", $"'{connection.Name}' has no usable credential; letting the control prompt");
-            }
-
-            _current = connection;
-            UpdateSessionBar();
-            session.Connect();
-            _connections?.TouchLastConnected(connection.Id);
             _settings.LastConnectionId = connection.Id;
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"Connecting to {connection.Name}",
-                $"{connection.Host}:{connection.Port}");
+            await session.StartAsync();
         }
         catch (Exception ex)
         {
-            _current = null;
-            UpdateSessionBar();
-            ProbeLog.Write("session", $"Connect failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            ProbeLog.Write("session", $"Opening '{connection.Name}' failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Connect failed",
                 $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}");
         }
@@ -427,13 +388,262 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
-    private void OnDisconnectClick(object sender, RoutedEventArgs e) => _session?.Disconnect();
+    /// <summary>
+    /// Configures one control, lends it the secret and connects. Handed to every
+    /// <see cref="RdpSession"/> as its <c>supplyAndConnect</c> delegate, so it runs again — from
+    /// scratch — for each automatic retry and each <em>Reconnect</em>. Nothing derived from the
+    /// credential is cached between calls: the vault re-lends the secret every time.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <c>async</c>: every step is synchronous. It returns a <see cref="Task"/>
+    /// only because that is the shape <see cref="RdpSession"/> asks for, and anything thrown here
+    /// is caught there and turned into a failed attempt.
+    /// </remarks>
+    private Task SupplyAndConnectAsync(Connection connection, RdpSessionHost host)
+    {
+        Credential? credential = null;
+        if (connection.CredentialId is long credentialId)
+        {
+            credential = _credentials?.Get(credentialId);
+            if (credential is null)
+            {
+                ProbeLog.Write("connections", $"'{connection.Name}' points at credential {credentialId}, which no longer exists; the control will prompt");
+            }
+        }
 
+        // The connection row carries no identity of its own: the user name and domain come from
+        // the credential, and with none attached both stay empty on purpose.
+        var settings = new RdpConnectionSettings(
+            Host: connection.Host,
+            Port: connection.Port,
+            UserName: credential?.UserName ?? "",
+            Domain: credential?.Domain,
+            UseWebAccount: connection.UseWebAccount,
+            AdminSession: connection.AdminSession,
+            RedirectClipboard: connection.RedirectClipboard,
+            RedirectDrives: connection.RedirectDrives,
+            RedirectPrinters: connection.RedirectPrinters,
+            RedirectAudio: connection.RedirectAudio,
+            AuthenticationLevel: connection.AuthenticationLevel,
+            DisplayMode: connection.DisplayMode,
+            FixedWidth: connection.FixedWidth,
+            FixedHeight: connection.FixedHeight);
+
+        // Every tab shares one container, so the area's size is every session's size.
+        var dpi = VisualTreeHelper.GetDpi(this);
+        int width = Math.Max(MinimumRemoteWidth, (int)(SessionsArea.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(MinimumRemoteHeight, (int)(SessionsArea.ActualHeight * dpi.DpiScaleY));
+        host.Configure(settings, width, height);
+
+        if (!settings.UseWebAccount && credential is not null && _vault is not null)
+        {
+            // Vault path: DPAPI blob -> UTF-8 bytes -> native BSTR lent to the control -> zeroed.
+            // No managed string; the vault owns the lifetime of both buffers.
+            _vault.UseSecret(credential, bstr => host.PutPassword(bstr));
+            ProbeLog.Write("vault", $"Password supplied from credential '{credential.Label}'");
+        }
+        else
+        {
+            // No secret is put at all. EnableCredSspSupport stays true, so the control raises
+            // its own credential prompt — RemoteDeck no longer has any manual entry of its own.
+            ProbeLog.Write("session", $"'{connection.Name}' has no usable credential; letting the control prompt");
+        }
+
+        host.Connect();
+        _connections?.TouchLastConnected(connection.Id);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Closes the active tab (Ctrl+W, the cross, <em>Disconnect</em>). Fire and forget:
+    /// <see cref="SessionsViewModel.CloseAsync(SessionTabViewModel?)"/> never throws.</summary>
+    private void CloseActiveTab()
+    {
+        if (_closeInProgress)
+        {
+            return;
+        }
+
+        _ = _sessions.CloseAsync(_sessions.Active);
+    }
+
+    /// <summary><em>Disconnect</em> is the graceful end of a session, which is exactly the §6.5
+    /// close protocol — the same thing the tab's cross does.</summary>
+    private void OnDisconnectClick(object sender, RoutedEventArgs e) => CloseActiveTab();
+
+    private async void OnReconnectClick(object sender, RoutedEventArgs e)
+    {
+        if (_sessions.Active is not { } tab)
+        {
+            return;
+        }
+
+        try
+        {
+            await tab.Session.ReconnectNowAsync();
+        }
+        catch (Exception ex)
+        {
+            // RdpSession swallows attempt failures itself; this only covers the unexpected.
+            ProbeLog.Write("session", $"Reconnect failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    private void OnCancelRetryClick(object sender, RoutedEventArgs e) => _sessions.Active?.Session.CancelReconnect();
+
+    /// <summary>Copies the active session's diagnostics. The clipboard is owned by whatever
+    /// currently holds it, so <c>SetText</c> is allowed to fail — and must not cost the window.</summary>
+    private void OnCopyDiagnosticsClick(object sender, RoutedEventArgs e)
+    {
+        if (_sessions.Active is not { } tab)
+        {
+            return;
+        }
+
+        try
+        {
+            // Qualified: UseWindowsForms puts System.Windows.Forms.Clipboard in scope too.
+            System.Windows.Clipboard.SetText(tab.Session.BuildDiagnostics());
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, "Diagnostics copied",
+                $"The state of '{tab.Title}' is on the clipboard.");
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("session", $"Clipboard.SetText failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Diagnostics not copied",
+                $"The clipboard refused the text ({ex.GetType().Name}).");
+        }
+    }
+
+    /// <summary>A tab was opened, closed or activated.</summary>
+    private void OnSessionsChanged()
+    {
+        UpdateSessionsArea();
+        UpdateSessionBar();
+        if (_sessions.Active is { } tab)
+        {
+            UpdateSessionInfoBar(tab);
+        }
+    }
+
+    /// <summary>A session changed state or ticked its countdown. Only the visible one is reported;
+    /// a background tab says everything it has to say through its status dot.</summary>
+    private void OnTabChanged(SessionTabViewModel tab)
+    {
+        if (!ReferenceEquals(tab, _sessions.Active))
+        {
+            return;
+        }
+
+        UpdateSessionBar();
+        UpdateSessionInfoBar(tab);
+    }
+
+    /// <summary>Shows the black session backdrop only while there is something to put in it, so the
+    /// empty-state message is readable in both themes.</summary>
+    private void UpdateSessionsArea()
+    {
+        bool any = _sessions.Tabs.Count > 0;
+        SessionsBorder.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+        EmptySessions.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>
+    /// The session bar always describes the active tab. <em>Reconnect</em> is offered exactly where
+    /// a new attempt is legal (Failed, or Idle after a normal disconnect) and <em>Cancel</em>
+    /// exactly where a retry is pending, so the two are never both on screen.
+    /// </summary>
     private void UpdateSessionBar()
     {
-        SessionLabel.Text = _current is null ? "No session" : $"{_current.Name} — {_current.Host}:{_current.Port}";
-        DisconnectButton.IsEnabled = _current is not null;
+        var tab = _sessions.Active;
+        SessionLabel.Text = tab is null ? "No session" : $"{tab.Title} — {tab.Subtitle} · {tab.StateText}";
+
+        bool live = tab is not null && !_closeInProgress;
+        ReconnectButton.Visibility = live && tab!.State is SessionState.Failed or SessionState.Idle
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        CancelRetryButton.Visibility = live && tab!.State is SessionState.Interrupted or SessionState.Reconnecting
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        DiagnosticsButton.IsEnabled = live;
+        DisconnectButton.IsEnabled = live;
     }
+
+    /// <summary>
+    /// Reports the active session's state in the one place RemoteDeck reports anything. Severity
+    /// follows the disconnect family (§6.4): codes 0–3 are informational, a network drop is a
+    /// warning — it is being retried — and everything else is an error, with Windows' own wording
+    /// attached because that is the only text that names the actual cause.
+    /// </summary>
+    private void UpdateSessionInfoBar(SessionTabViewModel tab)
+    {
+        var session = tab.Session;
+        var disconnect = session.LastDisconnect;
+
+        switch (tab.State)
+        {
+            case SessionState.Idle when disconnect is null:
+                // Freshly opened, nothing has happened yet: leave whatever is on screen alone.
+                break;
+
+            case SessionState.Idle:
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"'{tab.Title}' disconnected",
+                    disconnect!.Title);
+                break;
+
+            case SessionState.Connecting:
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"Connecting to {tab.Title}", tab.Subtitle);
+                break;
+
+            case SessionState.Connected:
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"Connected to {tab.Title}", tab.Subtitle);
+                break;
+
+            case SessionState.Interrupted:
+                StatusBar.Show(SeverityFor(disconnect), $"'{tab.Title}' interrupted — {disconnect?.Title ?? "connection lost"}",
+                    Join($"{tab.CountdownText} (attempt {session.Attempt} of {ReconnectPolicy.MaxAttempts})", WindowsWording(session)));
+                break;
+
+            case SessionState.Reconnecting:
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, $"Reconnecting to {tab.Title}",
+                    $"Attempt {session.Attempt} of {ReconnectPolicy.MaxAttempts}.");
+                break;
+
+            case SessionState.Failed:
+                StatusBar.Show(SeverityFor(disconnect), $"'{tab.Title}' failed — {disconnect?.Title ?? "the connection could not be established"}",
+                    WindowsWording(session));
+                break;
+
+            default:
+                // Closing and Closed: the tab is on its way out, the bar has nothing useful to add.
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Tone of a disconnect. A network family is a warning because it is being — or can be —
+    /// retried; authentication, security, licensing and internal failures need the user, so they
+    /// are errors. No description at all means the attempt never reached the wire: also an error.
+    /// </summary>
+    private static Wpf.Ui.Controls.InfoBarSeverity SeverityFor(DisconnectDescription? disconnect) => disconnect?.Category switch
+    {
+        null => Wpf.Ui.Controls.InfoBarSeverity.Error,
+        DisconnectCategory.NotAnError => Wpf.Ui.Controls.InfoBarSeverity.Informational,
+        DisconnectCategory.Network => Wpf.Ui.Controls.InfoBarSeverity.Warning,
+        _ => Wpf.Ui.Controls.InfoBarSeverity.Error,
+    };
+
+    /// <summary>
+    /// Windows' own description of the failure, or an empty string when there is none to show.
+    /// Deliberately withheld for codes 0–3: <c>GetErrorDescription()</c> answers "an internal error
+    /// has occurred" for them, which would turn an ordinary log-off into an alarming message.
+    /// </summary>
+    private static string WindowsWording(RdpSession session) =>
+        session.LastDisconnect is { Category: DisconnectCategory.NotAnError }
+            ? ""
+            : session.LastWindowsDescription ?? "";
+
+    private static string Join(string first, string second) =>
+        second.Length == 0 ? first : $"{first} — {second}";
 
     // ---------------------------------------------------------------- editor and delete
 
@@ -460,7 +670,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// the row, a second one within <see cref="DeleteConfirmationWindow"/> removes it. Arming a
     /// different row replaces the pending one rather than deleting anything.
     /// </summary>
-    private void OnDeleteRequested(Connection connection)
+    /// <remarks>
+    /// A connection with an open tab has its session closed first, through the same §6.5 protocol
+    /// as any other close: deleting the row out from under a live session would leave a tab whose
+    /// title names something that no longer exists. <c>async void</c> for that await, fully guarded.
+    /// </remarks>
+    private async void OnDeleteRequested(Connection connection)
     {
         if (connection is null)
         {
@@ -479,15 +694,15 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             DisarmDelete();
             try
             {
-                _connections.Delete(connection.Id);
-                ProbeLog.Write("connections", $"'{connection.Name}' deleted");
-                if (_current?.Id == connection.Id)
+                if (_sessions.Find(connection.Id) is { } tab)
                 {
-                    // The row is gone; the session it opened is not, but the bar must stop naming it.
-                    _current = null;
-                    UpdateSessionBar();
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"Closing '{connection.Name}'…",
+                        "Its session is closed before the connection is deleted.");
+                    await _sessions.CloseAsync(tab);
                 }
 
+                _connections.Delete(connection.Id);
+                ProbeLog.Write("connections", $"'{connection.Name}' deleted");
                 _list?.Reload();
                 StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, "Connection deleted", $"'{connection.Name}' is gone.");
             }
@@ -588,7 +803,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _settings.PaneWidth = !_paneCollapsed && PaneColumn.ActualWidth >= MinimumPaneWidth
             ? PaneColumn.ActualWidth
             : _paneWidth;
-        _settings.LastConnectionId = _list?.SelectedConnection?.Id ?? _current?.Id ?? _settings.LastConnectionId;
+        _settings.LastConnectionId = _list?.SelectedConnection?.Id
+            ?? _sessions.Active?.Session.Connection.Id
+            ?? _settings.LastConnectionId;
 
         try
         {
@@ -604,14 +821,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>
     /// Closing the window is a two-pass affair (spec §6.5): the first pass cancels the close and
-    /// runs the graceful <c>RequestClose</c> protocol so the server is told to end the session
-    /// instead of being left with a zombie one; the second pass releases the COM objects.
-    /// <c>async void</c> is the only shape available to an event handler that must await, so the
-    /// body is fully guarded — whatever happens, the window still closes.
+    /// runs the graceful <c>RequestClose</c> protocol on every open tab, one at a time, so each
+    /// server is told to end its session instead of being left with a zombie one; the second pass
+    /// releases the COM objects. <c>async void</c> is the only shape available to an event handler
+    /// that must await, so the body is fully guarded — whatever happens, the window still closes.
     /// </summary>
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        // The window stays interactive for up to the CloseAsync timeout, so the close box can be
+        // The window stays interactive for up to the close-all budget, so the close box can be
         // clicked again while the protocol runs. Re-entering the first pass would start a second
         // RequestClose, orphan the first waiter and let Dispose run under the pending await.
         if (_closeInProgress && !_closeConfirmed)
@@ -634,17 +851,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             SaveSettings();
         }
 
-        if (_closeConfirmed || _session is null)
+        if (_closeConfirmed || _sessions.Tabs.Count == 0)
         {
             try
             {
-                // Second pass, or nothing was ever created: let the OCX go with the window.
+                // Second pass, or nothing was ever opened: let whatever is left go with the window.
                 // The graceful path reaches this branch on its second pass, so unhooking here
                 // covers both routes out of the window.
                 _deleteDisarm.Stop();
                 _shortcuts?.Dispose();
-                _session?.Dispose();
-                _ax?.Dispose();
+                _sessions.DisposeAll();
             }
             catch (Exception ex)
             {
@@ -658,22 +874,23 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         e.Cancel = true;
         // Set synchronously, before the first await: this is what the guard above tests.
         _closeInProgress = true;
-        DisconnectButton.IsEnabled = false;
-        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Closing session…", "");
+        int count = _sessions.Tabs.Count;
+        UpdateSessionBar();
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+            $"Closing {count} session{(count == 1 ? "" : "s")}…", "");
 
         try
         {
-            // A no-op that says so in the log when nothing is connected.
-            await _session.CloseAsync(TimeSpan.FromSeconds(5));
+            await _sessions.CloseAllAsync(PerTabCloseTimeout, OverallCloseTimeout);
         }
         catch (Exception ex)
         {
             // A failed close must never trap the user in the window.
-            ProbeLog.Write("close", $"CloseAsync failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            ProbeLog.Write("close", $"CloseAllAsync failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
 
         _closeConfirmed = true;
-        // BeginInvoke, not a direct Close(): CloseAsync can complete synchronously (nothing
+        // BeginInvoke, not a direct Close(): CloseAllAsync can complete synchronously (nothing
         // connected, or RequestClose answering controlCloseCanProceed), and closing from inside
         // the Closing handler that just set e.Cancel would re-enter it. Let this pass unwind.
         // (discarded: the returned DispatcherOperation is deliberately not awaited)

@@ -10,8 +10,9 @@
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterScreen">
-    <!-- Two columns: the connection pane, a 4 px splitter, and the single RDP session area.
-         The title bar spans all three so the window keeps one continuous drag surface. -->
+    <!-- Two columns: the connection pane, a 4 px splitter, and the sessions area — tab strip on
+         top, the active session's WindowsFormsHost below. The title bar spans all three so the
+         window keeps one continuous drag surface. -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -49,14 +50,18 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- Session bar: what is connected, and the three commands that act on it. -->
+            <!-- Session bar: what the active tab is doing, and the commands that act on it. -->
             <Grid Grid.Row="0" Margin="0,0,12,6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
@@ -77,21 +82,56 @@
                            TextTrimming="CharacterEllipsis"
                            Text="No session" />
 
-                <ui:Button Grid.Column="2" Margin="8,0,0,0"
+                <ui:Button x:Name="ReconnectButton" Grid.Column="2" Margin="8,0,0,0"
+                           Content="Reconnect"
+                           Icon="{ui:SymbolIcon ArrowClockwise20}"
+                           Visibility="Collapsed"
+                           ToolTip="Connect this session again"
+                           Click="OnReconnectClick" />
+
+                <ui:Button x:Name="CancelRetryButton" Grid.Column="3" Margin="8,0,0,0"
+                           Content="Cancel"
+                           Visibility="Collapsed"
+                           ToolTip="Stop the scheduled reconnection"
+                           Click="OnCancelRetryClick" />
+
+                <ui:Button x:Name="DiagnosticsButton" Grid.Column="4" Margin="8,0,0,0"
+                           Icon="{ui:SymbolIcon Copy20}"
+                           IsEnabled="False"
+                           ToolTip="Copy diagnostics for this session to the clipboard"
+                           Click="OnCopyDiagnosticsClick" />
+
+                <ui:Button Grid.Column="5" Margin="8,0,0,0"
                            Icon="{ui:SymbolIcon Key24}"
                            ToolTip="Manage credentials"
                            Click="OnManageCredentials" />
 
-                <ui:Button x:Name="DisconnectButton" Grid.Column="3" Margin="8,0,0,0"
+                <ui:Button x:Name="DisconnectButton" Grid.Column="6" Margin="8,0,0,0"
                            Content="Disconnect" IsEnabled="False"
+                           ToolTip="Close this session (Ctrl+W)"
                            Click="OnDisconnectClick" />
             </Grid>
 
-            <ui:InfoBar Grid.Row="1" x:Name="StatusBar" Margin="0,0,12,6" IsOpen="False" IsClosable="True" />
+            <views:SessionTabStrip x:Name="TabStrip" Grid.Row="1" Margin="0,0,12,6" />
 
-            <Border Grid.Row="2" Margin="0,0,12,12" CornerRadius="6" Background="#FF000000">
-                <WindowsFormsHost x:Name="RdpHost" />
-            </Border>
+            <ui:InfoBar Grid.Row="2" x:Name="StatusBar" Margin="0,0,12,6" IsOpen="False" IsClosable="True" />
+
+            <Grid Grid.Row="3" Margin="0,0,12,12">
+                <!-- Sibling of the session area rather than a child of it: the backdrop behind a
+                     remote desktop is black, which no theme text colour reads well against. -->
+                <TextBlock x:Name="EmptySessions"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="Select a connection and press Enter" />
+
+                <!-- One child per open session, added by SessionsViewModel; the active one is
+                     Visible and the others Hidden. Collapsed when there is no tab at all, so the
+                     black rectangle does not sit over the message above. -->
+                <Border x:Name="SessionsBorder" CornerRadius="6" Background="#FF000000" Visibility="Collapsed">
+                    <Grid x:Name="SessionsArea" />
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </ui:FluentWindow>

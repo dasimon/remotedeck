@@ -44,6 +44,7 @@ internal sealed class ShortcutInterceptor : IDisposable
     private const int VkControl = 0x11;
     private const int VkB = 0x42;
     private const int VkK = 0x4B;
+    private const int VkW = 0x57;
     private const int WhKeyboard = 2;
     private const int WhKeyboardLl = 13;
 
@@ -209,6 +210,10 @@ internal sealed class ShortcutInterceptor : IDisposable
             // makes the pane foldable without first leaving the remote session.
             VkB => "Ctrl+B",
             VkK => "Ctrl+K",
+            // Ctrl+W closes the active tab. Like Ctrl+B it is also a WPF KeyBinding on the
+            // shell, for when the focus is on the WPF side; the interceptor is what makes it work
+            // from inside a remote session, where WPF sees no keystroke at all.
+            VkW => "Ctrl+W",
             VkTab => IsDown(VkShift) ? "Ctrl+Shift+Tab" : "Ctrl+Tab",
             _ => null,
         };
