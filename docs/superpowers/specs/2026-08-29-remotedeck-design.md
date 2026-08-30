@@ -398,6 +398,14 @@ lève `RdpSession.Changed`, sur le thread d'interface uniquement.
   `ClearTextPassword` soit repositionné. `RdpSession` porte le `CredentialId`,
   jamais le secret ; chaque tentative repasse par `ICredentialVault.UseSecret`
   (§5.2). Aucun secret n'est retenu entre deux tentatives.
+- **La reconnexion intégrée du contrôle ActiveX est désactivée**
+  (`EnableAutoReconnect = false`, `IMsRdpClientAdvancedSettings2`, activée par
+  défaut) : sinon sa propre boucle « Reconnexion en cours… 1 sur 5 » s'exécute
+  d'abord et ne remonte `OnDisconnected` qu'une fois ses cinq tentatives
+  épuisées — les deux mécanismes s'empilent (5 + 5) et l'onglet affiche
+  « Connected » pendant toute la phase du contrôle. `ReconnectPolicy` est le
+  seul mécanisme de reconnexion, ce qui garantit aussi que le secret est
+  re-fourni par le coffre à chaque tentative.
 
 **Fait au lot 4 (2026-08-30).** `RemoteDeck.Core/Sessions/ReconnectPolicy.cs`. L'ensemble
 des codes reconnectables est **fermé et explicite** — six valeurs, rien d'autre :
