@@ -2,6 +2,7 @@
 using MSTSCLib;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Services;
+using RemoteDeck.Core.Model;
 
 namespace RemoteDeck.App.Rdp;
 
@@ -56,26 +57,54 @@ internal sealed class RdpSessionHost : IDisposable
         ProbeLog.Write("R2", "Subscribed to IMsTscAxEvents_Event via TlbImp-generated interop");
     }
 
-    public void Configure(RdpConnectionProbeSettings settings, int desktopWidth, int desktopHeight)
+    /// <summary>
+    /// Applies one connection's settings to the control. <paramref name="hostWidth"/> and
+    /// <paramref name="hostHeight"/> are the physical pixel size of the surface hosting the control;
+    /// they are the requested remote resolution unless the connection pins one.
+    /// </summary>
+    /// <remarks>
+    /// The resolution is decided once, here. Following the window as it is resized
+    /// (<c>UpdateSessionDisplaySettings</c>) is lot 4's job, deliberately not done here.
+    /// </remarks>
+    public void Configure(RdpConnectionSettings settings, int hostWidth, int hostHeight)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        // Fixed pins the remote resolution and scrolls; Scaled and Dynamic both start from the host
+        // surface — Scaled then lets the control letterbox it through SmartSizing.
+        bool pinned = settings.DisplayMode == DisplayMode.Fixed;
+
         _client.Server = settings.Host;
         _client.UserName = settings.UserName;
         _client.Domain = settings.Domain ?? string.Empty;
-        _client.DesktopWidth = desktopWidth;
-        _client.DesktopHeight = desktopHeight;
+        _client.DesktopWidth = pinned && settings.FixedWidth is > 0 ? settings.FixedWidth.Value : hostWidth;
+        _client.DesktopHeight = pinned && settings.FixedHeight is > 0 ? settings.FixedHeight.Value : hostHeight;
         _client.ColorDepth = 32;
 
         var advanced = _client.AdvancedSettings9;      // IMsRdpClientAdvancedSettings8, inherits all previous
         advanced.RDPPort = settings.Port;
+        // Kept unconditionally true: with no credential attached this is what makes the control put
+        // up its own CredSSP prompt instead of failing, and RemoteDeck has no manual entry any more.
         advanced.EnableCredSspSupport = true;
-        advanced.RedirectClipboard = true;             // spec §2 default: clipboard on, everything else off
-        advanced.RedirectDrives = false;
-        advanced.RedirectPrinters = false;
-        advanced.AuthenticationLevel = 2;              // attempt + prompt (verified value, see plan constraints)
-        advanced.SmartSizing = false;
+        advanced.RedirectClipboard = settings.RedirectClipboard;   // IMsRdpClientAdvancedSettings5
+        advanced.RedirectDrives = settings.RedirectDrives;         // IMsRdpClientAdvancedSettings
+        advanced.RedirectPrinters = settings.RedirectPrinters;     // IMsRdpClientAdvancedSettings
+        advanced.ConnectToAdministerServer = settings.AdminSession; // IMsRdpClientAdvancedSettings6
+        advanced.SmartSizing = settings.DisplayMode == DisplayMode.Scaled;
+
+        if (settings.AuthenticationLevel is int level)
+        {
+            // 0 = connect and don't warn, 1 = do not connect if authentication fails,
+            // 2 = attempt authentication and prompt on failure (verified value, see plan constraints).
+            advanced.AuthenticationLevel = (uint)level;
+        }
 
         // Windowed use: Windows key combos stay local unless full screen (documented value 2 = default).
         _client.SecuredSettings2.KeyboardHookMode = 2;
+        // 0 = redirect sounds to the client (default), 1 = play them at the remote computer,
+        // 2 = do not play. RemoteDeck offers the on/off pair only, hence 0 or 2.
+        // https://learn.microsoft.com/windows/win32/termserv/imsrdpclientsecuredsettings-autoredirectionmode
+        _client.SecuredSettings2.AudioRedirectionMode = settings.RedirectAudio ? 0 : 2;
 
         if (settings.UseWebAccount)
         {
