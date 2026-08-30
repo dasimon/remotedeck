@@ -111,21 +111,25 @@ remotedeck/
 │  │  ├─ Search/        TextNormalizer            (repli casse + accents, un caractère pour un)
 │  │  │                 ConnectionFilter          (correspondance floue + plages de surlignage)
 │  │  ├─ Settings/      AppSettings, SettingsStore (settings.json, §7.2)
-│  │  ├─ Sessions/      ReconnectPolicy           (backoff, décision de reconnexion)
-│  │  ├─ Import/        RdpFileImporter           (.rdp + registre)
-│  │  └─ Diagnostics/   DisconnectReason          (code → clé de message)
+│  │  ├─ Sessions/      ReconnectPolicy           (§6.3 : ShouldReconnect + DelayFor, backoff)
+│  │  ├─ Import/        RdpFileImporter           (.rdp + registre)              [lot 5]
+│  │  └─ Diagnostics/   DisconnectReason          (§6.4 : code → DisconnectDescription,
+│  │                                               catégorie + libellé court)
 │  └─ RemoteDeck.App/                     net10.0-windows, UseWPF + UseWindowsForms
 │     ├─ Interop/       RdpAxHost, RdpEventSink, RdpControlCatalog,
 │     │                 ClsidRegistry (créabilité, §6.1), ComSecretPut (vtable, §5.2)
-│     ├─ Rdp/           RdpSession (machine à états), RdpConnectionSettings, SessionManager
+│     ├─ Rdp/           RdpSession (machine à états, reconnexion, résolution dynamique),
+│     │                 SessionState (§6.2), RdpSessionHost (façade OCX, UpdateDisplay,
+│     │                 fermeture §6.5), RdpConnectionSettings, ShortcutInterceptor (§7.3)
 │     ├─ Controls/      InfoBarExtensions (InfoBar partagée), HighlightTextBlock
 │     │                 (surlignage des correspondances), PasswordPlaceholder (adorner, §7.1)
-│     ├─ ViewModels/    ShellViewModel, ConnectionListViewModel, SessionViewModel,
+│     ├─ ViewModels/    ConnectionListViewModel, SessionsViewModel (onglets, D12),
+│     │                 SessionTabViewModel (un onglet : état, pastille, compte à rebours),
 │     │                 ConnectionEditorViewModel, CredentialEditorViewModel,
-│     │                 CommandPaletteViewModel
-│     ├─ Views/         ShellWindow, ConnectionPane, SessionView,
-│     │                 CommandPaletteWindow, ConnectionEditorWindow,
-│     │                 CredentialsWindow, CredentialEditorWindow
+│     │                 CommandPaletteViewModel                                  [lot 5]
+│     ├─ Views/         ShellWindow, ConnectionPane, SessionTabStrip (§7.1/§7.2),
+│     │                 ConnectionEditorWindow, CredentialsWindow,
+│     │                 CredentialEditorWindow, CommandPaletteWindow             [lot 5]
 │     ├─ Resources/     Strings.resx (en) · Strings.fr.resx · PasswordBox.xaml (§7.1) · Theme/
 │     └─ Services/      FileLogger, DialogService
 └─ tests/
@@ -357,6 +361,25 @@ Transitions pilotées par les événements du contrôle (`OnConnecting`, `OnConn
 `OnDisconnected`, `OnFatalError`, `OnLoginComplete`) et par les actions
 utilisateur. `RdpSession` expose son état ; l'onglet s'y lie.
 
+**Livré au lot 4** — `RemoteDeck.App/Rdp/SessionState.cs`, huit valeurs :
+
+| État | Signification |
+|---|---|
+| `Idle` | Jamais démarrée, **ou** déconnectée normalement (codes 0–3, §6.4). L'onglet reste ouvert avec *Reconnect*. Ce n'est pas un échec. |
+| `Connecting` | Première tentative en vol. |
+| `Connected` | `OnConnected` reçu. |
+| `Interrupted` | Chute sur un code reconnectable : une tentative est **planifiée**, le compte à rebours tourne. |
+| `Reconnecting` | Une tentative est en vol (compte à rebours arrivé à zéro, ou *Reconnect* demandé). |
+| `Failed` | Code non reconnectable, budget de tentatives épuisé, compte à rebours annulé par l'utilisateur, ou échec avant la mise sur le fil (exception de `supplyAndConnect`). |
+| `Closing` | Protocole §6.5 en cours : `RequestClose` émis, attente. |
+| `Closed` | Fermée et libérée. Terminal — une session fermée ne redémarre pas. |
+
+`Idle` et `Failed` sont **délibérément distincts** : une déconnexion voulue ne doit
+pas être peinte en rouge. La pastille de l'onglet suit ce découpage — vert
+`Connected`, ambre `Interrupted`/`Reconnecting`, rouge `Failed`, neutre partout
+ailleurs — et chaque changement (état, n° de tentative, tic du compte à rebours)
+lève `RdpSession.Changed`, sur le thread d'interface uniquement.
+
 ### 6.3 Reconnexion automatique
 
 `ReconnectPolicy` (dans `Core`, donc testable) décide **si** l'on reconnecte et
@@ -375,6 +398,43 @@ utilisateur. `RdpSession` expose son état ; l'onglet s'y lie.
   `ClearTextPassword` soit repositionné. `RdpSession` porte le `CredentialId`,
   jamais le secret ; chaque tentative repasse par `ICredentialVault.UseSecret`
   (§5.2). Aucun secret n'est retenu entre deux tentatives.
+
+**Fait au lot 4 (2026-08-30).** `RemoteDeck.Core/Sessions/ReconnectPolicy.cs`. L'ensemble
+des codes reconnectables est **fermé et explicite** — six valeurs, rien d'autre :
+
+| Code | Constante | Pourquoi on réessaie |
+|---|---|---|
+| 264 | `disconnectReasonConnectionTimedOut` | Délai dépassé : l'hôte peut répondre à la tentative suivante |
+| 516 | `disconnectReasonSocketConnectFailed` | Échec de `connect()` — coupure transitoire |
+| 772 | `disconnectReasonWinsockSendFailed` | Émission perdue sur une socket établie |
+| 1028 | `disconnectReasonSocketRecvFailed` | Réception perdue sur une socket établie |
+| 1796 | `disconnectReasonTimeoutOccurred` | Temporisation du client |
+| 2308 | `disconnectReasonAtClientWinsockFDCLOSE` | Socket fermée par le réseau |
+
+Le critère est « la socket ou le minuteur a lâché, **mais l'hôte est toujours censé
+répondre** ». D'où les exclusions, qui ne sont pas des oublis :
+
+- **Codes de nom et d'adresse — 260, 520, 776, 1288, 1540, 2052** (`DNSLookupFailed`,
+  `HostNotFound`, `InvalidIPAddr`, `DNSLookupFailed2`, `GetHostByNameFailed`,
+  `InvalidIP`) : un nom qui ne résout pas ou une IP invalide ne deviendront pas
+  valides en 60 secondes. Ce sont des erreurs de **saisie**, pas de réseau ; le
+  seul correctif est l'éditeur de connexion. Réessayer cinq fois ne ferait que
+  retarder de 107 s le message qui dit la vérité.
+- **Codes 0–3** : la déconnexion était voulue (§6.4).
+- **`SSL_ERR_*` (catégorie `Authentication`)** : verrouillage de compte AD garanti.
+- **Sécurité, licence, mémoire, erreur interne** : une boucle de tentatives ne
+  répare ni un certificat, ni une licence, ni un client à court de mémoire.
+
+Un code absent de la table documentée n'est **jamais** reconnecté : `Describe`
+le rend `Unknown` et `ShouldReconnect` répond `false`.
+
+Le reste du contrat est tenu par `RdpSession` : `Attempt` (0 à 5) remis à zéro par
+toute connexion réussie ; `NextRetryIn` alimente le compte à rebours visible et
+l'action *Cancel* ; **chaque tentative — automatique ou manuelle — rejoue à
+l'identique le délégué `supplyAndConnect` du shell**, qui repasse par
+`ICredentialVault.UseSecret` et repositionne `ClearTextPassword`. La session ne
+porte que la `Connection` ; ni le secret ni rien qui en dérive ne survit à une
+tentative.
 
 ### 6.4 Erreurs explicites
 
@@ -419,6 +479,36 @@ session. Le bandeau contient : message court, code brut `discReason` / `extended
 texte Windows, et actions contextuelles (*Reconnect*, *Change credential*,
 *Copy diagnostics*).
 
+**Fait au lot 4 (2026-08-30).** `RemoteDeck.Core/Diagnostics/DisconnectReason.cs` reprend
+les **47 codes** de la page Microsoft (URL en tête de fichier, relevée le 2026-08-30) et
+rend un `DisconnectDescription` = `(Reason, Category, Title, IsError)`. Les huit
+catégories, qui décident du ton du message :
+
+| Catégorie | Contenu | `IsError` | Sévérité `InfoBar` |
+|---|---|---|---|
+| `NotAnError` | 0, 1, 2, 3 | **non** | Informational |
+| `Network` | 260, 264, 516, 520, 772, 776, 1028, 1288, 1540, 1796, 2052, 2308 | oui | Warning (la chute est réessayée) |
+| `Authentication` | les 15 `SSL_ERR_*` (2055, 2567, 2823, 3079, 3335, 3591, 3847, 4615, 5639, 5895, 6151, 6919, 7175, 8455, 8711) | oui | Error |
+| `Security` | 1030, 1286, 1542, 1798, 2310, 2566, 2822, 3078, 3080 | oui | Error |
+| `Licensing` | 2056, 2312 | oui | Error |
+| `Resources` | 262, 518, 774 (mémoire épuisée) | oui | Error |
+| `Internal` | 1032, 1544 | oui | Error |
+| `Unknown` | tout code absent de la page | oui | Error, avec le code brut dans le titre |
+
+Aucune valeur n'est devinée : `Describe` d'un code inconnu retourne
+« Disconnected (code *n*) », jamais une interprétation inventée. Et le texte de
+`GetErrorDescription` n'est joint qu'aux codes traités comme des échecs
+(l'avertissement ci-dessus).
+
+Actions livrées dans la barre de session : **Reconnect** (offerte exactement en
+`Failed` et en `Idle`), **Cancel** (exactement en `Interrupted` et `Reconnecting` —
+les deux ne sont jamais affichées ensemble), **Copy diagnostics** et **Disconnect**.
+*Copy diagnostics* met dans le presse-papiers un bloc de texte brut : connexion,
+hôte:port, mode d'affichage, version du contrôle, état, tentatives consommées sur
+5, temps restant, code de déconnexion + catégorie + libellé, `extended`, texte
+Windows, état du repli SmartSizing et horodatage UTC. *Change credential* n'est pas
+livrée : l'éditeur de connexion (`F2`) est le seul endroit qui change un identifiant.
+
 ### 6.5 Fermeture propre (anti-zombie)
 
 Mécanisme documenté, appliqué à chaque fermeture d'onglet **et** en boucle sur
@@ -439,6 +529,21 @@ fermeture : les deux événements doivent bien rester dans la condition d'attent
 fermeture puis reconnexion, `query session` côté serveur ne montre qu'une seule session,
 sans doublon ni zombie. Le code de déconnexion `1` renvoyé ici n'est **pas** une erreur
 (§6.4).
+
+**Fait au lot 4 (2026-08-30) — fermeture de l'application.** `SessionsViewModel.CloseAllAsync`
+ferme les onglets **l'un après l'autre**, jamais en parallèle : §6.5 est un protocole
+*par contrôle*, et deux `RequestClose` simultanés entrelaceraient leurs attentes.
+Budget : **5 s par onglet, 15 s pour la passe entière**. Un onglet qui ne rentre pas
+dans le reliquat global est fermé avec un délai de 0 s — `RequestClose` est quand même
+émis, on n'attend simplement plus. Ce que cela donne à la fermeture de la fenêtre :
+`OnClosing` **annule** la fermeture (`e.Cancel = true`), affiche « fermeture de *n*
+session(s)… », attend `CloseAllAsync`, puis relance `Close()` par `BeginInvoke` — pas
+d'appel direct, qui ré-entrerait dans le gestionnaire en cours. Une seconde passe
+(`DisposeAll`) démonte de force ce qui aurait survécu. Un contrôle qui refuse de se
+fermer ne prend en otage ni son onglet ni la passe globale : l'exception est journalisée
+et la libération suit de toute façon. Un `Ctrl+W` répété, ou un clic sur la croix
+pendant que la fermeture tourne, est ignoré — un ensemble `_closing` garde chaque
+onglet d'une double fermeture.
 
 ### 6.6 Certificat serveur non fiable
 
@@ -729,7 +834,7 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 | **L1** | SQLite, modèle, migrations, repositories, tests | **Fait** (2026-08-29). `SqliteDatabase` (base créée au premier lancement, `Database ready` au log), migrations V1 par `SchemaMigrator` avec refus d'un schéma plus récent (`SchemaTooNewException`), `ConnectionRepository` / `CredentialRepository`, 33 tests verts à la clôture du lot. |
 | **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | **Fait** (2026-08-29). `Seal`/`UseSecret` sur DPAPI CurrentUser + entropie de 32 octets par identifiant, `CredentialsWindow` / `CredentialEditorWindow`, secret jamais matérialisé en `string` (test de réflexion sur `ICredentialVault`), fourniture du mot de passe au contrôle depuis le coffre. Modèle de menace du §5.4 publié dans `SECURITY.md`. La sonde humaine de fin de lot (connexion réelle avec un identifiant du coffre) reste à jouer par David. |
 | **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | **Fait** (2026-08-30). Coquille à deux colonnes (`Grid` + `GridSplitter`, panneau repliable) autour d'une zone de session unique. Panneau : liste virtualisée de 32 px, groupée (`★ Favorites` en tête, puis les groupes, puis `Ungrouped`), recherche floue insensible à la casse et aux accents avec surlignage des caractères touchés (`TextNormalizer` + `ConnectionFilter` dans `Core`, debounce 120 ms, filtrage de l'instantané mémoire — aucune requête SQL par frappe), étoile de favori, état vide rappelant les raccourcis, repli propre en « base indisponible ». Éditeur de connexion modal (`ConnectionEditorWindow`, validation par `ConnectionRules`) ; connexion depuis la liste avec l'identifiant du coffre, ou invite CredSSP du contrôle quand il n'y en a pas. Réglages d'interface dans `%APPDATA%\RemoteDeck\settings.json` (§7.2). `PasswordBox` natif restylé Fluent + texte indicatif par `Adorner`, champs qui s'étirent (§7.1) — les deux réserves d'ergonomie de R4 sont levées. Raccourcis : `Ctrl+B`, `Ctrl+F`, `F2`, `Entrée`, `Ctrl+N`, `Suppr` (suppression en deux temps dans l'`InfoBar`, désarmée après 5 s — jamais de `MessageBox`). 65 tests verts à la clôture. **Reporté** : résolution dynamique (D6) au lot 4, palette `Ctrl+K` au lot 5 ; en-têtes de groupe **non collants**, la virtualisation est conservée (§7.2). |
-| **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | Coupure réseau simulée → reconnexion puis abandon propre |
+| **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | **Fait** (2026-08-30). Onglets multi-sessions selon D12 : barre custom (`SessionTabStrip`, onglets de 34 px, coins arrondis, pastille d'état verte/ambre/rouge, réordonnancement au glisser, fermeture au clic milieu, animation 150 ms) au-dessus d'un `Grid` où **tous** les `WindowsFormsHost` restent instanciés — seul l'actif est `Visible`, les autres `Hidden`, donc changer d'onglet ne coupe aucune session. Une connexion a au plus un onglet : la reconnecter ramène le sien au premier plan. `RdpSession` (une session = un onglet) porte la machine à états à 8 valeurs du §6.2, le compte à rebours de reconnexion et la boucle de résolution. Reconnexion automatique (§6.3) : `ReconnectPolicy` dans `Core`, six codes réseau seulement, backoff 2/5/10/30/60 s, 5 tentatives, compte à rebours visible et annulable, **secret re-fourni par le coffre à chaque tentative**. Diagnostic (§6.4) : `DisconnectReason` (47 codes documentés, 8 catégories) pilote le libellé et la sévérité de l'`InfoBar` ; actions *Reconnect*, *Cancel*, *Copy diagnostics*, *Disconnect*. Résolution dynamique (D6) livrée : `UpdateSessionDisplaySettings` après un anti-rebond de 300 ms, taille en pixels physiques (`VisualTreeHelper.GetDpi`), plancher 640×480, et **repli une-fois-pour-toutes sur `SmartSizing`** si le contrôle refuse le redimensionnement — un contrôle qui en refuse un les refuse tous, on ne réessaie plus pour cette session. Fermeture propre (§6.5) appliquée à chaque onglet et à la sortie (5 s par onglet, 15 s au total, séquentiel). Raccourcis : `Ctrl+Tab` / `Ctrl+Shift+Tab` (cyclique), `Ctrl+W`. 130 tests verts à la clôture. **Reste au lot 5** : palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (`Ctrl+W` reste avalé dans un `TextBox`, §7.3), `.resx` fr. **Sonde humaine de fin de lot à jouer par David** — coupure réseau réelle, redimensionnement, `query session` : voir la section « Lot 4 » de `docs/manual-checklist.md`, non cochée à ce jour. |
 | **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | Critères de succès du §1 tous vérifiés |
 
 La politique de certificat n'est plus un contenu de lot : R5 a fermé le sujet

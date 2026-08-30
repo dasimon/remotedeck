@@ -151,6 +151,86 @@ Probe evidence for the lot 0 items lives in
 - [ ] The placeholder disappears as soon as one character is typed and comes back when
       the field is cleared; it aligns with the text of the `ui:TextBox` above it.
 
+## Lot 4 — sessions
+
+None of these boxes is ticked yet: lot 4 shipped its code on 2026-08-30, its human
+probe has not been run. The lot is not closed until this section is.
+
+### Tabs
+
+- [ ] Connect three connections in a row: **three tabs**, each with its own remote
+      desktop. The lot 3 item "only one session at a time" no longer applies — it is
+      superseded here.
+- [ ] Connecting a connection that **already has a tab** brings that tab forward
+      instead of opening a second one.
+- [ ] `Ctrl+Tab` and `Ctrl+Shift+Tab` cycle through the tabs — including **while the
+      remote desktop has focus** (low-level hook path) — and the session being left
+      **does not disconnect**: come back to it and the desktop is still there, no
+      reconnection, no black frame. This is the D12 rule (`Hidden`, never `Collapsed`).
+- [ ] The status dot follows the state: **green** connected, **amber** interrupted or
+      reconnecting, **red** failed, neutral otherwise.
+- [ ] Drag a tab onto another position: the order changes and the sessions survive it.
+
+### Dynamic resolution (D6)
+
+- [ ] On a connection in **Dynamic** display mode, resize the window (or drag the
+      splitter): after a short pause the **remote resolution changes** — the remote
+      desktop is redrawn crisp at the new size, it is not stretched. Dragging the window
+      edge continuously produces **one** resolution change at the end, not a hundred.
+- [ ] Shrinking the pane almost shut never asks for a desktop below **640×480**.
+- [ ] Against a server that refuses `UpdateSessionDisplaySettings` (older host), the
+      session falls back to **SmartSizing** — the image is scaled, blurry but complete —
+      the log carries `fallback to SmartSizing` once, and no further resize is attempted
+      for that session.
+- [ ] In **Fixed** and **Scaled** modes the remote resolution does **not** follow the
+      window (expected: only Dynamic does).
+
+### Reconnection
+
+- [ ] With a session connected, **cut the network** (disable the adapter, or unplug):
+      the tab goes **amber**, the InfoBar counts down (`retry in 2 s`, then 5, 10, 30,
+      60) and names the attempt number out of 5.
+- [ ] **Restore the network during the countdown**: the session comes back on its own,
+      the tab is green again and the attempt counter is back to 0.
+- [ ] Leave the network down for the whole budget (~107 s over five attempts): the tab
+      ends **red / `Failed`**, the countdown is gone, and *Reconnect* is offered.
+- [ ] Press **Cancel** during a countdown: the retry is abandoned immediately, the tab
+      is red, and *Reconnect* replaces *Cancel* (the two are never on screen together).
+- [ ] Press **Reconnect** on a failed tab: it reconnects with a **fresh budget** and,
+      for a connection with a credential, **without prompting for a password** — the
+      vault lends the secret again for every attempt. The log shows
+      `Password supplied from credential …` once per attempt.
+- [ ] **Expire or disable the account**, then let the session drop: the tab goes red
+      **immediately**, with **no retry at all**, and the InfoBar names the cause
+      (logon failed / account locked out / password expired). Reconnecting in a loop on
+      a refused credential is the one behaviour that must never happen — check the log
+      shows no `attempt n/5` line for that code.
+- [ ] Point a connection at a **nonexistent host name**: no automatic retry either
+      (name resolution is not a transient network failure), red tab, "DNS name lookup
+      failed" or "Host not found".
+- [ ] **Copy diagnostics** puts a readable block in the clipboard: connection, host,
+      display mode, control version, state, attempts, disconnect code, category,
+      meaning, extended reason, Windows wording, SmartSizing status, UTC timestamp.
+
+### Closing
+
+- [ ] `Ctrl+W` closes the active tab; the neighbouring tab becomes active and its
+      session is untouched.
+- [ ] **Middle-click** on a tab closes it, the way a browser does.
+- [ ] Closing the last tab brings back the empty state; the app does not close.
+- [ ] With **two sessions live**, close the window: the InfoBar announces the sessions
+      are closing, the window stays up until they are, then closes. On each server,
+      `query session` shows the session as **Disc** (not Active) and **no duplicate**
+      session exists. Reconnect afterwards: still one session, no zombie.
+- [ ] Pressing `Ctrl+W` twice quickly, or clicking the cross while a close is running,
+      does not close two tabs or throw.
+
+### Known limitations to confirm (not regressions)
+
+- [ ] `Ctrl+W` typed inside a **text box** still closes the active tab: the low-level
+      hook does not filter on the focused control yet (lot 5, §7.3). Confirm this is
+      still the known behaviour.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the

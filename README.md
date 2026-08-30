@@ -5,9 +5,9 @@ Tabs, groups, fuzzy search, a command palette, and a credential vault backed by
 Windows DPAPI — built on the native Remote Desktop ActiveX control, so the RDP
 protocol itself is Microsoft's, not ours.
 
-> Status: **pre-alpha**. Lots 0–3 are done: one session at a time, a searchable
-> connection pane, an editor and the credential vault. Multi-session tabs,
-> automatic reconnection and the command palette land in lots 4 and 5.
+> Status: **pre-alpha**. Lots 0–4 are done: multi-session tabs, automatic
+> reconnection, dynamic resolution, a searchable connection pane, an editor and the
+> credential vault. The command palette and `.rdp` import land in lot 5.
 
 ## Requirements
 
@@ -47,6 +47,31 @@ connection pane.
    CredSSP prompt.
 3. Select a connection and press `Enter`.
 
+### Sessions
+
+Each connection you open gets its **own tab**, and every session stays live in the
+background: switching tabs never disconnects anything. A connection has at most one
+tab — connecting it again just brings its tab forward. The dot on each tab is its
+state: green connected, amber reconnecting, red failed.
+
+Close a tab with `Ctrl+W`, the cross, or a middle-click. Closing the window closes
+every session properly first — the app waits for the servers to acknowledge, so
+sessions are left *disconnected*, never as zombies.
+
+**Automatic reconnection.** When a session drops on a network failure — a timeout or
+a lost socket — RemoteDeck reconnects on its own: five attempts, waiting 2 s, 5 s,
+10 s, 30 s then 60 s, with a visible countdown you can cancel at any time. It
+deliberately does **not** retry anything else: a refused password is never retried
+(that is how an Active Directory account gets locked out), and neither is an
+unresolvable host name, a certificate failure or a licensing failure. Those stop at
+the first attempt with the reason spelled out, a *Reconnect* button and *Copy
+diagnostics*.
+
+**Dynamic resolution.** Connections in *Dynamic* display mode resize the remote
+desktop to match the window: resize or maximise, and after a short pause the remote
+resolution follows, sharp, instead of being stretched. Against a server that refuses
+it, the session falls back to scaling the image and says so in the log.
+
 Connections and credentials live in `%APPDATA%\RemoteDeck\connections.db`.
 Window and pane layout — pane width, collapsed state, window size and position —
 lives beside it in **`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside
@@ -63,12 +88,16 @@ falls back to its defaults without complaining.
 | `F2` | Edit the selected connection |
 | `Delete` | Delete the selected connection — press twice; the first press only arms it, and the confirmation expires after 5 seconds |
 | `Ctrl+B` | Collapse or restore the connection pane |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous session tab (cycles; the session you leave stays connected) |
+| `Ctrl+W` | Close the active session tab |
 
 Search is fuzzy and ignores case and accents; it matches on name, host and group
 name, sorts favorites first, and highlights the characters your query hit.
 
-`Ctrl+K` (command palette), `Ctrl+Tab` / `Ctrl+Shift+Tab` (switch tab) and
-`Ctrl+W` (close tab) are part of the design but ship with later lots.
+`Ctrl+K` (command palette) is part of the design but ships with lot 5. Until then,
+shortcuts are also swallowed inside text boxes: `Ctrl+W` closes a tab even while you
+are typing in the search box or the editor. Lot 5 filters the hook on the focused
+control.
 
 If a security policy blocks the low-level keyboard hook, application shortcuts
 cannot be intercepted while the remote desktop has focus. `Ctrl+Alt+Left` /
