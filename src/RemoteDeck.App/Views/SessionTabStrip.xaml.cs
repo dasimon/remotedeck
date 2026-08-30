@@ -124,10 +124,12 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
     }
 
     /// <summary>Middle-click closes, the way it does in a browser. Only the middle button is handled
-    /// here: the left one has its own pair of handlers.</summary>
+    /// here: the left one has its own pair of handlers, and closing is refused while the window is
+    /// shutting down — the same rule the cross and Ctrl+W follow.</summary>
     private void OnTabMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (_viewModel is null || e.ChangedButton != MouseButton.Middle || TabOf(sender) is not { } tab)
+        if (_viewModel is null || !_viewModel.CanCloseTabs
+            || e.ChangedButton != MouseButton.Middle || TabOf(sender) is not { } tab)
         {
             return;
         }

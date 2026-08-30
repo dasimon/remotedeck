@@ -34,9 +34,13 @@ internal sealed partial class SessionsViewModel : ObservableObject
     private readonly Action<RdpSession> _attach;
     private readonly Action<RdpSession> _detach;
 
-    /// <summary>Tabs whose close is already running. A second Ctrl+W — or a click on the cross
-    /// while the protocol waits — must join nothing and start nothing.</summary>
-    private readonly HashSet<SessionTabViewModel> _closing = [];
+    /// <summary>
+    /// The close in flight for each tab. A second Ctrl+W — or a click on the cross while the
+    /// protocol waits — joins that task instead of starting a second <c>RequestClose</c>, and so
+    /// does <see cref="CloseAllAsync"/>: a window closing over a tab the user has just closed must
+    /// wait for the §6.5 protocol to finish, never dispose the control out from under it.
+    /// </summary>
+    private readonly Dictionary<SessionTabViewModel, Task> _closing = [];
 
     /// <param name="attach">Puts a session's host in the shell's container. Called by
     /// <see cref="Open"/>, before the shell starts the session.</param>
@@ -64,10 +68,21 @@ internal sealed partial class SessionsViewModel : ObservableObject
     /// <summary>Raised when any tab's session changed. The shell only acts on the active one.</summary>
     public event Action<SessionTabViewModel>? TabChanged;
 
-    /// <summary>The tab serving <paramref name="connectionId"/>, or <c>null</c>. A connection has at
-    /// most one tab: connecting to it again activates the existing one.</summary>
+    /// <summary>
+    /// False while the window is shutting down: the cross and the middle-click are then refused,
+    /// the way the shell already refuses Ctrl+W. A close started at that point would race the
+    /// close-all pass over the same tab.
+    /// </summary>
+    [ObservableProperty] private bool _canCloseTabs = true;
+
+    /// <summary>
+    /// The tab serving <paramref name="connectionId"/>, or <c>null</c>. A connection has at most
+    /// one tab: connecting to it again activates the existing one. A tab whose close is already
+    /// running does not count — it is on its way out, and reusing it would hand the user a session
+    /// about to disappear; the caller opens a fresh one instead.
+    /// </summary>
     public SessionTabViewModel? Find(long connectionId) =>
-        Tabs.FirstOrDefault(t => t.Session.Connection.Id == connectionId);
+        Tabs.FirstOrDefault(t => t.Session.Connection.Id == connectionId && !_closing.ContainsKey(t));
 
     /// <summary>
     /// Adds <paramref name="session"/> as a new, activated tab and puts its host in the container.
@@ -143,18 +158,52 @@ internal sealed partial class SessionsViewModel : ObservableObject
     public Task CloseAsync(SessionTabViewModel? tab) => CloseAsync(tab, DefaultCloseTimeout);
 
     /// <summary>
+    /// Closes one tab, or hands back the close already running on it. The returned task completes
+    /// once the tab is really gone, so a caller that must not proceed until the control has been
+    /// released — the window's close-all pass — can await it. Never throws.
+    /// </summary>
+    public Task CloseAsync(SessionTabViewModel? tab, TimeSpan timeout)
+    {
+        if (tab is null || !Tabs.Contains(tab))
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_closing.TryGetValue(tab, out var running))
+        {
+            return running;
+        }
+
+        // The entry has to exist before the first await inside CloseCoreAsync, and an async method
+        // cannot register its own task from within itself; the completion source bridges the two.
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _closing[tab] = gate.Task;
+        _ = RunCloseAsync(tab, timeout, gate);
+        return gate.Task;
+    }
+
+    private async Task RunCloseAsync(SessionTabViewModel tab, TimeSpan timeout, TaskCompletionSource gate)
+    {
+        try
+        {
+            await CloseCoreAsync(tab, timeout).ConfigureAwait(true);
+        }
+        finally
+        {
+            // Removed before the task completes, so a CloseAsync resuming on that completion starts
+            // a fresh close instead of being handed one that is already over.
+            _closing.Remove(tab);
+            gate.TrySetResult();
+        }
+    }
+
+    /// <summary>
     /// Runs the §6.5 close protocol on one tab, then removes it: the host leaves the container, the
     /// tab leaves the strip, and the neighbour on its right — or, for the last tab, on its left —
     /// takes over. Never throws.
     /// </summary>
-    public async Task CloseAsync(SessionTabViewModel? tab, TimeSpan timeout)
+    private async Task CloseCoreAsync(SessionTabViewModel tab, TimeSpan timeout)
     {
-        if (tab is null || !Tabs.Contains(tab) || !_closing.Add(tab))
-        {
-            return;
-        }
-
-        int index = Tabs.IndexOf(tab);
         try
         {
             await tab.Session.CloseAsync(timeout).ConfigureAwait(true);
@@ -166,7 +215,10 @@ internal sealed partial class SessionsViewModel : ObservableObject
             ProbeLog.Write("tabs", $"'{tab.Title}': close failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
 
-        _closing.Remove(tab);
+        // Read after the await, never before: the protocol takes seconds, during which the strip
+        // may have been reordered or another tab closed, and a stale index would hand the user the
+        // wrong neighbour.
+        int index = Tabs.IndexOf(tab);
         tab.CloseRequested -= OnTabCloseRequested;
         tab.Changed -= OnTabChanged;
         Tabs.Remove(tab);
@@ -176,7 +228,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
 
         if (ReferenceEquals(Active, tab))
         {
-            Active = Tabs.Count == 0 ? null : Tabs[Math.Min(index, Tabs.Count - 1)];
+            Active = Tabs.Count == 0 ? null : Tabs[Math.Clamp(index, 0, Tabs.Count - 1)];
         }
         else
         {
@@ -213,7 +265,23 @@ internal sealed partial class SessionsViewModel : ObservableObject
                 continue;
             }
 
-            await CloseAsync(tab, remaining < perTab ? remaining : perTab).ConfigureAwait(true);
+            // A tab the user closed a moment ago already has a protocol in flight with a budget
+            // of its own; CloseAsync hands that task back rather than starting a second
+            // RequestClose. Skipping it here is what used to let DisposeAll tear the control down
+            // mid-protocol, i.e. exactly the zombie session §6.5 exists to prevent.
+            bool joined = _closing.ContainsKey(tab);
+            var close = CloseAsync(tab, remaining < perTab ? remaining : perTab);
+            if (!joined)
+            {
+                await close.ConfigureAwait(true);
+                continue;
+            }
+
+            // Waiting on someone else's budget: bounded by what is left of ours.
+            if (await Task.WhenAny(close, Task.Delay(remaining)).ConfigureAwait(true) != close)
+            {
+                ProbeLog.Write("close", $"'{tab.Title}': the close already in flight outlived the overall budget");
+            }
         }
 
         ProbeLog.Write("close", $"All sessions closed in {clock.Elapsed.TotalSeconds:F1}s");
@@ -266,8 +334,17 @@ internal sealed partial class SessionsViewModel : ObservableObject
         ActiveChanged?.Invoke();
     }
 
-    // Fire and forget: CloseAsync never throws, and a command handler cannot await.
-    private void OnTabCloseRequested(SessionTabViewModel tab) => _ = CloseAsync(tab);
+    /// <summary>Fire and forget: <see cref="CloseAsync(SessionTabViewModel?)"/> never throws and a
+    /// command handler cannot await. Refused while the window is shutting down.</summary>
+    private void OnTabCloseRequested(SessionTabViewModel tab)
+    {
+        if (!CanCloseTabs)
+        {
+            return;
+        }
+
+        _ = CloseAsync(tab);
+    }
 
     private void OnTabChanged(SessionTabViewModel tab) => TabChanged?.Invoke(tab);
 }

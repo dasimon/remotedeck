@@ -74,6 +74,11 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Appearance" Value="Transparent" />
             <Setter Property="Visibility" Value="Hidden" />
+            <!-- Refused while the window is shutting down: a close started then would race the
+                 close-all pass over the very same tab. The ItemsControl's DataContext is the
+                 SessionsViewModel; the template's own is the tab. -->
+            <Setter Property="IsEnabled"
+                    Value="{Binding DataContext.CanCloseTabs, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsActive}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
