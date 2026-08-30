@@ -5,14 +5,15 @@ namespace RemoteDeck.Core.Tests.Diagnostics;
 public sealed class DisconnectReasonTests
 {
     /// <summary>
-    /// The 47 codes documented for <c>IMsTscAxEvents::OnDisconnected</c>, restated here on
-    /// purpose: the table under test must cover every one of them, so the expectation cannot
-    /// be sourced from the implementation it verifies.
+    /// The 48 codes the table must cover: the 47 documented for
+    /// <c>IMsTscAxEvents::OnDisconnected</c> plus the observed 267. Restated here on purpose —
+    /// the table under test must cover every one of them, so the expectation cannot be sourced
+    /// from the implementation it verifies.
     /// </summary>
-    public static TheoryData<int> DocumentedCodes =>
+    public static TheoryData<int> KnownCodes =>
     [
         0, 1, 2, 3,
-        260, 262, 264,
+        260, 262, 264, 267,
         516, 518, 520,
         772, 774, 776,
         1028, 1030, 1032,
@@ -50,6 +51,17 @@ public sealed class DisconnectReasonTests
         Assert.Equal(264, described.Reason);
         Assert.Equal(DisconnectCategory.Network, described.Category);
         Assert.Equal("Connection timed out", described.Title);
+        Assert.True(described.IsError);
+    }
+
+    [Fact]
+    public void Observed_connection_lost_code_is_a_network_error()
+    {
+        var described = DisconnectReason.Describe(267);
+
+        Assert.Equal(267, described.Reason);
+        Assert.Equal(DisconnectCategory.Network, described.Category);
+        Assert.Equal("Connection lost", described.Title);
         Assert.True(described.IsError);
     }
 
@@ -99,8 +111,8 @@ public sealed class DisconnectReasonTests
     }
 
     [Theory]
-    [MemberData(nameof(DocumentedCodes))]
-    public void Every_documented_code_has_a_category_and_a_title(int reason)
+    [MemberData(nameof(KnownCodes))]
+    public void Every_known_code_has_a_category_and_a_title(int reason)
     {
         var described = DisconnectReason.Describe(reason);
 

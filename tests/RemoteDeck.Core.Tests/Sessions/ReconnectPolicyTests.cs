@@ -32,6 +32,13 @@ public sealed class ReconnectPolicyTests
     }
 
     [Fact]
+    public void ShouldReconnect_is_true_for_the_observed_connection_lost_code()
+    {
+        // 267 is absent from the Microsoft table; observed on a real network cut. See ReconnectPolicy.
+        Assert.True(ReconnectPolicy.ShouldReconnect(267));
+    }
+
+    [Fact]
     public void ShouldReconnect_is_false_for_intentional_disconnections()
     {
         foreach (var reason in new[] { 0, 1, 2, 3 })
