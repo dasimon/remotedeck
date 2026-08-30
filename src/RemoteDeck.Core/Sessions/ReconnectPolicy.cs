@@ -16,6 +16,7 @@ namespace RemoteDeck.Core.Sessions;
 /// </list>
 /// Codes are documented at
 /// https://learn.microsoft.com/windows/win32/termserv/imstscaxevents-ondisconnected
+/// One retried code, 267, is <em>not</em> on that page — see the set below.
 /// </remarks>
 public static class ReconnectPolicy
 {
@@ -41,6 +42,12 @@ public static class ReconnectPolicy
         1028, // disconnectReasonSocketRecvFailed
         1796, // disconnectReasonTimeoutOccurred
         2308, // disconnectReasonAtClientWinsockFDCLOSE
+
+        // Observed on 2026-08-30 with control version 12 and EnableAutoReconnect=false; not listed
+        // on the Microsoft page above; Windows describes it as a lost connection due to network
+        // problems. A real network cut reports 267, so leaving it out would send the session
+        // straight to Failed without a single retry.
+        267,
     ];
 
     /// <summary>Returns true when <paramref name="reason"/> is a transient network failure.</summary>

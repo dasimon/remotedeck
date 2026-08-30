@@ -1,7 +1,8 @@
 // Disconnect codes and their meanings are taken verbatim from the documented parameter list of
 // IMsTscAxEvents::OnDisconnected (47 codes, verified 2026-08-30):
 // https://learn.microsoft.com/windows/win32/termserv/imstscaxevents-ondisconnected
-// No other code is invented here: anything absent from that page is reported as Unknown.
+// No code is invented here. The single exception is 267, added from observation and marked as
+// such in its own block below; anything else absent from that page is reported as Unknown.
 
 namespace RemoteDeck.Core.Diagnostics;
 
@@ -78,6 +79,13 @@ public static class DisconnectReason
         Add(DisconnectCategory.Network, 1796, "Time-out occurred");             // disconnectReasonTimeoutOccurred
         Add(DisconnectCategory.Network, 2052, "Bad IP address specified");      // disconnectReasonInvalidIP
         Add(DisconnectCategory.Network, 2308, "Socket closed");                 // disconnectReasonAtClientWinsockFDCLOSE
+
+        // Observed, NOT documented.
+        // Observed on 2026-08-30 with control version 12 and EnableAutoReconnect=false; not listed
+        // on the Microsoft page above; Windows describes it as a lost connection due to network
+        // problems ("La connexion a l'ordinateur distant a ete perdue, peut-etre en raison de
+        // problemes de connectivite reseau", GetErrorDescription).
+        Add(DisconnectCategory.Network, 267, "Connection lost");
 
         // Resources.
         Add(DisconnectCategory.Resources, 262, "Out of memory"); // disconnectReasonOutOfMemory
