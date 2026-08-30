@@ -11,8 +11,10 @@ namespace RemoteDeck.App.Rdp;
 /// <list type="bullet">
 ///   <item><c>AuthenticationLevel</c>: 0/1/2 as in <c>IMsRdpClientAdvancedSettings5::AuthenticationLevel</c>;
 ///   <c>null</c> leaves whatever default the control came with.</item>
-///   <item><c>FixedWidth</c>/<c>FixedHeight</c>: the remote resolution to request when
-///   <c>DisplayMode</c> is <see cref="DisplayMode.Fixed"/>; ignored otherwise.</item>
+///   <item><c>FixedWidth</c>/<c>FixedHeight</c>: the remote resolution to request when <c>DisplayMode</c>
+///   is <see cref="DisplayMode.Fixed"/> or <see cref="DisplayMode.Scaled"/> — Scaled asks for the same
+///   pinned resolution and lets SmartSizing fit it to the window; ignored under
+///   <see cref="DisplayMode.Dynamic"/>, which follows the window instead.</item>
 /// </list>
 /// </summary>
 internal sealed record RdpConnectionSettings(

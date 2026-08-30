@@ -11,7 +11,8 @@ public static class ConnectionRules
     private const int MinFixedHeight = 480;
     private const int MaxFixedSide = 8192;
 
-    public static IReadOnlyList<string> Validate(string? name, string? host, int port, DisplayMode mode, int? fixedWidth, int? fixedHeight)
+    /// <param name="port">The port, or <c>null</c> when the box is empty — reported as missing, not out of range.</param>
+    public static IReadOnlyList<string> Validate(string? name, string? host, int? port, DisplayMode mode, int? fixedWidth, int? fixedHeight)
     {
         var errors = new List<string>();
 
@@ -23,7 +24,8 @@ public static class ConnectionRules
         if (trimmedHost.Length == 0) errors.Add("Host is required.");
         else if (trimmedHost.Any(char.IsWhiteSpace)) errors.Add("Host must not contain spaces.");
 
-        if (port is < MinPort or > MaxPort) errors.Add($"Port must be between {MinPort} and {MaxPort}.");
+        if (port is null) errors.Add("Port is required.");
+        else if (port is < MinPort or > MaxPort) errors.Add($"Port must be between {MinPort} and {MaxPort}.");
 
         // Dynamic follows the window, so the fixed size is irrelevant — and must not block saving.
         if (mode != DisplayMode.Dynamic)

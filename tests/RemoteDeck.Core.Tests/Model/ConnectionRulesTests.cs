@@ -25,6 +25,14 @@ public sealed class ConnectionRulesTests
     }
 
     [Fact]
+    public void Missing_port_is_reported_as_required()
+    {
+        var errors = ConnectionRules.Validate("Web01", "web01.corp", null, DisplayMode.Dynamic, null, null);
+
+        Assert.Equal(["Port is required."], errors);
+    }
+
+    [Fact]
     public void Host_must_not_contain_spaces()
         => Assert.Single(ConnectionRules.Validate("Web01", "web 01.corp", 3389, DisplayMode.Dynamic, null, null));
 
@@ -34,6 +42,13 @@ public sealed class ConnectionRulesTests
         Assert.Equal(2, ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Fixed, null, null).Count);
         Assert.Equal(2, ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Scaled, 639, 479).Count);
         Assert.Empty(ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Fixed, 1920, 1080));
+    }
+
+    [Fact]
+    public void Fixed_dimensions_stop_at_the_upper_bound()
+    {
+        Assert.Single(ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Fixed, 8193, 1080));
+        Assert.Empty(ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Fixed, 8192, 1080));
     }
 
     [Fact]
