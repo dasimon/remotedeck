@@ -13,6 +13,14 @@ public sealed partial class CredentialEditorViewModel : ObservableObject
 
     public bool IsNew { get; init; } = true;
 
+    /// <summary>Field label. The asterisk marks the password as required only when creating:
+    /// on edit an empty box means "keep the stored secret".</summary>
+    public string PasswordLabel => IsNew ? "Password *" : "Password";
+
+    /// <summary>Placeholder for the password box. The stored secret is encrypted and never decrypted
+    /// for display, so on edit the placeholder states the intent instead of faking masked characters.</summary>
+    public string PasswordPlaceholder => IsNew ? "password" : "•••••••• (unchanged — type to replace)";
+
     public bool Validate(IEnumerable<string> otherLabels)
     {
         var errors = CredentialRules.Validate(Label, UserName, otherLabels);

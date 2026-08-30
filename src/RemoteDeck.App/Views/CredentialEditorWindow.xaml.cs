@@ -39,7 +39,6 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
             Domain = existing?.Domain ?? "",
         };
         DataContext = _vm;
-        PasswordHint.Visibility = existing is null ? Visibility.Collapsed : Visibility.Visible;
         Loaded += (_, _) => LabelInput.Focus();
     }
 
