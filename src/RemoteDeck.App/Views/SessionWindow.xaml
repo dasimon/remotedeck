@@ -19,7 +19,11 @@
          There is no ui:TitleBar: ExtendsContentIntoTitleBar leaves the strip below as the only
          caption, which is what makes it 32 px rather than the Fluent default, and the code-behind
          supplies the drag through DragMove(). WindowStyle is declared even though it is the
-         default, because full screen swaps it for None and puts this value back. -->
+         default, because full screen swaps it for None and puts this value back.
+
+         The strip and the InfoBar share one Chrome panel because full screen collapses them
+         together and brings them back together: the code-behind toggles one Visibility and measures
+         one height. -->
     <ui:FluentWindow.Resources>
         <!-- Same four keys and the same DynamicResource indirection as SessionTabStrip: the
              view-model publishes a resource *key*, not a Brush, so the dot follows a light/dark
@@ -70,87 +74,88 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Background is Transparent rather than unset: a null Background is not hit-testable, and
-             the whole strip has to answer the drag. -->
-        <Grid x:Name="TitleBarRow" Grid.Row="0" Height="32"
-              Background="Transparent"
-              MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <StackPanel x:Name="Chrome" Grid.Row="0">
+            <!-- Background is Transparent rather than unset: a null Background is not hit-testable, and
+                 the whole strip has to answer the drag. -->
+            <Grid x:Name="TitleBarRow" Height="32"
+                  Background="Transparent"
+                  MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
+                <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
 
-            <TextBlock Grid.Column="1"
-                       Text="{Binding Title}"
-                       VerticalAlignment="Center"
-                       MaxWidth="240"
-                       TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Title}"
+                           VerticalAlignment="Center"
+                           MaxWidth="240"
+                           TextTrimming="CharacterEllipsis" />
 
-            <TextBlock Grid.Column="2"
-                       Text="{Binding Subtitle}"
-                       VerticalAlignment="Center"
-                       Margin="8,0,8,0"
-                       Opacity="0.7"
-                       TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Subtitle}"
+                           VerticalAlignment="Center"
+                           Margin="8,0,8,0"
+                           Opacity="0.7"
+                           TextTrimming="CharacterEllipsis" />
 
-            <ui:Button x:Name="ReconnectButton" Grid.Column="3"
-                       Style="{StaticResource CaptionTextButtonStyle}"
-                       Content="{x:Static res:Strings.Shell_Reconnect}"
-                       Icon="{ui:SymbolIcon ArrowClockwise20}"
-                       ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
-                       Click="OnReconnectClick" />
+                <ui:Button x:Name="ReconnectButton" Grid.Column="3"
+                           Style="{StaticResource CaptionTextButtonStyle}"
+                           Content="{x:Static res:Strings.Shell_Reconnect}"
+                           Icon="{ui:SymbolIcon ArrowClockwise20}"
+                           ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
+                           Click="OnReconnectClick" />
 
-            <ui:Button x:Name="CancelRetryButton" Grid.Column="4"
-                       Style="{StaticResource CaptionTextButtonStyle}"
-                       Content="{x:Static res:Strings.Common_Cancel}"
-                       ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
-                       Click="OnCancelRetryClick" />
+                <ui:Button x:Name="CancelRetryButton" Grid.Column="4"
+                           Style="{StaticResource CaptionTextButtonStyle}"
+                           Content="{x:Static res:Strings.Common_Cancel}"
+                           ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
+                           Click="OnCancelRetryClick" />
 
-            <ui:Button x:Name="DiagnosticsButton" Grid.Column="5"
-                       Style="{StaticResource CaptionButtonStyle}"
-                       Icon="{ui:SymbolIcon Copy20}"
-                       ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
-                       Click="OnCopyDiagnosticsClick" />
+                <ui:Button x:Name="DiagnosticsButton" Grid.Column="5"
+                           Style="{StaticResource CaptionButtonStyle}"
+                           Icon="{ui:SymbolIcon Copy20}"
+                           ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
+                           Click="OnCopyDiagnosticsClick" />
 
-            <ui:Button Grid.Column="6"
-                       Style="{StaticResource CaptionButtonStyle}"
-                       Icon="{ui:SymbolIcon TabDesktop20}"
-                       ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
-                       Click="OnReattachClick" />
+                <ui:Button Grid.Column="6"
+                           Style="{StaticResource CaptionButtonStyle}"
+                           Icon="{ui:SymbolIcon TabDesktop20}"
+                           ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
+                           Click="OnReattachClick" />
 
-            <ui:Button Grid.Column="7"
-                       Style="{StaticResource CaptionButtonStyle}"
-                       Icon="{ui:SymbolIcon FullScreenMaximize20}"
-                       ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
-                       Click="OnFullScreenClick" />
+                <ui:Button Grid.Column="7"
+                           Style="{StaticResource CaptionButtonStyle}"
+                           Icon="{ui:SymbolIcon FullScreenMaximize20}"
+                           ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
+                           Click="OnFullScreenClick" />
 
-            <ui:Button Grid.Column="8"
-                       Style="{StaticResource CaptionButtonStyle}"
-                       Margin="2,0,4,0"
-                       Icon="{ui:SymbolIcon Dismiss24}"
-                       ToolTip="{x:Static res:Strings.SessionWindow_Close}"
-                       Click="OnCloseClick" />
-        </Grid>
+                <ui:Button Grid.Column="8"
+                           Style="{StaticResource CaptionButtonStyle}"
+                           Margin="2,0,4,0"
+                           Icon="{ui:SymbolIcon Dismiss24}"
+                           ToolTip="{x:Static res:Strings.SessionWindow_Close}"
+                           Click="OnCloseClick" />
+            </Grid>
 
-        <ui:InfoBar Grid.Row="1" x:Name="StatusBar" Margin="8,0,8,6" IsOpen="False" IsClosable="True" />
+            <ui:InfoBar x:Name="StatusBar" Margin="8,0,8,6" IsOpen="False" IsClosable="True" />
+        </StackPanel>
 
         <!-- Named HostAreaBorder so the Decorator the shell writes into can be the public HostArea
              property; black for the same reason as the shell's session area — no theme text colour
              reads well against a remote desktop. -->
-        <Border x:Name="HostAreaBorder" Grid.Row="2" Margin="8,0,8,8"
+        <Border x:Name="HostAreaBorder" Grid.Row="1" Margin="8,0,8,8"
                 CornerRadius="6" Background="#FF000000" />
     </Grid>
 </ui:FluentWindow>

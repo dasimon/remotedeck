@@ -29,6 +29,13 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Detached session windows are deliberately owner-less — an owned window is always painted
+        // above its owner and minimises with it, which is the opposite of a session torn onto a
+        // second monitor. The default OnLastWindowClose would therefore keep the process alive after
+        // the shell is gone, with windows the user has no way back to. The shell is the application:
+        // when it closes, so does RemoteDeck. StartupUri makes it MainWindow.
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
         ApplyOverriddenCulture();
         ProbeLog.Write("startup", $"RemoteDeck starting, log at {ProbeLog.Path}");
         try

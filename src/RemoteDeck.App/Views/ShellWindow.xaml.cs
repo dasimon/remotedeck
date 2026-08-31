@@ -13,7 +13,6 @@ using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Data;
-using RemoteDeck.Core.Diagnostics;
 using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Rdp;
 using RemoteDeck.Core.Search;
@@ -47,12 +46,6 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 {
     /// <summary>How long an armed delete stays armed before it disarms itself.</summary>
     private static readonly TimeSpan DeleteConfirmationWindow = TimeSpan.FromSeconds(5);
-
-    /// <summary>§6.5 budget for one tab while the window is closing.</summary>
-    private static readonly TimeSpan PerTabCloseTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>Ceiling on the whole close-all pass, whatever the tabs do.</summary>
-    private static readonly TimeSpan OverallCloseTimeout = TimeSpan.FromSeconds(15);
 
     /// <summary>Narrowest usable pane; mirrors <c>PaneColumn.MinWidth</c> in the XAML and is what
     /// unfolding restores when the stored width is unusable.</summary>
@@ -159,6 +152,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         InputBindings.Add(new KeyBinding(new RelayCommand(TogglePane, () => ShouldInterceptShortcut("Ctrl+B")), Key.B, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(CloseActiveTab, () => ShouldInterceptShortcut("Ctrl+W")), Key.W, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(OpenCommandPalette), Key.K, ModifierKeys.Control));
+        // Ctrl+Shift+D is symmetrical: it tears the active tab off here, and takes a session back in
+        // a detached window. Like Ctrl+K it needs no canExecute — no text control does anything with
+        // it — and the hook takes it in both windows, so it works from inside a remote desktop too.
+        InputBindings.Add(new KeyBinding(new RelayCommand(DetachActiveTab), Key.D, ModifierKeys.Control | ModifierKeys.Shift));
 
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -346,14 +343,57 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- shortcuts
 
     /// <summary>
-    /// Whether a shortcut is the application's to take, or the focused input's. The single
-    /// definition of that rule: the low-level hook asks it before swallowing a keystroke, and the
-    /// window's Ctrl+B / Ctrl+W key bindings ask it as their <c>canExecute</c> — a shortcut reaching
-    /// WPF through the message pump never went past the hook, so one path alone would not do.
-    /// Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+W and Ctrl+B all mean something inside a text field — move
-    /// between fields, delete the word to the left, jump back a word — and a system-wide hook that
-    /// swallows them makes typing in the shell feel broken. Ctrl+K is never filtered: it is the
-    /// only way into the command palette and has no meaning in a WPF input.
+    /// The detached session window that currently holds the foreground, or <c>null</c> when it is
+    /// the shell — or one of its dialogs, or another application — that does. The one place the
+    /// keyboard routing asks "which window is this shortcut for".
+    /// </summary>
+    /// <remarks>
+    /// Called from inside the hook callback as well as from the UI thread, so it does what the
+    /// callback is allowed to do and nothing more: walk the application's window list and read
+    /// <see cref="Window.IsActive"/>. No I/O, no dispatcher hop.
+    /// </remarks>
+    private static SessionWindow? ActiveSessionWindow()
+    {
+        // Fully qualified: UseWindowsForms puts System.Windows.Forms.Application in scope too.
+        var windows = System.Windows.Application.Current?.Windows;
+        if (windows is null)
+        {
+            return null;
+        }
+
+        foreach (Window window in windows)
+        {
+            if (window is SessionWindow { IsActive: true } session)
+            {
+                return session;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether a shortcut is the application's to take, or the focused window's and input's. The
+    /// single definition of that rule: the low-level hook asks it before swallowing a keystroke, and
+    /// the window's Ctrl+B / Ctrl+W key bindings ask it as their <c>canExecute</c> — a shortcut
+    /// reaching WPF through the message pump never went past the hook, so one path alone would not
+    /// do. Three rules live here:
+    /// <list type="bullet">
+    /// <item>F11 and Ctrl+Alt+Pause only mean something over a detached session window: the shell
+    /// has no full screen of its own, and swallowing them there would cost the remote desktop a
+    /// keystroke for nothing.</item>
+    /// <item>Ctrl+Shift+D is always taken: it detaches over the shell and reattaches over a session
+    /// window, and the whole point of the hook is that it works from inside a remote desktop, which
+    /// is exactly where the user is when they want the session in a window of its own.</item>
+    /// <item>Ctrl+Tab, Ctrl+Shift+Tab and Ctrl+B are the shell's alone: a detached window has
+    /// neither a strip to cycle nor a pane to fold, so taking them there would cost the remote
+    /// desktop a keystroke for nothing.</item>
+    /// <item>Those three and Ctrl+W also mean something inside a text field — move between fields,
+    /// delete the word to the left, jump back a word — and a system-wide hook that swallows them
+    /// makes typing in the shell feel broken.</item>
+    /// </list>
+    /// Ctrl+K is never filtered: it is the only way into the command palette and has no meaning in a
+    /// WPF input.
     /// </summary>
     /// <remarks>
     /// Runs inside the hook callback (see <see cref="ShortcutInterceptor.ShouldIntercept"/>), so it
@@ -368,30 +408,50 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </remarks>
     private static bool ShouldInterceptShortcut(string shortcut)
     {
-        if (shortcut is not ("Ctrl+Tab" or "Ctrl+Shift+Tab" or "Ctrl+W" or "Ctrl+B"))
-        {
-            return true;
-        }
-
         if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == false)
         {
             return true;
         }
 
-        // Qualified: UseWindowsForms puts its own Application, TextBoxBase and ComboBox in scope
-        // through implicit usings. A read-only ComboBox has no caret, so Ctrl+W there is ours.
-        return Keyboard.FocusedElement is not (System.Windows.Controls.Primitives.TextBoxBase
-            or System.Windows.Controls.PasswordBox
-            or System.Windows.Controls.ComboBox { IsEditable: true });
+        bool overSessionWindow = ActiveSessionWindow() is not null;
+
+        if (shortcut is "F11" or "Ctrl+Alt+Pause")
+        {
+            return overSessionWindow;
+        }
+
+        if (shortcut is "Ctrl+Tab" or "Ctrl+Shift+Tab" or "Ctrl+B")
+        {
+            return !overSessionWindow && NotATextInput();
+        }
+
+        return shortcut is not "Ctrl+W" || NotATextInput();
     }
 
+    /// <summary>Whether the keyboard focus is somewhere a caret would be. Qualified: UseWindowsForms
+    /// puts its own TextBoxBase and ComboBox in scope through implicit usings. A read-only ComboBox
+    /// has no caret, so Ctrl+W there is ours.</summary>
+    private static bool NotATextInput() =>
+        Keyboard.FocusedElement is not (System.Windows.Controls.Primitives.TextBoxBase
+            or System.Windows.Controls.PasswordBox
+            or System.Windows.Controls.ComboBox { IsEditable: true });
+
     /// <summary>
-    /// What an intercepted shortcut does. The <c>default</c> branch is the lot-0 probe message: it
-    /// now only ever fires for a shortcut the interceptor learns to recognise before this switch
-    /// learns to act on it.
+    /// What an intercepted shortcut does. The hook has no idea which window is on screen, so the
+    /// routing is here: a detached session window takes its own set, the shell takes the rest, and
+    /// anything else that happens to be foreground — the editor, the credentials window, the palette
+    /// itself — takes none. The <c>default</c> branch is the lot-0 probe message: it now only ever
+    /// fires for a shortcut the interceptor learns to recognise before this switch learns to act on
+    /// it.
     /// </summary>
     private void OnShortcut(string shortcut, ShortcutInterceptor.Mechanism mechanism)
     {
+        if (ActiveSessionWindow() is { } window)
+        {
+            OnSessionWindowShortcut(window, shortcut);
+            return;
+        }
+
         // The hook is system-wide and fires whenever *any* window of this process is foreground —
         // the connection editor and the credentials window included. Acting there would toggle the
         // pane behind a dialog and, worse, let Ctrl+W close a session the user cannot even see.
@@ -419,10 +479,60 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             case "Ctrl+K":
                 OpenCommandPalette();
                 break;
+            case "Ctrl+Shift+D":
+                DetachActiveTab();
+                break;
+            case "F11":
+            case "Ctrl+Alt+Pause":
+                // Full screen belongs to a detached window and the shell has none.
+                // ShouldInterceptShortcut normally keeps these out of the shell altogether; this
+                // covers the window going inactive between the verdict and the dispatched call.
+                ProbeLog.Write("shortcuts", $"{shortcut} ignored: no detached session window is active");
+                break;
             default:
                 StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
                     Text.Of(Strings.Shell_ShortcutInterceptedTitle, shortcut),
                     Text.Of(Strings.Shell_ShortcutInterceptedMessage, mechanism));
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The same shortcuts, aimed at the detached window the user is actually looking at. Ctrl+W goes
+    /// through that window's own <c>Close</c> so the §6.5 protocol runs exactly where its cross runs
+    /// it, and the palette is owned by it rather than by a shell that may be behind another monitor.
+    /// </summary>
+    private void OnSessionWindowShortcut(SessionWindow window, string shortcut)
+    {
+        switch (shortcut)
+        {
+            case "Ctrl+W":
+                if (_closeInProgress)
+                {
+                    break;
+                }
+
+                window.Close();
+                break;
+
+            case "F11":
+            case "Ctrl+Alt+Pause":
+                window.ToggleFullScreen();
+                break;
+
+            case "Ctrl+K":
+                OpenCommandPalette(window);
+                break;
+
+            case "Ctrl+Shift+D":
+                Reattach(window);
+                break;
+
+            default:
+                // Ctrl+Tab, Ctrl+Shift+Tab and Ctrl+B: no strip to cycle, no pane to fold.
+                // ShouldInterceptShortcut declines them here, so they reach the remote desktop
+                // instead of being swallowed for nothing; this only covers a race with it.
+                ProbeLog.Write("shortcuts", $"{shortcut} ignored: '{window.Tab.Title}' is a detached session window");
                 break;
         }
     }
@@ -434,12 +544,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// shell's own state (the tab list, the pane, the active session), and letting the shell change
     /// underneath it would make <c>tab:&lt;index&gt;</c> point at a different tab than the one shown.
     /// </summary>
-    private void OpenCommandPalette()
+    private void OpenCommandPalette() => OpenCommandPalette(null);
+
+    /// <param name="from">The detached session window the palette was asked for, or <c>null</c> for
+    /// the shell. It decides who owns the palette — a palette centred on a shell the user cannot see
+    /// is a palette on the wrong monitor — and which of the two window commands is offered.</param>
+    private void OpenCommandPalette(SessionWindow? from)
     {
         // _paletteOpen is not redundant with the modality: the low-level hook fires on Ctrl+K even
-        // while the palette itself holds the focus. OnShortcut already refuses that case (the shell
-        // is not IsActive), but the WPF KeyBinding on this window would still stack a second palette
-        // when the first one is dismissed and the keystroke arrives twice.
+        // while the palette itself holds the focus. OnShortcut already refuses that case (neither
+        // the shell nor a session window is IsActive), but the WPF KeyBinding on this window would
+        // still stack a second palette when the first one is dismissed and the keystroke arrives
+        // twice.
         if (_paletteOpen || _closeInProgress)
         {
             return;
@@ -449,7 +565,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _paletteOpen = true;
         try
         {
-            var palette = new CommandPaletteWindow(BuildPaletteItems()) { Owner = this };
+            var palette = new CommandPaletteWindow(BuildPaletteItems(from)) { Owner = from ?? (Window)this };
             palette.ShowDialog();
             chosen = palette.ChosenId;
         }
@@ -462,7 +578,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // and both belong to the shell once the palette is gone.
         if (chosen is not null)
         {
-            RunPaletteChoice(chosen);
+            RunPaletteChoice(chosen, from);
         }
     }
 
@@ -476,7 +592,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// whatever is typed in the search box, and the palette must see every connection. Without a
     /// database there simply are none, and the commands stand alone.
     /// </remarks>
-    private IReadOnlyList<PaletteItem> BuildPaletteItems()
+    /// <param name="from">The detached window the palette was opened from, or <c>null</c> for the
+    /// shell.</param>
+    private IReadOnlyList<PaletteItem> BuildPaletteItems(SessionWindow? from)
     {
         var items = new List<PaletteItem>();
 
@@ -516,6 +634,20 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
             Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority));
 
+        // Exactly one of the two, and only when it would do something: from a detached window the
+        // session can only go back, and from the shell only a docked active tab can leave. Offering
+        // the other one would be a row that answers with nothing.
+        if (from is not null)
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reattach",
+                Strings.Palette_ReattachSession, "Ctrl+Shift+D", CommandPriority));
+        }
+        else if (_sessions.Active is { IsDetached: false })
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:detach",
+                Strings.Palette_DetachSession, "Ctrl+Shift+D", CommandPriority));
+        }
+
         return items;
     }
 
@@ -524,7 +656,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// they can only come from the list this window built moments earlier, and a row whose
     /// connection was deleted meanwhile is a race, not a mistake the user made.
     /// </summary>
-    private void RunPaletteChoice(string id)
+    /// <param name="from">The detached window the palette was opened from, or <c>null</c> for the
+    /// shell — the only thing that knows which session <c>cmd:reattach</c> means.</param>
+    private void RunPaletteChoice(string id, SessionWindow? from)
     {
         if (id.StartsWith(ConnectionIdPrefix, StringComparison.Ordinal))
         {
@@ -592,6 +726,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
                 ReconnectActiveTab();
                 break;
+
+            case "cmd:detach":
+                DetachActiveTab();
+                break;
+
+            case "cmd:reattach":
+                if (from is not null)
+                {
+                    Reattach(from);
+                }
+
+                break;
         }
     }
 
@@ -617,7 +763,30 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// No <c>Owner</c>: an owned window is always painted above its owner and minimises with it,
     /// which is the opposite of what a session torn onto a second monitor is for.
     /// </remarks>
-    private void OnDetachRequested(SessionTabViewModel tab, System.Windows.Point screenPoint)
+    private void OnDetachRequested(SessionTabViewModel tab, System.Windows.Point screenPoint) =>
+        DetachTab(tab, screenPoint);
+
+    /// <summary>Ctrl+Shift+D and the palette's <c>cmd:detach</c>: the active tab leaves for a window
+    /// of its own. No pointer behind the gesture, hence no drop point — the window opens where this
+    /// connection was last seen, or centred.</summary>
+    private void DetachActiveTab()
+    {
+        if (_sessions.Active is { IsDetached: false } tab)
+        {
+            DetachTab(tab, null);
+        }
+    }
+
+    /// <summary>
+    /// Tears <paramref name="tab"/> off into a window of its own. Where that window opens is decided
+    /// in this order: the placement remembered for this connection in <c>settings.json</c>, fitted
+    /// onto the monitors present right now; failing that, under the pointer that dragged the tab
+    /// out; failing that, centred. A remembered full screen is entered once the session is really in
+    /// the window — a window that never got one has nothing to show full screen.
+    /// </summary>
+    /// <param name="screenPoint">Where the tab was dropped, in screen device pixels, or <c>null</c>
+    /// when the detach came from the keyboard or the palette.</param>
+    private void DetachTab(SessionTabViewModel tab, System.Windows.Point? screenPoint)
     {
         if (_closeInProgress || tab.IsDetached)
         {
@@ -625,7 +794,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         var window = new SessionWindow(tab);
-        if (PlaceUnder(screenPoint, window) is { } placement)
+        var placement = RememberedPlacement(tab, window)
+            ?? (screenPoint is { } point ? PlaceUnder(point, window) : null);
+        if (placement is not null)
         {
             window.WindowStartupLocation = WindowStartupLocation.Manual;
             window.Left = placement.Left;
@@ -635,8 +806,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
         else
         {
-            // The pointer belongs to no screen ScreenFit knows about — it should not happen, since
-            // the user is pointing at one. Centring is the reachable answer either way.
+            // Nothing remembered and no pointer, or a pointer belonging to no screen ScreenFit knows
+            // about. Centring is the reachable answer either way.
             window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
@@ -648,6 +819,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (_sessions.Detach(tab, window))
         {
+            if (placement?.FullScreen == true)
+            {
+                window.ToggleFullScreen();
+            }
+
             return;
         }
 
@@ -712,6 +888,51 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private static System.Windows.Point ToDeviceIndependent(System.Windows.Point screenPoint, DpiScale dpi) =>
         new(screenPoint.X / dpi.DpiScaleX, screenPoint.Y / dpi.DpiScaleY);
 
+    // ---------------------------------------------------------------- remembered geometry
+
+    /// <summary>How a detached window is keyed in <c>settings.json</c>: by its connection, so the
+    /// same machine reopens where it was, whatever tab it happens to be. Invariant text because
+    /// <c>System.Text.Json</c> only round-trips string-keyed dictionaries.</summary>
+    private static string PlacementKey(SessionTabViewModel tab) =>
+        tab.Session.Connection.Id.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Where this connection's window was last seen, adjusted to the monitors present right now, or
+    /// <c>null</c> when nothing was remembered or when the screen it was on is gone.
+    /// <see cref="ScreenFit"/> is what turns "last seen on the monitor that has since been
+    /// unplugged" into "forget it" rather than "open it where nobody can reach it".
+    /// </summary>
+    private DetachedWindowPlacement? RememberedPlacement(SessionTabViewModel tab, SessionWindow window) =>
+        ScreenFit.Choose(_settings.DetachedWindows.GetValueOrDefault(PlacementKey(tab)),
+            Screens(VisualTreeHelper.GetDpi(this)), window.MinWidth, window.MinHeight);
+
+    /// <summary>
+    /// Records where a detached window is, for the next time this connection is torn off. Called on
+    /// both paths out of a detached window — its own close, and the shell saving on the way down —
+    /// and on a reattach, which is a window disappearing just the same.
+    /// </summary>
+    /// <remarks>
+    /// A minimized window is skipped: it describes nothing the user could recognise, and the entry
+    /// already on file — where the window was before it was minimized — is the better answer.
+    /// <see cref="SessionWindow.CurrentPlacement"/> handles the maximized and full-screen cases
+    /// itself, reporting the restore bounds rather than the screen-sized frame.
+    /// </remarks>
+    private void RememberPlacement(SessionWindow window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+        {
+            return;
+        }
+
+        var placement = window.CurrentPlacement();
+        if (placement is not { Width: > 0, Height: > 0 })
+        {
+            return;
+        }
+
+        _settings.DetachedWindows[PlacementKey(window.Tab)] = placement;
+    }
+
     /// <summary>The <em>Reattach</em> button of a detached window.</summary>
     private void OnSessionWindowReattachRequested(SessionWindow window) => Reattach(window);
 
@@ -724,6 +945,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private void Reattach(SessionWindow window)
     {
         ClearReattachHint();
+        // Before the window goes: a session coming back is a window disappearing, and the next
+        // detach of this connection should still find where the user had put it.
+        RememberPlacement(window);
         if (!_sessions.Reattach(window.Tab))
         {
             ProbeLog.Write("session", $"'{window.Tab.Title}': reattach refused; the session stays in its window");
@@ -736,9 +960,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>The cross of a detached window. The §6.5 protocol is the same one Ctrl+W and the
-    /// tab's own cross run, and it is what closes that window when it is done.</summary>
-    private void OnSessionWindowCloseRequested(SessionWindow window) =>
+    /// tab's own cross run, and it is what closes that window when it is done — so the geometry is
+    /// taken here, while the window is still where the user left it.</summary>
+    private void OnSessionWindowCloseRequested(SessionWindow window)
+    {
+        RememberPlacement(window);
         _ = _sessions.CloseAsync(window.Tab);
+    }
 
     /// <summary>A detached window moved under the user's hand: light the strip's drop band exactly
     /// while letting go would take the session back.</summary>
@@ -1042,97 +1270,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         DisconnectButton.IsEnabled = live;
     }
 
-    /// <summary>
-    /// Reports the active session's state in the one place RemoteDeck reports anything. Severity
-    /// follows the disconnect family (§6.4): codes 0–3 are informational, a network drop is a
-    /// warning — it is being retried — and everything else is an error, with Windows' own wording
-    /// attached because that is the only text that names the actual cause.
-    /// </summary>
-    private void UpdateSessionInfoBar(SessionTabViewModel tab)
-    {
-        var session = tab.Session;
-        var disconnect = session.LastDisconnect;
-
-        switch (tab.State)
-        {
-            case SessionState.Idle when disconnect is null:
-                // Freshly opened, nothing has happened yet: leave whatever is on screen alone.
-                break;
-
-            case SessionState.Idle:
-                // disconnect.Title comes from RemoteDeck.Core and stays English in v1 (spec §9):
-                // only the wording around it is localised.
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                    Text.Of(Strings.Session_DisconnectedTitle, tab.Title), disconnect!.Title);
-                break;
-
-            case SessionState.Connecting:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                    Text.Of(Strings.Session_ConnectingTitle, tab.Title), tab.Subtitle);
-                break;
-
-            case SessionState.Connected:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
-                    Text.Of(Strings.Session_ConnectedTitle, tab.Title), tab.Subtitle);
-                break;
-
-            case SessionState.Interrupted:
-                // The countdown is empty for the tick between the drop and the first timer tick;
-                // the attempt then stands on its own rather than behind a leading space.
-                string progress = Text.Of(Strings.Session_AttemptProgress, session.Attempt, ReconnectPolicy.MaxAttempts);
-                StatusBar.Show(SeverityFor(disconnect),
-                    Text.Of(Strings.Session_InterruptedTitle, tab.Title,
-                        disconnect?.Title ?? Strings.Session_ConnectionLost),
-                    Join(tab.CountdownText.Length == 0
-                            ? progress
-                            : Text.Of(Strings.Session_CountdownWithProgress, tab.CountdownText, progress),
-                        WindowsWording(session)));
-                break;
-
-            case SessionState.Reconnecting:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
-                    Text.Of(Strings.Session_ReconnectingTitle, tab.Title),
-                    Text.Of(Strings.Session_ReconnectingMessage, session.Attempt, ReconnectPolicy.MaxAttempts));
-                break;
-
-            case SessionState.Failed:
-                StatusBar.Show(SeverityFor(disconnect),
-                    Text.Of(Strings.Session_FailedTitle, tab.Title,
-                        disconnect?.Title ?? Strings.Session_CouldNotConnect),
-                    WindowsWording(session));
-                break;
-
-            default:
-                // Closing and Closed: the tab is on its way out, the bar has nothing useful to add.
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Tone of a disconnect. A network family is a warning because it is being — or can be —
-    /// retried; authentication, security, licensing and internal failures need the user, so they
-    /// are errors. No description at all means the attempt never reached the wire: also an error.
-    /// </summary>
-    private static Wpf.Ui.Controls.InfoBarSeverity SeverityFor(DisconnectDescription? disconnect) => disconnect?.Category switch
-    {
-        null => Wpf.Ui.Controls.InfoBarSeverity.Error,
-        DisconnectCategory.NotAnError => Wpf.Ui.Controls.InfoBarSeverity.Informational,
-        DisconnectCategory.Network => Wpf.Ui.Controls.InfoBarSeverity.Warning,
-        _ => Wpf.Ui.Controls.InfoBarSeverity.Error,
-    };
-
-    /// <summary>
-    /// Windows' own description of the failure, or an empty string when there is none to show.
-    /// Deliberately withheld for codes 0–3: <c>GetErrorDescription()</c> answers "an internal error
-    /// has occurred" for them, which would turn an ordinary log-off into an alarming message.
-    /// </summary>
-    private static string WindowsWording(RdpSession session) =>
-        session.LastDisconnect is { Category: DisconnectCategory.NotAnError }
-            ? ""
-            : session.LastWindowsDescription ?? "";
-
-    private static string Join(string first, string second) =>
-        second.Length == 0 ? first : Text.Of(Strings.Session_DetailSeparator, first, second);
+    /// <summary>Reports the active session's state in the one place RemoteDeck reports anything.
+    /// Shared with the detached windows (§6.4): a session says the same thing wherever it is
+    /// shown.</summary>
+    private void UpdateSessionInfoBar(SessionTabViewModel tab) =>
+        SessionStatusPresenter.Report(StatusBar, tab);
 
     // ---------------------------------------------------------------- editor and delete
 
@@ -1330,6 +1472,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             ?? _sessions.Active?.Session.Connection.Id
             ?? _settings.LastConnectionId;
 
+        // The second path geometry is written on: the application going down with detached windows
+        // still open. OnClosing runs this on its first pass, before the close-all protocol takes
+        // those windows away, so each is still standing where the user left it. A window that closed
+        // on its own earlier already wrote its own entry and is no longer in this list.
+        foreach (var tab in _sessions.Tabs)
+        {
+            if (_sessions.DetachedWindowOf(tab) is { } detached)
+            {
+                RememberPlacement(detached);
+            }
+        }
+
         try
         {
             _settingsStore.Save(_settings);
@@ -1407,7 +1561,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         try
         {
-            await _sessions.CloseAllAsync(PerTabCloseTimeout, OverallCloseTimeout);
+            // No budgets from here: ClosePlan owns both — five seconds per session under a
+            // thirty-second ceiling — and with detached windows the number of live sessions is no
+            // longer bounded by what fits in a tab strip.
+            await _sessions.CloseAllAsync();
         }
         catch (Exception ex)
         {

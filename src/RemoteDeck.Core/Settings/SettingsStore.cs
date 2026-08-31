@@ -24,7 +24,13 @@ public sealed class SettingsStore(string path)
         try
         {
             if (!File.Exists(path)) return new AppSettings();
-            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Options) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Options) ?? new AppSettings();
+            // An absent section keeps the property initialiser, but an explicit "detachedWindows":
+            // null overwrites it — and the file is one a user can open in an editor. Making
+            // AppSettings' "never null after a Load()" true here is what lets every caller index it
+            // without a guard of its own.
+            settings.DetachedWindows ??= [];
+            return settings;
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
         {

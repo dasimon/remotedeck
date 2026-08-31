@@ -350,6 +350,12 @@
   <data name="Palette_ReconnectTabSubtitle" xml:space="preserve">
     <value>Reconnecter la session active</value>
   </data>
+  <data name="Palette_DetachSession" xml:space="preserve">
+    <value>Détacher la session courante</value>
+  </data>
+  <data name="Palette_ReattachSession" xml:space="preserve">
+    <value>Rattacher cette session à la fenêtre principale</value>
+  </data>
   <data name="Editor_Title" xml:space="preserve">
     <value>Connexion</value>
   </data>

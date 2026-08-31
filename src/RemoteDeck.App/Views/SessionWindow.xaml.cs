@@ -1,13 +1,12 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Input;
 using RemoteDeck.App.Controls;
 using RemoteDeck.App.Rdp;
 using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
-using RemoteDeck.Core.Diagnostics;
-using RemoteDeck.Core.Sessions;
 using RemoteDeck.Core.Settings;
 using Wpf.Ui.Appearance;
 
@@ -36,12 +35,33 @@ namespace RemoteDeck.App.Views;
 // friends ambiguous across the app.
 internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 {
+    /// <summary>How close to the top edge the pointer has to come for the chrome to reappear in
+    /// full screen. The auto-hide band every RDP client has.</summary>
+    private const double RevealBand = 4;
+
+    /// <summary>Height of the caption strip, mirroring the XAML. Used as the reveal band's floor for
+    /// the one tick between showing the chrome and WPF having measured it.</summary>
+    private const double CaptionHeight = 32;
+
+    /// <summary>How often the pointer is sampled while the chrome is hidden. Fast enough to feel
+    /// immediate, slow enough to be free: eight in-memory reads a second.</summary>
+    private static readonly TimeSpan PointerPoll = TimeSpan.FromMilliseconds(120);
+
     private readonly SessionTabViewModel _tab;
 
     /// <summary>What full screen replaced, so leaving it can put all three back (spec §5).</summary>
     private WindowState _restoreState = WindowState.Normal;
     private WindowStyle _restoreStyle = WindowStyle.SingleBorderWindow;
     private Rect _restoreBounds = Rect.Empty;
+
+    /// <summary>What the host area looked like before full screen took its margin away.</summary>
+    private Thickness _restoreHostMargin;
+    private CornerRadius _restoreHostCorner;
+
+    /// <summary>Samples the pointer while the window is in full screen; null the rest of the
+    /// time. The remote desktop's HWND swallows every mouse message in its area, so WPF sees no
+    /// <c>MouseMove</c> at all there and polling is the only way to notice the top edge.</summary>
+    private DispatcherTimer? _pointerWatch;
 
     private bool _isFullScreen;
 
@@ -70,9 +90,14 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         // from the tab.
         DataContext = tab;
 
-        // F11 reaches this window only while WPF owns the keyboard; the remote session swallows it
-        // otherwise, which is what ShortcutInterceptor is for.
+        // These reach this window only while WPF owns the keyboard; the remote session swallows them
+        // otherwise, which is what ShortcutInterceptor is for — it routes the same three to whichever
+        // window is active. The two never double-fire: the hook swallows what it handles. No
+        // canExecute guard as the shell's bindings carry: this window holds no text input at all.
         InputBindings.Add(new KeyBinding(new RelayCommand(ToggleFullScreen), Key.F11, ModifierKeys.None));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => ReattachRequested?.Invoke(this)),
+            Key.D, ModifierKeys.Control | ModifierKeys.Shift));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => Close()), Key.W, ModifierKeys.Control));
 
         _tab.Changed += OnTabChanged;
         _tab.Session.FullScreenRequested += OnFullScreenRequested;
@@ -154,9 +179,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// window currently sits on, which is what lets two detached windows fill two monitors at the
     /// same time — no multimon flag, no explicit screen arithmetic.
     ///
-    /// The 32 px strip and the InfoBar stay on screen: they are the only way out of full screen
-    /// while the remote session holds the keyboard, and they cost the remote desktop 32 px rather
-    /// than an exit.
+    /// The 32 px strip, the InfoBar and the host area's margin all go: full screen means a remote
+    /// desktop edge to edge, which is the whole point of the gesture. The chrome comes back on its
+    /// own whenever the pointer touches the top edge — see <see cref="OnPointerWatchTick"/> — and
+    /// F11, Ctrl+Alt+Pause and the control's own <c>RequestLeaveFullScreen</c> are the other three
+    /// ways out, so nothing here can trap a user whose keyboard is inside the remote session.
     /// </summary>
     private void SetFullScreen(bool on)
     {
@@ -170,6 +197,8 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             _restoreState = WindowState;
             _restoreStyle = WindowStyle;
             _restoreBounds = NormalBounds();
+            _restoreHostMargin = HostAreaBorder.Margin;
+            _restoreHostCorner = HostAreaBorder.CornerRadius;
             _isFullScreen = true;
 
             // Normal first: a style change on a window that is already maximized is applied to a
@@ -177,10 +206,20 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             WindowState = WindowState.Normal;
             WindowStyle = WindowStyle.None;
             WindowState = WindowState.Maximized;
+
+            HostAreaBorder.Margin = new Thickness(0);
+            HostAreaBorder.CornerRadius = new CornerRadius(0);
+            ShowChrome(false);
+            StartPointerWatch();
         }
         else
         {
             _isFullScreen = false;
+            StopPointerWatch();
+            ShowChrome(true);
+            HostAreaBorder.Margin = _restoreHostMargin;
+            HostAreaBorder.CornerRadius = _restoreHostCorner;
+
             WindowStyle = _restoreStyle;
             WindowState = _restoreState;
             if (_restoreState == WindowState.Normal && _restoreBounds is { Width: > 0, Height: > 0 })
@@ -193,6 +232,84 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         ProbeLog.Write("session", $"'{_tab.Title}': full screen {(_isFullScreen ? "entered" : "left")}");
+    }
+
+    /// <summary>Shows or hides the caption strip and the InfoBar together. Collapsed rather than
+    /// hidden: a hidden strip would still reserve its 32 px, which is exactly what full screen is
+    /// meant to give back.</summary>
+    private void ShowChrome(bool visible) =>
+        Chrome.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+
+    private void StartPointerWatch()
+    {
+        _pointerWatch ??= CreatePointerWatch();
+        _pointerWatch.Start();
+    }
+
+    private DispatcherTimer CreatePointerWatch()
+    {
+        var timer = new DispatcherTimer(DispatcherPriority.Input, Dispatcher) { Interval = PointerPoll };
+        timer.Tick += OnPointerWatchTick;
+        return timer;
+    }
+
+    private void StopPointerWatch() => _pointerWatch?.Stop();
+
+    /// <summary>
+    /// The auto-hide band. While the window is in full screen the chrome comes back as soon as the
+    /// pointer is within <see cref="RevealBand"/> of the top edge, and stays as long as the pointer
+    /// is on it — the rule every RDP client follows.
+    /// </summary>
+    /// <remarks>
+    /// Polled rather than driven by <c>MouseMove</c>: the remote desktop is a <c>WindowsFormsHost</c>
+    /// whose HWND takes every mouse message in its area, so WPF is never told the pointer moved
+    /// there. Reading the cursor and mapping it into the window is all this does — no I/O — and it
+    /// only runs while the window is in full screen.
+    /// </remarks>
+    private void OnPointerWatchTick(object? sender, EventArgs e)
+    {
+        if (!_isFullScreen)
+        {
+            StopPointerWatch();
+            return;
+        }
+
+        // Another window has the foreground: whatever the pointer is doing, it is not aimed at this
+        // session's chrome.
+        if (!IsActive)
+        {
+            ShowChrome(false);
+            return;
+        }
+
+        System.Windows.Point pointer;
+        try
+        {
+            // Qualified: UseWindowsForms puts its own Control and Point in scope. MousePosition is in
+            // physical pixels, which is what PointFromScreen expects; the result is this window's own
+            // device-independent coordinates.
+            var cursor = System.Windows.Forms.Control.MousePosition;
+            pointer = PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
+        }
+        catch (InvalidOperationException)
+        {
+            // No PresentationSource yet, or none any more: nothing to map into, and the next tick
+            // will find one. Never worth costing the window.
+            return;
+        }
+
+        if (pointer.X < 0 || pointer.X > ActualWidth || pointer.Y < 0)
+        {
+            ShowChrome(false);
+            return;
+        }
+
+        // ActualHeight is still 0 on the tick that showed the chrome, before WPF has measured it;
+        // the caption's own height is the floor that keeps it from hiding itself again immediately.
+        double reveal = Chrome.Visibility == Visibility.Visible
+            ? Math.Max(Chrome.ActualHeight, CaptionHeight)
+            : RevealBand;
+        ShowChrome(pointer.Y <= reveal);
     }
 
     /// <summary>The remote session asked for full screen itself — <c>ContainerHandledFullScreen</c>
@@ -320,96 +437,10 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         DiagnosticsButton.IsEnabled = live;
     }
 
-    /// <summary>
-    /// Reports the session's state in the one place RemoteDeck reports anything. Wording, severity
-    /// rule and resource keys are the shell's (§6.4): a session says the same thing whether it is
-    /// docked or detached.
-    /// </summary>
-    private void RefreshInfoBar()
-    {
-        var session = _tab.Session;
-        var disconnect = session.LastDisconnect;
-
-        switch (_tab.State)
-        {
-            case SessionState.Idle when disconnect is null:
-                // Freshly detached, nothing has happened yet: leave whatever is on screen alone.
-                break;
-
-            case SessionState.Idle:
-                // disconnect.Title comes from RemoteDeck.Core and stays English in v1 (spec §9):
-                // only the wording around it is localised.
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                    Text.Of(Strings.Session_DisconnectedTitle, _tab.Title), disconnect!.Title);
-                break;
-
-            case SessionState.Connecting:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                    Text.Of(Strings.Session_ConnectingTitle, _tab.Title), _tab.Subtitle);
-                break;
-
-            case SessionState.Connected:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
-                    Text.Of(Strings.Session_ConnectedTitle, _tab.Title), _tab.Subtitle);
-                break;
-
-            case SessionState.Interrupted:
-                // The countdown is empty for the tick between the drop and the first timer tick;
-                // the attempt then stands on its own rather than behind a leading space.
-                string progress = Text.Of(Strings.Session_AttemptProgress, session.Attempt, ReconnectPolicy.MaxAttempts);
-                StatusBar.Show(SeverityFor(disconnect),
-                    Text.Of(Strings.Session_InterruptedTitle, _tab.Title,
-                        disconnect?.Title ?? Strings.Session_ConnectionLost),
-                    Join(_tab.CountdownText.Length == 0
-                            ? progress
-                            : Text.Of(Strings.Session_CountdownWithProgress, _tab.CountdownText, progress),
-                        WindowsWording(session)));
-                break;
-
-            case SessionState.Reconnecting:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
-                    Text.Of(Strings.Session_ReconnectingTitle, _tab.Title),
-                    Text.Of(Strings.Session_ReconnectingMessage, session.Attempt, ReconnectPolicy.MaxAttempts));
-                break;
-
-            case SessionState.Failed:
-                StatusBar.Show(SeverityFor(disconnect),
-                    Text.Of(Strings.Session_FailedTitle, _tab.Title,
-                        disconnect?.Title ?? Strings.Session_CouldNotConnect),
-                    WindowsWording(session));
-                break;
-
-            default:
-                // Closing and Closed: the session is on its way out, the bar has nothing to add.
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Tone of a disconnect. A network family is a warning because it is being — or can be —
-    /// retried; authentication, security, licensing and internal failures need the user, so they
-    /// are errors. No description at all means the attempt never reached the wire: also an error.
-    /// </summary>
-    private static Wpf.Ui.Controls.InfoBarSeverity SeverityFor(DisconnectDescription? disconnect) => disconnect?.Category switch
-    {
-        null => Wpf.Ui.Controls.InfoBarSeverity.Error,
-        DisconnectCategory.NotAnError => Wpf.Ui.Controls.InfoBarSeverity.Informational,
-        DisconnectCategory.Network => Wpf.Ui.Controls.InfoBarSeverity.Warning,
-        _ => Wpf.Ui.Controls.InfoBarSeverity.Error,
-    };
-
-    /// <summary>
-    /// Windows' own description of the failure, or an empty string when there is none to show.
-    /// Deliberately withheld for codes 0–3: <c>GetErrorDescription()</c> answers "an internal error
-    /// has occurred" for them, which would turn an ordinary log-off into an alarming message.
-    /// </summary>
-    private static string WindowsWording(RdpSession session) =>
-        session.LastDisconnect is { Category: DisconnectCategory.NotAnError }
-            ? ""
-            : session.LastWindowsDescription ?? "";
-
-    private static string Join(string first, string second) =>
-        second.Length == 0 ? first : Text.Of(Strings.Session_DetailSeparator, first, second);
+    /// <summary>Reports the session's state in the one place RemoteDeck reports anything. Wording,
+    /// severity rule and resource keys are shared with the shell (§6.4): a session says the same
+    /// thing whether it is docked or detached.</summary>
+    private void RefreshInfoBar() => SessionStatusPresenter.Report(StatusBar, _tab);
 
     // ---------------------------------------------------------------- shutdown
 
@@ -423,6 +454,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_allowClose)
         {
+            StopPointerWatch();
             _tab.Changed -= OnTabChanged;
             _tab.Session.FullScreenRequested -= OnFullScreenRequested;
             return;
