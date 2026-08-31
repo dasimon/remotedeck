@@ -129,7 +129,7 @@
                            ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                            Click="OnCopyDiagnosticsClick" />
 
-                <ui:Button Grid.Column="6"
+                <ui:Button x:Name="ReattachButton" Grid.Column="6"
                            Style="{StaticResource CaptionButtonStyle}"
                            Icon="{ui:SymbolIcon TabDesktop20}"
                            ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"

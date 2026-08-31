@@ -369,10 +369,13 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary><em>Reconnect</em> is offered exactly where a new attempt is legal (Failed, or Idle
     /// after a normal disconnect) and <em>Cancel</em> exactly where a retry is pending, so the two
-    /// are never both on screen — the same rule as the shell's session bar.</summary>
+    /// are never both on screen — the same rule as the shell's session bar. <em>Reattach</em> goes
+    /// with them once the cross has been answered: the shell is running §6.5 over this session, and
+    /// that protocol must not have its control moved to another window underneath it.</summary>
     private void RefreshCaption()
     {
         bool live = !_closeRequested;
+        ReattachButton.IsEnabled = live;
         ReconnectButton.Visibility = live && _tab.State is SessionState.Failed or SessionState.Idle
             ? Visibility.Visible
             : Visibility.Collapsed;
