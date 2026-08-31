@@ -262,6 +262,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.EditRequested += OnEditRequested;
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
+        // The pane holds no reference to the sessions: the shell is the one place that knows both,
+        // so it hands the list a way to ask rather than a way to be told.
+        _list.StatusProvider = StatusOf;
+        _list.RefreshStatuses();
         Pane.ViewModel = _list;
 
         // Re-select what was selected when the app last closed, when that row still exists.
@@ -1239,8 +1243,15 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>A tab was opened, closed or activated.</summary>
+    /// <summary>What the pane's state pill must say about one saved connection: the state of the
+    /// session opened from it, or nothing at all when no session was ever opened. <c>Find</c> already
+    /// skips the tabs being closed, so a row goes quiet the moment its session starts leaving.</summary>
+    private ConnectionStatus StatusOf(long connectionId)
+        => _sessions.Find(connectionId) is { } tab ? StatusTag.For(tab.State) : ConnectionStatus.None;
+
     private void OnSessionsChanged()
     {
+        _list?.RefreshStatuses();
         UpdateSessionsArea();
         UpdateSessionBar();
         if (_sessions.Active is { } tab)
@@ -1258,6 +1269,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// a background tab says everything it has to say through its status dot.</summary>
     private void OnTabChanged(SessionTabViewModel tab)
     {
+        // Before the early return: a background tab losing its connection still has to change the
+        // pill on its row, even though it changes nothing in the session bar.
+        _list?.RefreshStatuses();
+
         if (!ReferenceEquals(tab, _sessions.Active))
         {
             return;

@@ -101,6 +101,12 @@
   <data name="Pane_EmptyNoMatch" xml:space="preserve">
     <value>No connection matches “{0}”.</value>
   </data>
+  <data name="Pane_StatusReconnecting" xml:space="preserve">
+    <value>Reconnecting</value>
+  </data>
+  <data name="Pane_StatusOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
   <data name="Shell_PaneToggleToolTip" xml:space="preserve">
     <value>Show or hide the connection pane (Ctrl+B)</value>
   </data>

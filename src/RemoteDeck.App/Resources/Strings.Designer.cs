@@ -190,6 +190,24 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Reconnecting.
+        /// </summary>
+        public static string Pane_StatusReconnecting {
+            get {
+                return ResourceManager.GetString("Pane_StatusReconnecting", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Offline.
+        /// </summary>
+        public static string Pane_StatusOffline {
+            get {
+                return ResourceManager.GetString("Pane_StatusOffline", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Show or hide the connection pane (Ctrl+B).
         /// </summary>
         public static string Shell_PaneToggleToolTip {
