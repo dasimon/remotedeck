@@ -49,8 +49,13 @@
         </Style>
 
         <!-- The caption's own buttons. Transparent so the strip reads as one surface, and small
-             enough that three of them plus the session actions fit in 32 px. -->
-        <Style x:Key="CaptionButtonStyle" TargetType="ui:Button">
+             enough that three of them plus the session actions fit in 32 px.
+
+             BasedOn is not decoration: an explicit Style replaces the implicit one the WPF-UI
+             dictionary supplies, so without it the button falls back to the plain WPF template —
+             Appearance stops meaning anything and the Icon is never rendered, which is a row of
+             blank rectangles on the strip. -->
+        <Style x:Key="CaptionButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="24" />
             <Setter Property="Padding" Value="0" />
@@ -61,7 +66,7 @@
 
         <!-- Reconnect and Cancel keep their wording — they are exceptional, and an icon alone would
              not say which of the two is on screen. -->
-        <Style x:Key="CaptionTextButtonStyle" TargetType="ui:Button">
+        <Style x:Key="CaptionTextButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Height" Value="24" />
             <Setter Property="Padding" Value="8,0" />
             <Setter Property="Margin" Value="2,0,0,0" />
