@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RemoteDeck.App.Controls;
 using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Model;
@@ -13,16 +14,30 @@ namespace RemoteDeck.App.ViewModels;
 /// One row of the connection pane: a <see cref="ConnectionMatch"/> plus the few plain properties the
 /// XAML binds to. <see cref="Group"/> exists because <c>PropertyGroupDescription</c> needs a real
 /// bindable property to group on, and <see cref="ConnectionMatch"/> (a Core type) has none.
-/// Immutable: the view-model rebuilds the whole list on every refresh.
 /// </summary>
-public sealed class ConnectionItem(ConnectionMatch match, string group)
+/// <remarks>
+/// Everything but <see cref="Status"/> is fixed at construction — the view-model rebuilds the whole
+/// list on every refresh. <see cref="Status"/> is the exception because a session changes state under
+/// a row that is not being rebuilt, so it has to be observable rather than read once.
+/// </remarks>
+public sealed partial class ConnectionItem : ObservableObject
 {
-    public ConnectionMatch Match { get; } = match;
-    public string Group { get; } = group;
+    public ConnectionItem(ConnectionMatch match, string group)
+    {
+        Match = match;
+        Group = group;
+    }
+
+    public ConnectionMatch Match { get; }
+    public string Group { get; }
     public Connection Connection => Match.Connection;
     public string Name => Match.Connection.Name;
     public string Host => Match.Connection.Host;
     public bool IsFavorite => Match.Connection.IsFavorite;
+
+    /// <summary>What the row's state pill says. <see cref="ConnectionStatus.None"/> — the default —
+    /// hides the pill, which is the right answer for a connection nobody has opened.</summary>
+    [ObservableProperty] private ConnectionStatus _status;
 }
 
 /// <summary>
@@ -76,6 +91,17 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// <summary>Raised when the user asks for the import window. The shell owns it, like every other window.</summary>
     public event Action? ImportRequested;
 
+    /// <summary>
+    /// How a row learns whether its connection currently has a session, given the connection's id.
+    /// The shell sets it: the pane knows nothing about sessions, and must not start to.
+    /// </summary>
+    /// <remarks>
+    /// A provider rather than a subscription, and a pull rather than a push, because the list is
+    /// rebuilt wholesale on every refresh: a row created two lines ago has to be able to ask.
+    /// Left null, every row simply stays <see cref="ConnectionStatus.None"/> and shows no pill.
+    /// </remarks>
+    public Func<long, ConnectionStatus>? StatusProvider { get; set; }
+
     [ObservableProperty] private string _searchText = "";
 
     [ObservableProperty] private ConnectionItem? _selected;
@@ -126,6 +152,21 @@ public sealed partial class ConnectionListViewModel : ObservableObject
         EmptyMessage = string.IsNullOrWhiteSpace(SearchText)
             ? DefaultEmptyMessage
             : Text.Of(Strings.Pane_EmptyNoMatch, SearchText.Trim());
+
+        RefreshStatuses();
+    }
+
+    /// <summary>Re-asks <see cref="StatusProvider"/> for every visible row. Called after a rebuild and
+    /// whenever a session changes state; cheap enough to run on either, since it touches only the rows
+    /// the filter left standing and an unchanged assignment raises nothing.</summary>
+    public void RefreshStatuses()
+    {
+        if (StatusProvider is not { } provider) return;
+
+        foreach (var item in Items)
+        {
+            item.Status = provider(item.Connection.Id);
+        }
     }
 
     /// <summary>The group a match belongs to: favorites win over the connection's own group name.</summary>

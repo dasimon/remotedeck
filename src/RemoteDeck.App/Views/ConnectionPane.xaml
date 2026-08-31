@@ -64,7 +64,7 @@
                  keeping virtualization, unlike ScrollViewer.CanContentScroll="False" — which is the
                  only way to get truly sticky group headers in a plain ListView, and which disables
                  virtualization altogether. Virtualization wins; headers scroll with the content. -->
-            <ui:ListView x:Name="List"
+            <ListView x:Name="List"
                          ItemsSource="{Binding Source={StaticResource GroupedConnections}}"
                          SelectedItem="{Binding Selected, Mode=TwoWay}"
                          SelectionMode="Single"
@@ -77,40 +77,160 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          KeyDown="OnListKeyDown"
                          MouseDoubleClick="OnListMouseDoubleClick">
-                <ui:ListView.ItemContainerStyle>
-                    <!-- WPF-UI 4.3.0 ships no implicit ListViewItem style: its Fluent row template is
-                         a keyed "ListViewItemStyle" targeting its own ui:ListViewItem, installed by
-                         ui:ListView. Hence ui:ListView here rather than the plain WPF one, and an explicit
-                         BasedOn on that key: "{StaticResource {x:Type ListViewItem}}" does not exist. -->
-                    <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource ListViewItemStyle}">
-                        <Setter Property="Height" Value="32" />
+                <ListView.ItemContainerStyle>
+                    <!-- A plain WPF ListView, and no longer ui:ListView, because this row needs a
+                         template of its own: the three states it must tell apart — hover, selection,
+                         keyboard focus — are not the two WPF-UI's Fluent row draws.
+
+                         Measured, not assumed: with ui:ListView the row kept WPF-UI's template even
+                         under an explicit Setter, because "ListViewItemStyle" sets Template from a
+                         *trigger* and a style trigger outranks a style setter
+                         (DependencyPropertyHelper reported BaseValueSource=StyleTrigger on the live
+                         container). Inheriting that style through BasedOn therefore means inheriting
+                         a template that cannot be replaced. Nothing is lost by leaving: WPF-UI styles
+                         ScrollViewer and ScrollBar implicitly, so the list keeps its Fluent scrolling,
+                         and the ListView itself is a transparent, border-less box. There is no longer
+                         any explicit Style on a Wpf.Ui.Controls.* type here, so global constraint 6
+                         no longer has anything to bind. -->
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="Height" Value="{StaticResource RdRowHeight}" />
+                        <!-- 6 px of air on both sides, so the row reads as a card in the pane rather
+                             than as a full-bleed band. Nothing vertical: rows stack. -->
+                        <Setter Property="Margin" Value="6,0" />
                         <Setter Property="Padding" Value="8,0" />
+                        <Setter Property="Foreground" Value="{DynamicResource RdText}" />
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <Setter Property="VerticalContentAlignment" Value="Center" />
-                    </Style>
-                </ui:ListView.ItemContainerStyle>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListViewItem">
+                                    <!-- One layer per state, all four stacked and all four transparent
+                                         at rest. Opacity is what moves; nothing here changes size or
+                                         position, so a list walked with the arrow keys never shifts
+                                         under the eye (plan, global constraint 8). -->
+                                    <Grid Background="Transparent">
+                                        <Border x:Name="Hover"
+                                                CornerRadius="{StaticResource RdRadius}"
+                                                Background="{DynamicResource RdSurface2}"
+                                                Opacity="0" />
+                                        <!-- The focused-but-unselected ground. Neutral on purpose: the
+                                             accent on this row is spent on the outline below. -->
+                                        <Border x:Name="FocusGround"
+                                                CornerRadius="{StaticResource RdRadius}"
+                                                Background="{DynamicResource RdSurface3}"
+                                                Opacity="0" />
+                                        <Border x:Name="Selection"
+                                                CornerRadius="{StaticResource RdRadius}"
+                                                Background="{DynamicResource RdAccentSoft}"
+                                                Opacity="0" />
+                                        <Border x:Name="FocusRing"
+                                                CornerRadius="{StaticResource RdRadius}"
+                                                BorderBrush="{DynamicResource RdAccent}"
+                                                BorderThickness="1.5"
+                                                Opacity="0" />
+                                        <!-- The selection rail: 3 px against the left edge, flat on
+                                             that side and rounded on the other, and half the row tall
+                                             so it reads as a mark rather than as a second border. -->
+                                        <Border x:Name="Rail"
+                                                Width="3" Height="16"
+                                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                CornerRadius="0,3,3,0"
+                                                Background="{DynamicResource RdAccent}"
+                                                Visibility="Collapsed" />
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                          HorizontalAlignment="Stretch"
+                                                          VerticalAlignment="Center" />
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <!-- Hover is the only animated state: it is the one a pointer
+                                             sweeps through, and 150 ms of fade on a background is what
+                                             stops that sweep from flickering. Selection and focus stay
+                                             instant — a keyboard user must never wait to see where
+                                             they are. Animations are held rather than set, so nothing
+                                             else may write this Opacity: it is Hover's alone. -->
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                                         Storyboard.TargetProperty="Opacity"
+                                                                         To="1" Duration="0:0:0.15" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                                         Storyboard.TargetProperty="Opacity"
+                                                                         To="0" Duration="0:0:0.15" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
 
-                <ui:ListView.GroupStyle>
+                                        <!-- Keyboard focus, not focus: a click must not leave an
+                                             outline behind, and this list is walked far more often
+                                             than it is clicked. -->
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="FocusGround" Property="Opacity" Value="1" />
+                                            <Setter TargetName="FocusRing" Property="Opacity" Value="1" />
+                                        </Trigger>
+
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Selection" Property="Opacity" Value="1" />
+                                            <Setter TargetName="Rail" Property="Visibility" Value="Visible" />
+                                            <Setter TargetName="FocusGround" Property="Opacity" Value="0" />
+                                        </Trigger>
+
+                                        <!-- Selected and focused at once — the ordinary case after an
+                                             arrow key. The outline goes: rail and outline are both the
+                                             accent, in the same place, and only one accent may speak
+                                             at a time (plan, global constraint 4). The distinct focus
+                                             state is still reachable and still needed, by Ctrl+Arrow,
+                                             which moves the focus off the selected row. -->
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsSelected" Value="True" />
+                                                <Condition Property="IsKeyboardFocused" Value="True" />
+                                            </MultiTrigger.Conditions>
+                                            <Setter TargetName="FocusRing" Property="Opacity" Value="0" />
+                                        </MultiTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListView.ItemContainerStyle>
+
+                <ListView.GroupStyle>
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                        CornerRadius="4" Padding="8,3" Margin="0,6,0,2">
+                                <Border Background="{DynamicResource RdSurface3}"
+                                        CornerRadius="{StaticResource RdRadiusSm}"
+                                        Padding="8,3" Margin="6,6,6,2">
                                     <TextBlock Text="{Binding Name}"
                                                FontSize="12" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                               Foreground="{DynamicResource RdTextMuted}" />
                                 </Border>
                             </DataTemplate>
                         </GroupStyle.HeaderTemplate>
                     </GroupStyle>
-                </ui:ListView.GroupStyle>
+                </ListView.GroupStyle>
 
-                <ui:ListView.ItemTemplate>
+                <ListView.ItemTemplate>
                     <DataTemplate>
-                        <Grid Height="32">
+                        <Grid Height="{StaticResource RdRowHeight}">
+                            <!-- Name and host both share what the tag leaves, rather than the host
+                                 taking what it wants: an Auto host plus an Auto tag overflow a narrow
+                                 pane together, and what overflows and gets clipped is the tag — the
+                                 one element here that must never be half-read. Weighted 3:2 so the
+                                 name, which is what the user searches by, keeps the larger half. -->
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="18" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="3*" />
+                                <ColumnDefinition Width="2*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
@@ -118,32 +238,43 @@
                             <TextBlock Grid.Column="0" Text="&#xE735;"
                                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                        FontSize="12" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                       Foreground="{DynamicResource RdAccent}"
                                        Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibility}}" />
 
                             <controls:HighlightTextBlock Grid.Column="1"
                                                          Text="{Binding Name}"
                                                          Ranges="{Binding Match.NameRanges}"
                                                          VerticalAlignment="Center"
+                                                         Foreground="{DynamicResource RdText}"
                                                          TextTrimming="CharacterEllipsis" />
 
+                            <!-- Muted through the token rather than through Opacity: the host must
+                                 recede by the same amount in both themes, and 0.7 of white does not
+                                 recede like 0.7 of black. -->
                             <controls:HighlightTextBlock Grid.Column="2"
                                                          Margin="8,0,0,0"
                                                          Text="{Binding Host}"
                                                          Ranges="{Binding Match.HostRanges}"
                                                          VerticalAlignment="Center"
-                                                         TextTrimming="CharacterEllipsis"
-                                                         Opacity="0.7" />
+                                                         HorizontalAlignment="Right"
+                                                         Foreground="{DynamicResource RdTextMuted}"
+                                                         TextTrimming="CharacterEllipsis" />
+
+                            <!-- Only rows with a session of their own show anything here; the rest
+                                 collapse the tag and give their width back to the name. -->
+                            <controls:StatusTag Grid.Column="3"
+                                                Margin="8,0,0,0"
+                                                Status="{Binding Status}" />
                         </Grid>
                     </DataTemplate>
-                </ui:ListView.ItemTemplate>
-            </ui:ListView>
+                </ListView.ItemTemplate>
+            </ListView>
 
             <TextBlock Text="{Binding EmptyMessage}"
                        Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}"
                        Margin="16" TextWrapping="Wrap" TextAlignment="Center"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Foreground="{DynamicResource RdTextMuted}"
                        IsHitTestVisible="False" />
         </Grid>
     </Grid>

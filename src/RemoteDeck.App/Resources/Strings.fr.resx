@@ -101,6 +101,12 @@
   <data name="Pane_EmptyNoMatch" xml:space="preserve">
     <value>Aucune connexion ne correspond à « {0} ».</value>
   </data>
+  <data name="Pane_StatusReconnecting" xml:space="preserve">
+    <value>Reconnexion</value>
+  </data>
+  <data name="Pane_StatusOffline" xml:space="preserve">
+    <value>Hors ligne</value>
+  </data>
   <data name="Shell_PaneToggleToolTip" xml:space="preserve">
     <value>Afficher ou masquer le volet des connexions (Ctrl+B)</value>
   </data>
