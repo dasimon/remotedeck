@@ -1,6 +1,5 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Input;
 using RemoteDeck.App.Controls;
 using RemoteDeck.App.Rdp;
@@ -35,18 +34,6 @@ namespace RemoteDeck.App.Views;
 // friends ambiguous across the app.
 internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 {
-    /// <summary>How close to the top edge the pointer has to come for the chrome to reappear in
-    /// full screen. The auto-hide band every RDP client has.</summary>
-    private const double RevealBand = 4;
-
-    /// <summary>Height of the caption strip, mirroring the XAML. Used as the reveal band's floor for
-    /// the one tick between showing the chrome and WPF having measured it.</summary>
-    private const double CaptionHeight = 32;
-
-    /// <summary>How often the pointer is sampled while the chrome is hidden. Fast enough to feel
-    /// immediate, slow enough to be free: eight in-memory reads a second.</summary>
-    private static readonly TimeSpan PointerPoll = TimeSpan.FromMilliseconds(120);
-
     private readonly SessionTabViewModel _tab;
 
     /// <summary>What full screen replaced, so leaving it can put all three back (spec §5).</summary>
@@ -57,11 +44,6 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>What the host area looked like before full screen took its margin away.</summary>
     private Thickness _restoreHostMargin;
     private CornerRadius _restoreHostCorner;
-
-    /// <summary>Samples the pointer while the window is in full screen; null the rest of the
-    /// time. The remote desktop's HWND swallows every mouse message in its area, so WPF sees no
-    /// <c>MouseMove</c> at all there and polling is the only way to notice the top edge.</summary>
-    private DispatcherTimer? _pointerWatch;
 
     private bool _isFullScreen;
 
@@ -180,15 +162,31 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// same time — no multimon flag, no explicit screen arithmetic.
     ///
     /// The 32 px strip, the InfoBar and the host area's margin all go: full screen means a remote
-    /// desktop edge to edge, which is the whole point of the gesture. The chrome comes back on its
-    /// own whenever the pointer touches the top edge — see <see cref="OnPointerWatchTick"/> — and
-    /// F11, Ctrl+Alt+Pause and the control's own <c>RequestLeaveFullScreen</c> are the other three
-    /// ways out, so nothing here can trap a user whose keyboard is inside the remote session.
+    /// desktop edge to edge, which is the whole point of the gesture. Nothing is ever laid over it
+    /// and its size never changes while it lasts — chrome that came and went with the pointer would
+    /// resize the host, and in dynamic display mode that renegotiates the remote resolution because
+    /// the pointer brushed the top of the screen.
+    ///
+    /// Full screen is therefore bound to the connected state: it is only entered from it, and
+    /// <see cref="LeaveFullScreenUnlessConnected"/> ends it the moment the session leaves it. That
+    /// is what puts the strip and the InfoBar back exactly when they have something to report — the
+    /// reason, <em>Reconnect</em>, <em>Copy diagnostics</em> — instead of leaving the user in front
+    /// of a black screen with no explanation. F11 and Ctrl+Alt+Pause remain the manual way out at
+    /// any time, alongside the control's own <c>RequestLeaveFullScreen</c>.
     /// </summary>
     private void SetFullScreen(bool on)
     {
         if (on == _isFullScreen)
         {
+            return;
+        }
+
+        // Only a live session is worth showing edge to edge, and it is the state leaving Connected
+        // that ends full screen: entering from anywhere else would produce a chromeless window no
+        // state change would ever take out again.
+        if (on && _tab.State != SessionState.Connected)
+        {
+            ProbeLog.Write("session", $"'{_tab.Title}': full screen refused, the session is {_tab.State}");
             return;
         }
 
@@ -210,12 +208,10 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             HostAreaBorder.Margin = new Thickness(0);
             HostAreaBorder.CornerRadius = new CornerRadius(0);
             ShowChrome(false);
-            StartPointerWatch();
         }
         else
         {
             _isFullScreen = false;
-            StopPointerWatch();
             ShowChrome(true);
             HostAreaBorder.Margin = _restoreHostMargin;
             HostAreaBorder.CornerRadius = _restoreHostCorner;
@@ -239,78 +235,6 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// meant to give back.</summary>
     private void ShowChrome(bool visible) =>
         Chrome.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-
-    private void StartPointerWatch()
-    {
-        _pointerWatch ??= CreatePointerWatch();
-        _pointerWatch.Start();
-    }
-
-    private DispatcherTimer CreatePointerWatch()
-    {
-        var timer = new DispatcherTimer(DispatcherPriority.Input, Dispatcher) { Interval = PointerPoll };
-        timer.Tick += OnPointerWatchTick;
-        return timer;
-    }
-
-    private void StopPointerWatch() => _pointerWatch?.Stop();
-
-    /// <summary>
-    /// The auto-hide band. While the window is in full screen the chrome comes back as soon as the
-    /// pointer is within <see cref="RevealBand"/> of the top edge, and stays as long as the pointer
-    /// is on it — the rule every RDP client follows.
-    /// </summary>
-    /// <remarks>
-    /// Polled rather than driven by <c>MouseMove</c>: the remote desktop is a <c>WindowsFormsHost</c>
-    /// whose HWND takes every mouse message in its area, so WPF is never told the pointer moved
-    /// there. Reading the cursor and mapping it into the window is all this does — no I/O — and it
-    /// only runs while the window is in full screen.
-    /// </remarks>
-    private void OnPointerWatchTick(object? sender, EventArgs e)
-    {
-        if (!_isFullScreen)
-        {
-            StopPointerWatch();
-            return;
-        }
-
-        // Another window has the foreground: whatever the pointer is doing, it is not aimed at this
-        // session's chrome.
-        if (!IsActive)
-        {
-            ShowChrome(false);
-            return;
-        }
-
-        System.Windows.Point pointer;
-        try
-        {
-            // Qualified: UseWindowsForms puts its own Control and Point in scope. MousePosition is in
-            // physical pixels, which is what PointFromScreen expects; the result is this window's own
-            // device-independent coordinates.
-            var cursor = System.Windows.Forms.Control.MousePosition;
-            pointer = PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
-        }
-        catch (InvalidOperationException)
-        {
-            // No PresentationSource yet, or none any more: nothing to map into, and the next tick
-            // will find one. Never worth costing the window.
-            return;
-        }
-
-        if (pointer.X < 0 || pointer.X > ActualWidth || pointer.Y < 0)
-        {
-            ShowChrome(false);
-            return;
-        }
-
-        // ActualHeight is still 0 on the tick that showed the chrome, before WPF has measured it;
-        // the caption's own height is the floor that keeps it from hiding itself again immediately.
-        double reveal = Chrome.Visibility == Visibility.Visible
-            ? Math.Max(Chrome.ActualHeight, CaptionHeight)
-            : RevealBand;
-        ShowChrome(pointer.Y <= reveal);
-    }
 
     /// <summary>The remote session asked for full screen itself — <c>ContainerHandledFullScreen</c>
     /// makes that the container's decision, and the container is this window.</summary>
@@ -418,8 +342,29 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnTabChanged(SessionTabViewModel tab)
     {
+        // First: the two refreshes below write into a caption and an InfoBar that full screen has
+        // collapsed, and this is what puts them back on screen.
+        LeaveFullScreenUnlessConnected();
         RefreshCaption();
         RefreshInfoBar();
+    }
+
+    /// <summary>
+    /// Ends full screen as soon as the session stops being connected — a drop, a retry, a failure, a
+    /// close. What was hidden is exactly what the user now needs: the reason in the InfoBar, and
+    /// <em>Reconnect</em> / <em>Copy diagnostics</em> in the strip.
+    /// </summary>
+    /// <remarks>
+    /// Driven by <see cref="SessionTabViewModel.Changed"/>, which this window already subscribes to —
+    /// no polling. Coming back is deliberately not automatic: a session that reconnects stays in the
+    /// window it was given, and F11 puts it back edge to edge when the user asks for it.
+    /// </remarks>
+    private void LeaveFullScreenUnlessConnected()
+    {
+        if (_isFullScreen && _tab.State != SessionState.Connected)
+        {
+            SetFullScreen(false);
+        }
     }
 
     /// <summary><em>Reconnect</em> is offered exactly where a new attempt is legal (Failed, or Idle
@@ -454,7 +399,6 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_allowClose)
         {
-            StopPointerWatch();
             _tab.Changed -= OnTabChanged;
             _tab.Session.FullScreenRequested -= OnFullScreenRequested;
             return;
