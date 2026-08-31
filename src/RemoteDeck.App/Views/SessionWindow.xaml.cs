@@ -18,10 +18,13 @@ namespace RemoteDeck.App.Views;
 /// strip that doubles as the caption, that session's InfoBar, and the area the shell drops the
 /// session's <c>WindowsFormsHost</c> into.
 ///
-/// The window owns no protocol. It raises <see cref="ReattachRequested"/> and
-/// <see cref="CloseRequested"/> and waits: <c>SessionsViewModel</c> is the only thing allowed to
-/// move a host between containers, and the §6.5 close protocol belongs to the shell. What the
-/// window does own is its own geometry — full screen and <see cref="CurrentPlacement"/>.
+/// The window owns no protocol. It raises <see cref="ReattachRequested"/>,
+/// <see cref="CloseRequested"/> and — while it is being dragged by its caption —
+/// <see cref="CaptionDragMoved"/> / <see cref="CaptionDragEnded"/>, then waits:
+/// <c>SessionsViewModel</c> is the only thing allowed to move a host between containers, the §6.5
+/// close protocol belongs to the shell, and so does the decision that a drag ended over the tab
+/// strip. What the window does own is its own geometry — full screen and
+/// <see cref="CurrentPlacement"/>.
 /// </summary>
 /// <remarks>
 /// Internal because the constructor takes a <see cref="SessionTabViewModel"/>, which is itself
@@ -49,6 +52,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>True once the cross has been answered: the session actions stop being offered while
     /// the shell runs the close protocol, exactly as the shell's own session bar does.</summary>
     private bool _closeRequested;
+
+    /// <summary>True for the whole of a caption drag, i.e. while <c>DragMove</c>'s modal move loop
+    /// runs. It is what turns an ordinary <c>LocationChanged</c> into
+    /// <see cref="CaptionDragMoved"/>.</summary>
+    private bool _captionDragging;
 
     public SessionWindow(SessionTabViewModel tab)
     {
@@ -89,6 +97,20 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>Raised by the cross — and by any other close — until <see cref="AllowClose"/> has
     /// been called. The shell runs the close protocol and calls it when the session is done.</summary>
     public event Action<SessionWindow>? CloseRequested;
+
+    /// <summary>
+    /// The window moved while the user is dragging it by its caption strip. Raised on every step of
+    /// the drag, with <see cref="Window.Left"/> and <see cref="Window.Top"/> already updated, so the
+    /// shell can decide whether the window is over its tab strip and light the drop band.
+    /// </summary>
+    public event Action<SessionWindow>? CaptionDragMoved;
+
+    /// <summary>
+    /// The caption drag is over — the button came up, wherever the window ended. Raised exactly once
+    /// per <see cref="CaptionDragMoved"/> sequence, including when the drag moved nothing, so the
+    /// shell always gets to clear what the drag put on screen.
+    /// </summary>
+    public event Action<SessionWindow>? CaptionDragEnded;
 
     /// <summary>True while the window covers the screen it sits on.</summary>
     public bool IsFullScreen => _isFullScreen;
@@ -183,6 +205,13 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// Drags the window by its strip. Refused on a double-click and on a maximized window: neither
     /// has anything to drag, and <c>DragMove</c> throws when the button is no longer down.
     /// </summary>
+    /// <remarks>
+    /// <c>DragMove</c> runs Windows' own modal move loop and only returns once the button is up, so
+    /// this method <em>is</em> the whole gesture: <see cref="CaptionDragMoved"/> is raised from
+    /// <see cref="OnLocationChanged"/> for as long as the loop runs, and
+    /// <see cref="CaptionDragEnded"/> exactly where it ends. That is a far steadier signal than
+    /// <c>Deactivated</c> or a <c>MouseLeftButtonUp</c> the move loop never delivers.
+    /// </remarks>
     private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ClickCount > 1 || WindowState != WindowState.Normal)
@@ -190,6 +219,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        _captionDragging = true;
         try
         {
             DragMove();
@@ -198,6 +228,26 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         {
             // The button was released between the event and this call. Nothing to drag, nothing to
             // report: the window simply stays where it is.
+        }
+        finally
+        {
+            _captionDragging = false;
+        }
+
+        // Raised even when DragMove refused: the drag ended either way, and whoever is listening has
+        // something on screen to take down.
+        CaptionDragEnded?.Invoke(this);
+    }
+
+    /// <summary>Every move of the window; only the ones that belong to a caption drag are passed on.
+    /// A programmatic move — full screen, or the shell placing the window — is not a gesture and must
+    /// not look like the user offering the session back.</summary>
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        if (_captionDragging)
+        {
+            CaptionDragMoved?.Invoke(this);
         }
     }
 

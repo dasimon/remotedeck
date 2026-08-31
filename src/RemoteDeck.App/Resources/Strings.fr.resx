@@ -662,4 +662,10 @@
   <data name="SessionWindow_Close" xml:space="preserve">
     <value>Fermer la session</value>
   </data>
+  <data name="Shell_DetachRefusedTitle" xml:space="preserve">
+    <value>Session non détachée</value>
+  </data>
+  <data name="Shell_DetachRefusedMessage" xml:space="preserve">
+    <value>« {0} » n’a pas pu être déplacée dans une fenêtre à elle et reste dans la fenêtre principale.</value>
+  </data>
 </root>

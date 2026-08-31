@@ -1871,5 +1871,23 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("SessionWindow_Close", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Session not detached.
+        /// </summary>
+        public static string Shell_DetachRefusedTitle {
+            get {
+                return ResourceManager.GetString("Shell_DetachRefusedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; could not be moved to a window of its own and stayed in the main window.
+        /// </summary>
+        public static string Shell_DetachRefusedMessage {
+            get {
+                return ResourceManager.GetString("Shell_DetachRefusedMessage", resourceCulture);
+            }
+        }
     }
 }

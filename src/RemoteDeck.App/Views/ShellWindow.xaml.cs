@@ -63,6 +63,21 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private const int MinimumRemoteWidth = 640;
     private const int MinimumRemoteHeight = 480;
 
+    /// <summary>Slack around the tab strip inside which the corner of a dragged detached window
+    /// counts as being over it. The strip is 34 px tall, so 24 px on each side makes a band the user
+    /// can aim at without having to hit the tabs themselves.</summary>
+    private const double ReattachMargin = 24;
+
+    /// <summary>Shortest drop zone the strip is ever given, whatever it currently measures: with
+    /// every session detached the strip has no visible tab left and would otherwise shrink to a
+    /// line nobody could aim at. Mirrors the 34 px tab height.</summary>
+    private const double MinimumDropZoneHeight = 34;
+
+    /// <summary>How far below the pointer a torn-off window's top edge starts, so the caption strip
+    /// the user was dragging ends up under the cursor rather than above it. Half the window's 32 px
+    /// caption.</summary>
+    private const double CaptionGrabOffset = 16;
+
     /// <summary>Palette id prefixes. The palette carries strings, not objects, so the shell can act
     /// on a choice after the window that produced it is gone.</summary>
     private const string ConnectionIdPrefix = "conn:";
@@ -92,6 +107,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>Armed by a first Delete; a second one on the same row within
     /// <see cref="DeleteConfirmationWindow"/> performs the deletion.</summary>
     private Connection? _pendingDelete;
+
+    /// <summary>The detached window whose caption drag is currently over the tab strip, i.e. the one
+    /// that would be taken back if the user let go now. Null the rest of the time.</summary>
+    private SessionWindow? _reattachCandidate;
 
     private bool _paletteOpen;
     private bool _paneCollapsed;
@@ -123,6 +142,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _sessions.ActiveChanged += OnSessionsChanged;
         _sessions.TabChanged += OnTabChanged;
         TabStrip.ViewModel = _sessions;
+        TabStrip.DetachRequested += OnDetachRequested;
 
         // Window-level shortcuts. They fire whenever the WPF side owns the keyboard; while the RDP
         // control has focus nothing reaches WPF at all, which is what ShortcutInterceptor is for —
@@ -585,6 +605,198 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// in the tree, so this is the only thing that removes it.</summary>
     private void DetachSession(RdpSession session) => SessionsArea.Children.Remove(session.Host);
 
+    // ---------------------------------------------------------------- detach / reattach
+
+    /// <summary>
+    /// A tab was dragged out of the strip. The shell builds the window, places it under the pointer
+    /// and shows it, and only then asks <see cref="SessionsViewModel.Detach"/> to move the session's
+    /// host into it — a <c>WindowsFormsHost</c> can only be given to a window that already has a
+    /// handle of its own.
+    /// </summary>
+    /// <remarks>
+    /// No <c>Owner</c>: an owned window is always painted above its owner and minimises with it,
+    /// which is the opposite of what a session torn onto a second monitor is for.
+    /// </remarks>
+    private void OnDetachRequested(SessionTabViewModel tab, System.Windows.Point screenPoint)
+    {
+        if (_closeInProgress || tab.IsDetached)
+        {
+            return;
+        }
+
+        var window = new SessionWindow(tab);
+        if (PlaceUnder(screenPoint, window) is { } placement)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = placement.Left;
+            window.Top = placement.Top;
+            window.Width = placement.Width;
+            window.Height = placement.Height;
+        }
+        else
+        {
+            // The pointer belongs to no screen ScreenFit knows about — it should not happen, since
+            // the user is pointing at one. Centring is the reachable answer either way.
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        window.ReattachRequested += OnSessionWindowReattachRequested;
+        window.CloseRequested += OnSessionWindowCloseRequested;
+        window.CaptionDragMoved += OnSessionWindowCaptionDragMoved;
+        window.CaptionDragEnded += OnSessionWindowCaptionDragEnded;
+        window.Show();
+
+        if (_sessions.Detach(tab, window))
+        {
+            return;
+        }
+
+        // Refused: the session never left the docked container, so this window has nothing to show.
+        // AllowClose first — the window cancels every close until the shell has run the protocol,
+        // and there is no protocol to run over a session that never moved.
+        window.AllowClose();
+        window.Close();
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DetachRefusedTitle,
+            Text.Of(Strings.Shell_DetachRefusedMessage, tab.Title));
+    }
+
+    /// <summary>
+    /// Where a window torn off at <paramref name="screenPoint"/> opens: the size of the docked
+    /// session area, centred horizontally under the pointer with its caption strip under it, then
+    /// clamped by <see cref="ScreenFit"/> onto a monitor that is really there. Null when the point
+    /// belongs to no screen at all.
+    /// </summary>
+    /// <remarks>
+    /// Nothing here reads or writes <c>settings.json</c>: remembering where a session was last
+    /// detached is a separate concern, and this method is the fallback it will fall back to.
+    /// </remarks>
+    private DetachedWindowPlacement? PlaceUnder(System.Windows.Point screenPoint, SessionWindow window)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double width = Math.Max(window.MinWidth, SessionsArea.ActualWidth);
+        double height = Math.Max(window.MinHeight, SessionsArea.ActualHeight);
+        var pointer = ToDeviceIndependent(screenPoint, dpi);
+
+        var proposed = new DetachedWindowPlacement(
+            pointer.X - width / 2, pointer.Y - CaptionGrabOffset, width, height, FullScreen: false);
+        return ScreenFit.Choose(proposed, Screens(dpi), window.MinWidth, window.MinHeight);
+    }
+
+    /// <summary>
+    /// The working areas of the monitors present right now, in the device-independent units
+    /// <see cref="Window.Left"/> and <see cref="Window.Top"/> are expressed in.
+    /// </summary>
+    /// <remarks>
+    /// <c>Screen.AllScreens</c> reports physical pixels, hence the division by the shell's own DPI
+    /// scale: exact on a desktop where every monitor runs at the same scale, and approximate on a
+    /// mixed one — where Windows re-scales the window onto whichever monitor it lands on anyway.
+    /// The whole point of going through <see cref="ScreenFit"/> is that the result is a rectangle
+    /// the user can reach, not one that is right to the pixel.
+    /// </remarks>
+    private static IReadOnlyList<ScreenBounds> Screens(DpiScale dpi)
+    {
+        var screens = new List<ScreenBounds>();
+        // Qualified: UseWindowsForms puts System.Windows.Forms.Screen in scope through the implicit
+        // usings, and RemoteDeck never imports that namespace into a WPF file.
+        foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+        {
+            var area = screen.WorkingArea;
+            screens.Add(new ScreenBounds(area.Left / dpi.DpiScaleX, area.Top / dpi.DpiScaleY,
+                area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY));
+        }
+
+        return screens;
+    }
+
+    /// <summary>A point in screen device pixels, in device-independent units.</summary>
+    private static System.Windows.Point ToDeviceIndependent(System.Windows.Point screenPoint, DpiScale dpi) =>
+        new(screenPoint.X / dpi.DpiScaleX, screenPoint.Y / dpi.DpiScaleY);
+
+    /// <summary>The <em>Reattach</em> button of a detached window.</summary>
+    private void OnSessionWindowReattachRequested(SessionWindow window) => Reattach(window);
+
+    /// <summary>
+    /// Takes a session back into the docked area, from the button or from a drag onto the strip.
+    /// <see cref="SessionsViewModel.Reattach"/> closes the emptied window itself, so nothing here
+    /// touches it afterwards; a refusal leaves the session where it is, still visible and still
+    /// usable, and only costs a line in the probe log.
+    /// </summary>
+    private void Reattach(SessionWindow window)
+    {
+        ClearReattachHint();
+        if (!_sessions.Reattach(window.Tab))
+        {
+            ProbeLog.Write("session", $"'{window.Tab.Title}': reattach refused; the session stays in its window");
+            return;
+        }
+
+        // The window that had the focus has just gone; without this the shell would sit behind
+        // whatever was under it, showing the session the user just dropped on it.
+        Activate();
+    }
+
+    /// <summary>The cross of a detached window. The §6.5 protocol is the same one Ctrl+W and the
+    /// tab's own cross run, and it is what closes that window when it is done.</summary>
+    private void OnSessionWindowCloseRequested(SessionWindow window) =>
+        _ = _sessions.CloseAsync(window.Tab);
+
+    /// <summary>A detached window moved under the user's hand: light the strip's drop band exactly
+    /// while letting go would take the session back.</summary>
+    private void OnSessionWindowCaptionDragMoved(SessionWindow window)
+    {
+        var candidate = IsOverTabStrip(window) ? window : null;
+        if (ReferenceEquals(candidate, _reattachCandidate))
+        {
+            return;
+        }
+
+        _reattachCandidate = candidate;
+        TabStrip.ShowDropHint(candidate is not null);
+    }
+
+    /// <summary>The drag ended. Reattaching is deferred to the next dispatcher pass: the drag ended
+    /// inside the window's own mouse handler, and reattaching moves the session's host out of that
+    /// window and closes it.</summary>
+    private void OnSessionWindowCaptionDragEnded(SessionWindow window)
+    {
+        bool dropped = ReferenceEquals(_reattachCandidate, window);
+        ClearReattachHint();
+        if (dropped)
+        {
+            // (discarded: the returned DispatcherOperation is deliberately not awaited)
+            _ = Dispatcher.BeginInvoke(() => Reattach(window));
+        }
+    }
+
+    /// <summary>
+    /// Whether the top-left corner of a dragged detached window has reached the tab strip. The drop
+    /// zone is the strip's own rectangle grown by <see cref="ReattachMargin"/> and never shorter
+    /// than one tab, so a strip whose every session is detached — and which therefore measures to
+    /// nothing — is still something the user can aim at. A shell that is not on screen is no target
+    /// at all.
+    /// </summary>
+    private bool IsOverTabStrip(SessionWindow window)
+    {
+        if (!IsVisible || WindowState == WindowState.Minimized || !TabStrip.IsVisible)
+        {
+            return false;
+        }
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var origin = ToDeviceIndependent(TabStrip.PointToScreen(new System.Windows.Point(0, 0)), dpi);
+        var zone = new Rect(origin.X, origin.Y,
+            TabStrip.ActualWidth, Math.Max(TabStrip.ActualHeight, MinimumDropZoneHeight));
+        zone.Inflate(ReattachMargin, ReattachMargin);
+
+        return zone.Contains(new System.Windows.Point(window.Left, window.Top));
+    }
+
+    private void ClearReattachHint()
+    {
+        _reattachCandidate = null;
+        TabStrip.ShowDropHint(false);
+    }
+
     /// <summary>
     /// Opens one connection, or brings its tab forward when it already has one — a connection has
     /// at most one session. <c>async void</c> is the only shape an event handler that awaits can
@@ -798,10 +1010,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>Shows the black session backdrop only while there is something to put in it, so the
-    /// empty-state message is readable in both themes.</summary>
+    /// empty-state message is readable in both themes. Detached tabs do not count: their session is
+    /// on screen in a window of its own, and the docked area behind them is empty.</summary>
     private void UpdateSessionsArea()
     {
-        bool any = _sessions.Tabs.Count > 0;
+        bool any = _sessions.Tabs.Any(t => !t.IsDetached);
         SessionsBorder.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         EmptySessions.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
     }
