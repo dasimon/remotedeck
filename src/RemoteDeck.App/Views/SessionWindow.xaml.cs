@@ -47,6 +47,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 
     private bool _isFullScreen;
 
+    /// <summary>The connection bar of the current full-screen episode, or <c>null</c> outside one.
+    /// Created when full screen is entered and closed when it ends, so it never exists over a window
+    /// that is not full screen.</summary>
+    private FullScreenBar? _bar;
+
     /// <summary>Set by <see cref="AllowClose"/>. Until then every close is cancelled and answered
     /// with <see cref="CloseRequested"/>.</summary>
     private bool _allowClose;
@@ -85,6 +90,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         _tab.Session.FullScreenRequested += OnFullScreenRequested;
 
         Closing += OnClosing;
+
+        // Last line of defence for the connection bar. Every ordinary path already takes it down —
+        // leaving full screen, the session dropping out of Connected, OnClosing — and it is owned by
+        // this window on top of that; this catches whatever none of the three did.
+        Closed += (_, _) => EndBar();
 
         RefreshCaption();
         RefreshInfoBar();
@@ -162,10 +172,12 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// same time — no multimon flag, no explicit screen arithmetic.
     ///
     /// The 32 px strip, the InfoBar and the host area's margin all go: full screen means a remote
-    /// desktop edge to edge, which is the whole point of the gesture. Nothing is ever laid over it
-    /// and its size never changes while it lasts — chrome that came and went with the pointer would
-    /// resize the host, and in dynamic display mode that renegotiates the remote resolution because
-    /// the pointer brushed the top of the screen.
+    /// desktop edge to edge, which is the whole point of the gesture. The host area's size never
+    /// changes while it lasts — chrome that came and went with the pointer <em>inside</em> this
+    /// window would resize the host, and in dynamic display mode that renegotiates the remote
+    /// resolution because the pointer brushed the top of the screen. What the pointer does bring in
+    /// is <see cref="FullScreenBar"/>: a window of its own, floating over the session, which this
+    /// window's layout never hears about.
     ///
     /// Full screen is therefore bound to the connected state: it is only entered from it, and
     /// <see cref="LeaveFullScreenUnlessConnected"/> ends it the moment the session leaves it. That
@@ -208,10 +220,12 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             HostAreaBorder.Margin = new Thickness(0);
             HostAreaBorder.CornerRadius = new CornerRadius(0);
             ShowChrome(false);
+            StartBar();
         }
         else
         {
             _isFullScreen = false;
+            EndBar();
             ShowChrome(true);
             HostAreaBorder.Margin = _restoreHostMargin;
             HostAreaBorder.CornerRadius = _restoreHostCorner;
@@ -235,6 +249,43 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// meant to give back.</summary>
     private void ShowChrome(bool visible) =>
         Chrome.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>
+    /// Puts this session's connection bar up for the full-screen episode that is starting. A window
+    /// of its own — see <see cref="FullScreenBar"/> for why it cannot be part of this one — owned by
+    /// this window, so it can never be left floating over the desktop with nothing to dismiss it.
+    /// </summary>
+    private void StartBar()
+    {
+        // One bar per episode: the previous one, if any, was closed when its full screen ended.
+        _bar = new FullScreenBar(this, _tab);
+        _bar.ReattachRequested += OnBarReattachRequested;
+        _bar.LeaveFullScreenRequested += () => SetFullScreen(false);
+        _bar.CloseSessionRequested += () => Close();
+        _bar.SetLive(!_closeRequested);
+        _bar.Begin();
+    }
+
+    /// <summary>Takes the connection bar down and closes it. Called from every end of full screen,
+    /// from <see cref="OnClosing"/> and from <c>Closed</c>; <see cref="FullScreenBar.Dismiss"/> is
+    /// idempotent, so running twice costs nothing.</summary>
+    private void EndBar()
+    {
+        _bar?.Dismiss();
+        _bar = null;
+    }
+
+    /// <summary><em>Reattach</em> from the bar. Refused while the close protocol runs, the same rule
+    /// the caption strip applies by disabling its own button.</summary>
+    private void OnBarReattachRequested()
+    {
+        if (_closeRequested)
+        {
+            return;
+        }
+
+        ReattachRequested?.Invoke(this);
+    }
 
     /// <summary>The remote session asked for full screen itself — <c>ContainerHandledFullScreen</c>
     /// makes that the container's decision, and the container is this window.</summary>
@@ -383,6 +434,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             ? Visibility.Visible
             : Visibility.Collapsed;
         DiagnosticsButton.IsEnabled = live;
+        _bar?.SetLive(live);
     }
 
     /// <summary>Reports the session's state in the one place RemoteDeck reports anything. Wording,
@@ -402,6 +454,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_allowClose)
         {
+            EndBar();
             _tab.Changed -= OnTabChanged;
             _tab.Session.FullScreenRequested -= OnFullScreenRequested;
 
