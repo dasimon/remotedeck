@@ -50,6 +50,22 @@ internal sealed class ShortcutInterceptor : IDisposable
 
     public event Action<string>? Triggered;
 
+    /// <summary>
+    /// Last word on whether a recognised shortcut is actually taken from the keystroke. Called with
+    /// the shortcut name (<c>"Ctrl+W"</c>, …) once <see cref="Decide"/> has matched it and before
+    /// anything is swallowed; <c>false</c> lets the key through untouched, as if the shortcut had
+    /// never been recognised. <c>null</c> — the default — swallows every recognised shortcut.
+    /// </summary>
+    /// <remarks>
+    /// The predicate runs inside the hook callback, under the same rules as
+    /// <see cref="LowLevelHookCallback"/>: reading in-memory state only — no I/O, no synchronous
+    /// dispatcher hop — or Windows drops the hook on <c>LowLevelHooksTimeout</c>. It is also the
+    /// only piece of application code the callback can be made to run, so it is treated as
+    /// untrusted: anything it throws is logged and read as <c>true</c>, the behaviour from before
+    /// there was a predicate.
+    /// </remarks>
+    public Func<string, bool>? ShouldIntercept { get; set; }
+
     private readonly Mechanism _mechanism;
     private readonly WinFormsFilter? _winFormsFilter;
     private readonly HookProc? _hookProc;   // kept alive: the native side holds a raw pointer
@@ -220,6 +236,72 @@ internal sealed class ShortcutInterceptor : IDisposable
     }
 
     /// <summary>
+    /// Asks <see cref="ShouldIntercept"/> whether a recognised shortcut is really ours to take.
+    /// Synchronous and side-effect-free on the nominal path, so all four mechanisms can call it
+    /// straight after <see cref="Decide"/>, the low-level hook included.
+    /// </summary>
+    /// <remarks>
+    /// A predicate that throws must cost neither the keystroke nor the process: the failure is
+    /// reported on the deferred <c>[shortcuts]</c> path and read as <c>true</c>, which is exactly
+    /// how the interceptor behaved before there was a predicate at all.
+    /// </remarks>
+    private bool ShouldSwallow(string shortcut)
+    {
+        // Read once: the shell may replace the predicate from the UI thread while we are in here.
+        Func<string, bool>? predicate = ShouldIntercept;
+        if (predicate is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            return predicate(shortcut);
+        }
+        catch (Exception ex)
+        {
+            LogDeferred($"ShouldIntercept(\"{shortcut}\") failed: {ex.GetType().Name}: {ex.Message} — intercepting anyway");
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Writes a <c>[shortcuts]</c> line without doing the I/O here: the caller may be the low-level
+    /// callback, which has a 300 ms budget for the whole keystroke. Falls back to writing inline
+    /// when there is no dispatcher to post to — no application, hence no message pump to starve.
+    /// </summary>
+    private static void LogDeferred(string message)
+    {
+        try
+        {
+            // Fully qualified: UseWindowsForms puts System.Windows.Forms.Application in scope too.
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is null)
+            {
+                ProbeLog.Write("shortcuts", message);
+                return;
+            }
+
+            _ = dispatcher.BeginInvoke(() =>
+            {
+                try
+                {
+                    ProbeLog.Write("shortcuts", message);
+                }
+                catch
+                {
+                    // On the UI thread an escaping exception is a crash all the same, and the
+                    // logger is the very thing that failed: there is nowhere left to report to.
+                }
+            });
+        }
+        catch
+        {
+            // Same reasoning, for a dispatcher that is shutting down under us.
+        }
+    }
+
+    /// <summary>
     /// Decides whether a key-down belongs to the application and, if so, raises
     /// <see cref="Triggered"/> synchronously. Returns <c>true</c> when the key was consumed.
     /// Used by the three message-pump mechanisms, which run while the pump dispatches the very
@@ -238,7 +320,7 @@ internal sealed class ShortcutInterceptor : IDisposable
         try
         {
             string? shortcut = Decide(virtualKey);
-            if (shortcut is null)
+            if (shortcut is null || !ShouldSwallow(shortcut))
             {
                 return false;
             }
@@ -269,7 +351,7 @@ internal sealed class ShortcutInterceptor : IDisposable
         try
         {
             string? shortcut = Decide(virtualKey);
-            if (shortcut is null)
+            if (shortcut is null || !ShouldSwallow(shortcut))
             {
                 return false;
             }
