@@ -74,8 +74,13 @@
         </Style>
 
         <!-- The cross: shown on the active tab and on the one under the pointer, so a strip at rest
-             stays quiet. AncestorType=Border resolves to the tab root, the nearest Border above. -->
-        <Style x:Key="TabCloseStyle" TargetType="ui:Button">
+             stays quiet. AncestorType=Border resolves to the tab root, the nearest Border above.
+
+             BasedOn is required, not decoration: an explicit Style replaces the implicit one the
+             WPF-UI dictionary supplies, and without it the button falls back to the plain WPF
+             template — Appearance stops meaning anything and the Icon is never rendered, leaving a
+             blank rectangle where the cross should be. -->
+        <Style x:Key="TabCloseStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Width" Value="22" />
             <Setter Property="Height" Value="22" />
             <Setter Property="Padding" Value="0" />
