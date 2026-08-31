@@ -1,0 +1,126 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.CommandPaletteWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
+                 Title="Command palette"
+                 Width="560"
+                 SizeToContent="Height"
+                 MaxHeight="420"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowStyle="None"
+                 ResizeMode="NoResize"
+                 ShowInTaskbar="False"
+                 WindowBackdropType="Acrylic"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner"
+                 Deactivated="OnDeactivated"
+                 PreviewKeyDown="OnPreviewKeyDown">
+    <!-- No ui:TitleBar and WindowStyle=None: the palette is a transient overlay, so it has no
+         caption, no caption buttons and no drag surface. Escape, Enter and a click outside are the
+         only ways out, which is why it also refuses to resize.
+
+         The border is the whole chrome. It is left unpainted so the acrylic backdrop shows through;
+         the code-behind fills it with an opaque theme brush on the machines where DWM refuses that
+         backdrop, and only there. -->
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </ui:FluentWindow.Resources>
+
+    <Border x:Name="Root"
+            CornerRadius="8"
+            BorderThickness="1"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+            Padding="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ui:TextBox x:Name="SearchBox"
+                        Grid.Row="0"
+                        Margin="0,0,0,8"
+                        PlaceholderText="Search connections and commands"
+                        ClearButtonEnabled="False"
+                        Icon="{ui:SymbolIcon Search24}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+            <!-- MaxHeight on the list, not only on the window: SizeToContent=Height measures the
+                 content unbounded, so an unconstrained list would ask for the height of all its rows
+                 and the window's own MaxHeight would then clip it without a scrollbar. -->
+            <Grid Grid.Row="1">
+                <ui:ListView x:Name="List"
+                             MaxHeight="320"
+                             ItemsSource="{Binding Results}"
+                             SelectedItem="{Binding Selected, Mode=TwoWay}"
+                             SelectionMode="Single"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectionChanged="OnSelectionChanged"
+                             PreviewMouseLeftButtonUp="OnListMouseLeftButtonUp">
+                    <ui:ListView.ItemContainerStyle>
+                        <!-- Same reasoning as the connection pane: WPF-UI 4.3.0 ships no implicit
+                             ListViewItem style, only the keyed "ListViewItemStyle" its own
+                             ui:ListView installs. -->
+                        <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource ListViewItemStyle}">
+                            <Setter Property="Padding" Value="8,6" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                        </Style>
+                    </ui:ListView.ItemContainerStyle>
+
+                    <ui:ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:SymbolIcon x:Name="KindIcon"
+                                               Grid.Column="0"
+                                               Symbol="Desktop24"
+                                               FontSize="16"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <controls:HighlightTextBlock Text="{Binding Item.Title}"
+                                                                 Ranges="{Binding TitleRanges}"
+                                                                 TextTrimming="CharacterEllipsis" />
+                                    <controls:HighlightTextBlock x:Name="Subtitle"
+                                                                 Text="{Binding Item.Subtitle}"
+                                                                 Ranges="{Binding SubtitleRanges}"
+                                                                 FontSize="11"
+                                                                 Opacity="0.7"
+                                                                 TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Item.Kind}" Value="Command">
+                                    <Setter TargetName="KindIcon" Property="Symbol" Value="Options24" />
+                                </DataTrigger>
+                                <!-- An entry without a subtitle would otherwise reserve an empty line. -->
+                                <DataTrigger Binding="{Binding Item.Subtitle}" Value="">
+                                    <Setter TargetName="Subtitle" Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ui:ListView.ItemTemplate>
+                </ui:ListView>
+
+                <TextBlock x:Name="EmptyMessage"
+                           Text="{Binding EmptyMessage}"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}"
+                           Margin="8,16"
+                           TextWrapping="Wrap" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           IsHitTestVisible="False" />
+            </Grid>
+        </Grid>
+    </Border>
+</ui:FluentWindow>

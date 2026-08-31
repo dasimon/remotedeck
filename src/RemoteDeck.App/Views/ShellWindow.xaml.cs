@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -14,6 +15,7 @@ using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Diagnostics;
 using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Rdp;
+using RemoteDeck.Core.Search;
 using RemoteDeck.Core.Security;
 using RemoteDeck.Core.Sessions;
 using RemoteDeck.Core.Settings;
@@ -60,6 +62,17 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private const int MinimumRemoteWidth = 640;
     private const int MinimumRemoteHeight = 480;
 
+    /// <summary>Palette id prefixes. The palette carries strings, not objects, so the shell can act
+    /// on a choice after the window that produced it is gone.</summary>
+    private const string ConnectionIdPrefix = "conn:";
+    private const string TabIdPrefix = "tab:";
+
+    /// <summary>Palette sort bonuses: commands first, then the open tabs, then every connection.
+    /// They only decide an unfiltered list and break ties in a filtered one.</summary>
+    private const int ConnectionPriority = 0;
+    private const int TabPriority = 5;
+    private const int CommandPriority = 10;
+
     private readonly SettingsStore _settingsStore = new(SettingsStore.DefaultPath());
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _deleteDisarm;
@@ -79,6 +92,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <see cref="DeleteConfirmationWindow"/> performs the deletion.</summary>
     private Connection? _pendingDelete;
 
+    private bool _paletteOpen;
     private bool _paneCollapsed;
     private double _paneWidth;
     private bool _connecting;
@@ -117,6 +131,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         InputBindings.Add(new KeyBinding(new RelayCommand(NewConnection), Key.N, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(TogglePane), Key.B, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(CloseActiveTab), Key.W, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(new RelayCommand(OpenCommandPalette), Key.K, ModifierKeys.Control));
 
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -334,8 +349,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>
-    /// What an intercepted shortcut does. Ctrl+K keeps its probe message: the command palette is
-    /// lot 5, and until then the InfoBar is the only proof the interception happened.
+    /// What an intercepted shortcut does. The <c>default</c> branch is the lot-0 probe message: it
+    /// now only ever fires for a shortcut the interceptor learns to recognise before this switch
+    /// learns to act on it.
     /// </summary>
     private void OnShortcut(string shortcut, ShortcutInterceptor.Mechanism mechanism)
     {
@@ -363,9 +379,175 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             case "Ctrl+W":
                 CloseActiveTab();
                 break;
+            case "Ctrl+K":
+                OpenCommandPalette();
+                break;
             default:
                 StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted",
-                    $"via {mechanism} — command palette arrives in lot 5");
+                    $"via {mechanism} — no action is wired to it yet");
+                break;
+        }
+    }
+
+    // ---------------------------------------------------------------- command palette
+
+    /// <summary>
+    /// Opens the Ctrl+K palette and runs what comes back. Modal on purpose: the palette acts on the
+    /// shell's own state (the tab list, the pane, the active session), and letting the shell change
+    /// underneath it would make <c>tab:&lt;index&gt;</c> point at a different tab than the one shown.
+    /// </summary>
+    private void OpenCommandPalette()
+    {
+        // _paletteOpen is not redundant with the modality: the low-level hook fires on Ctrl+K even
+        // while the palette itself holds the focus. OnShortcut already refuses that case (the shell
+        // is not IsActive), but the WPF KeyBinding on this window would still stack a second palette
+        // when the first one is dismissed and the keystroke arrives twice.
+        if (_paletteOpen || _closeInProgress)
+        {
+            return;
+        }
+
+        string? chosen;
+        _paletteOpen = true;
+        try
+        {
+            var palette = new CommandPaletteWindow(BuildPaletteItems()) { Owner = this };
+            palette.ShowDialog();
+            chosen = palette.ChosenId;
+        }
+        finally
+        {
+            _paletteOpen = false;
+        }
+
+        // Outside the try: the chosen action often opens another window or writes to the InfoBar,
+        // and both belong to the shell once the palette is gone.
+        if (chosen is not null)
+        {
+            RunPaletteChoice(chosen);
+        }
+    }
+
+    /// <summary>
+    /// Everything the palette offers, in one flat list: every saved connection, every open tab, and
+    /// the shell's commands. Ordering is <see cref="PaletteFilter"/>'s business — the priorities
+    /// below are the only ranking expressed here.
+    /// </summary>
+    /// <remarks>
+    /// Read straight from the repository rather than from the pane's rows: those are filtered by
+    /// whatever is typed in the search box, and the palette must see every connection. Without a
+    /// database there simply are none, and the commands stand alone.
+    /// </remarks>
+    private IReadOnlyList<PaletteItem> BuildPaletteItems()
+    {
+        var items = new List<PaletteItem>();
+
+        foreach (var connection in _connections?.GetAll() ?? [])
+        {
+            var group = string.IsNullOrWhiteSpace(connection.GroupName)
+                ? ConnectionListViewModel.UngroupedGroup
+                : connection.GroupName;
+            items.Add(new PaletteItem(PaletteItemKind.Connection, $"{ConnectionIdPrefix}{connection.Id}",
+                connection.Name, $"{group} · {connection.Host}", ConnectionPriority));
+        }
+
+        // By index, not by connection id: an index is what Activate needs, and the strip cannot be
+        // reordered while the palette is modal.
+        for (int i = 0; i < _sessions.Tabs.Count; i++)
+        {
+            var tab = _sessions.Tabs[i];
+            items.Add(new PaletteItem(PaletteItemKind.Command, $"{TabIdPrefix}{i}",
+                $"Switch to {tab.Title}", tab.Subtitle, TabPriority));
+        }
+
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
+            "New connection", "Ctrl+N", CommandPriority));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
+            "Import connections…", "From .rdp files or the mstsc history", CommandPriority));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:credentials",
+            "Manage credentials…", "Saved user names and passwords", CommandPriority));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
+            "Toggle connection pane", "Ctrl+B", CommandPriority));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
+            "Close current tab", "Ctrl+W", CommandPriority));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
+            "Reconnect current tab", "Connect the active session again", CommandPriority));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:disconnect",
+            "Disconnect current tab", "End the active session and close its tab", CommandPriority));
+
+        return items;
+    }
+
+    /// <summary>
+    /// Runs one palette entry. Unknown, malformed and stale ids are ignored rather than reported:
+    /// they can only come from the list this window built moments earlier, and a row whose
+    /// connection was deleted meanwhile is a race, not a mistake the user made.
+    /// </summary>
+    private void RunPaletteChoice(string id)
+    {
+        if (id.StartsWith(ConnectionIdPrefix, StringComparison.Ordinal))
+        {
+            if (long.TryParse(id.AsSpan(ConnectionIdPrefix.Length), CultureInfo.InvariantCulture, out long connectionId)
+                && _connections?.Get(connectionId) is { } connection)
+            {
+                // The same path Enter takes in the pane: one tab per connection, existing tab reused.
+                OnConnectRequested(connection);
+            }
+
+            return;
+        }
+
+        if (id.StartsWith(TabIdPrefix, StringComparison.Ordinal))
+        {
+            if (int.TryParse(id.AsSpan(TabIdPrefix.Length), CultureInfo.InvariantCulture, out int index)
+                && index >= 0 && index < _sessions.Tabs.Count)
+            {
+                _sessions.Activate(_sessions.Tabs[index]);
+            }
+
+            return;
+        }
+
+        switch (id)
+        {
+            case "cmd:new":
+                NewConnection();
+                break;
+
+            case "cmd:import":
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Import connections",
+                    "Importing .rdp files and the mstsc history is not wired up yet; it arrives in the next task.");
+                break;
+
+            case "cmd:credentials":
+                ManageCredentials();
+                break;
+
+            case "cmd:pane":
+                TogglePane();
+                break;
+
+            // Two entries, one action: RemoteDeck has no disconnect that keeps the tab behind — the
+            // toolbar's own Disconnect button is CloseActiveTab as well — so both words find it.
+            case "cmd:close":
+            case "cmd:disconnect":
+                if (_sessions.Active is null)
+                {
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "No session", "There is no tab to close.");
+                    break;
+                }
+
+                CloseActiveTab();
+                break;
+
+            case "cmd:reconnect":
+                if (_sessions.Active is null)
+                {
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "No session", "There is no tab to reconnect.");
+                    break;
+                }
+
+                ReconnectActiveTab();
                 break;
         }
     }
@@ -514,7 +696,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// close protocol — the same thing the tab's cross does.</summary>
     private void OnDisconnectClick(object sender, RoutedEventArgs e) => CloseActiveTab();
 
-    private async void OnReconnectClick(object sender, RoutedEventArgs e)
+    private void OnReconnectClick(object sender, RoutedEventArgs e) => ReconnectActiveTab();
+
+    /// <summary><em>Reconnect</em>, from the button or from the palette. <c>async void</c> is the
+    /// only shape an awaiting handler can take, hence the fully guarded body.</summary>
+    private async void ReconnectActiveTab()
     {
         if (_sessions.Active is not { } tab)
         {
@@ -787,7 +973,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _pendingDelete = null;
     }
 
-    private void OnManageCredentials(object sender, RoutedEventArgs e)
+    private void OnManageCredentials(object sender, RoutedEventArgs e) => ManageCredentials();
+
+    /// <summary>Opens the credential manager, from the toolbar button or from the palette.</summary>
+    private void ManageCredentials()
     {
         if (_credentials is null)
         {
