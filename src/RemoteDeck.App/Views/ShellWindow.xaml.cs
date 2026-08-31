@@ -172,6 +172,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             _shortcuts = new ShortcutInterceptor(mechanism);
+            // Asked inside the hook callback, before the keystroke is swallowed: it is the only
+            // point where the key can still be handed back to whatever has the focus.
+            _shortcuts.ShouldIntercept = ShouldInterceptShortcut;
             // BeginInvoke, not Invoke: the notification comes off the message pump itself, and a
             // synchronous hop back would block the thread that raised it.
             _shortcuts.Triggered += shortcut => Dispatcher.BeginInvoke(() => OnShortcut(shortcut, mechanism));
@@ -298,6 +301,37 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private void NewConnection() => OnEditRequested(null);
 
     // ---------------------------------------------------------------- shortcuts
+
+    /// <summary>
+    /// Whether an intercepted shortcut is the application's to take, or the focused input's.
+    /// Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+W and Ctrl+B all mean something inside a text field — move
+    /// between fields, delete the word to the left, jump back a word — and a system-wide hook that
+    /// swallows them makes typing in the shell feel broken. Ctrl+K is never filtered: it is the
+    /// only way into the command palette and has no meaning in a WPF input.
+    /// </summary>
+    /// <remarks>
+    /// Runs inside the hook callback (see <see cref="ShortcutInterceptor.ShouldIntercept"/>), so it
+    /// reads WPF state and nothing else — no I/O, no synchronous dispatcher hop. Off the UI thread
+    /// there is no safe way to read the focus at all, so the shortcut is taken, as before.
+    /// </remarks>
+    private static bool ShouldInterceptShortcut(string shortcut)
+    {
+        if (shortcut is not ("Ctrl+Tab" or "Ctrl+Shift+Tab" or "Ctrl+W" or "Ctrl+B"))
+        {
+            return true;
+        }
+
+        if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == false)
+        {
+            return true;
+        }
+
+        // Qualified: UseWindowsForms puts its own Application, TextBoxBase and ComboBox in scope
+        // through implicit usings. A read-only ComboBox has no caret, so Ctrl+W there is ours.
+        return Keyboard.FocusedElement is not (System.Windows.Controls.Primitives.TextBoxBase
+            or System.Windows.Controls.PasswordBox
+            or System.Windows.Controls.ComboBox { IsEditable: true });
+    }
 
     /// <summary>
     /// What an intercepted shortcut does. Ctrl+K keeps its probe message: the command palette is
