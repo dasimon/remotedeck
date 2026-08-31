@@ -16,3 +16,6 @@ publish/
 # --- IDE ---
 .idea/
 *.swp
+
+# SDD/spike workspaces — never committed
+.superpowers/
