@@ -237,6 +237,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.ConnectRequested += OnConnectRequested;
         _list.EditRequested += OnEditRequested;
         _list.DeleteRequested += OnDeleteRequested;
+        _list.ImportRequested += ImportConnections;
         Pane.ViewModel = _list;
 
         // Re-select what was selected when the app last closed, when that row still exists.
@@ -517,8 +518,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 break;
 
             case "cmd:import":
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "Import connections",
-                    "Importing .rdp files and the mstsc history is not wired up yet; it arrives in the next task.");
+                ImportConnections();
                 break;
 
             case "cmd:credentials":
@@ -974,6 +974,33 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     {
         _deleteDisarm.Stop();
         _pendingDelete = null;
+    }
+
+    /// <summary>
+    /// Opens the import preview, from the palette or from the pane's Import button. The window writes
+    /// nothing until the user presses Import, and reports its own outcome; the shell only has to pick
+    /// up what landed in the table.
+    /// </summary>
+    private void ImportConnections()
+    {
+        if (_connections is null)
+        {
+            // ImportWindow resolves the repository with GetRequiredService: opening it without a
+            // database would throw instead of showing anything.
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable",
+                "Connections cannot be imported until the database opens.");
+            return;
+        }
+
+        var import = new ImportWindow { Owner = this };
+        import.ShowDialog();
+        if (import.ImportedCount > 0)
+        {
+            _list?.Reload();
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
+                import.ImportedCount == 1 ? "1 connection imported" : $"{import.ImportedCount} connections imported",
+                "They were saved without a credential; add one from Manage credentials when you need it.");
+        }
     }
 
     private void OnManageCredentials(object sender, RoutedEventArgs e) => ManageCredentials();

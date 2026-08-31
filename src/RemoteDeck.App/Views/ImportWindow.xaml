@@ -1,0 +1,82 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.ImportWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="Import connections" Width="820" Height="600" MinWidth="640" MinHeight="440"
+                 ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Import connections" ShowMinimize="False" ShowMaximize="False" />
+
+        <!-- The two sources. Each click replaces the preview: a source is browsed, not accumulated. -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="16,4,16,0">
+            <ui:Button x:Name="FolderButton" Content="From a folder…" Icon="{ui:SymbolIcon FolderOpen24}"
+                       Margin="0,0,8,0" Click="OnFromFolder"
+                       ToolTip="Read every .rdp file directly inside a folder" />
+            <ui:Button x:Name="RegistryButton" Content="From Remote Desktop Connection" Icon="{ui:SymbolIcon Desktop24}"
+                       Click="OnFromRegistry"
+                       ToolTip="Read the servers the Windows Remote Desktop client remembers" />
+        </StackPanel>
+
+        <!-- The promise, in the window itself and not only in the documentation. -->
+        <TextBlock Grid.Row="2" Margin="16,10,16,0" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="No password is ever imported and no credential is created. Imported connections start without one — add credentials afterwards from Manage credentials." />
+
+        <ui:InfoBar Grid.Row="3" x:Name="StatusBar" Margin="16,8,16,0" IsOpen="False" IsClosable="True" />
+
+        <Grid Grid.Row="4" Margin="16,8,16,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Margin="0,0,0,6" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
+                       ToolTip="{Binding Summary}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+            <ListView Grid.Row="1" x:Name="List" ItemsSource="{Binding Rows}" SelectionMode="Single">
+                <ListView.ItemContainerStyle>
+                    <!-- Partial style: WPF still applies the theme style underneath, so only the tooltip
+                         is changed here. It carries what has no column — the full source path, the
+                         duplicate a row matches, and everything the reader had to drop. -->
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="ToolTip" Value="{Binding ToolTipText}" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Width="36">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="Name" Width="200" DisplayMemberBinding="{Binding Name}" />
+                        <GridViewColumn Header="Host:port" Width="200" DisplayMemberBinding="{Binding Address}" />
+                        <GridViewColumn Header="Source" Width="180" DisplayMemberBinding="{Binding Source}" />
+                        <GridViewColumn Header="Status" Width="180" DisplayMemberBinding="{Binding Status}" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </Grid>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="16,12,16,16">
+            <ui:Button Content="Select all new" Icon="{ui:SymbolIcon CheckboxChecked24}" Margin="0,0,8,0" Click="OnSelectAllNew" />
+            <ui:Button Content="Clear" Icon="{ui:SymbolIcon Broom24}" Margin="0,0,8,0" Click="OnClear" />
+            <ui:Button x:Name="ImportButton" Appearance="Primary" Icon="{ui:SymbolIcon ArrowImport24}"
+                       Margin="0,0,8,0" Content="{Binding ImportButtonText}" IsEnabled="{Binding CanImport}"
+                       Click="OnImport" />
+            <ui:Button Content="Close" Click="OnClose" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

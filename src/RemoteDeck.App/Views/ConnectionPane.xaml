@@ -35,14 +35,27 @@
                     Icon="{ui:SymbolIcon Search24}"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-        <ui:Button Grid.Row="1"
-                   Margin="0,0,0,6"
-                   HorizontalAlignment="Stretch"
-                   HorizontalContentAlignment="Center"
-                   Content="New"
-                   Icon="{ui:SymbolIcon Add24}"
-                   Command="{Binding NewCommand}"
-                   ToolTip="New connection (Ctrl+N)" />
+        <!-- New takes the width; Import sits beside it as an icon, since it is the rarer gesture. -->
+        <Grid Grid.Row="1" Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <ui:Button Grid.Column="0"
+                       HorizontalAlignment="Stretch"
+                       HorizontalContentAlignment="Center"
+                       Content="New"
+                       Icon="{ui:SymbolIcon Add24}"
+                       Command="{Binding NewCommand}"
+                       ToolTip="New connection (Ctrl+N)" />
+
+            <ui:Button Grid.Column="1"
+                       Margin="6,0,0,0"
+                       Icon="{ui:SymbolIcon ArrowImport24}"
+                       Command="{Binding ImportCommand}"
+                       ToolTip="Import connections from .rdp files or the Remote Desktop history" />
+        </Grid>
 
         <Grid Grid.Row="2">
             <!-- Virtualization stays on: IsVirtualizingWhenGrouping is mandatory, since grouping
