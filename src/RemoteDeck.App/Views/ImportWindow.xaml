@@ -27,10 +27,11 @@
                        ToolTip="Read the servers the Windows Remote Desktop client remembers" />
         </StackPanel>
 
-        <!-- The promise, in the window itself and not only in the documentation. -->
+        <!-- The two promises, in the window itself and not only in the documentation: what import never
+             carries, and what the tick means. -->
         <TextBlock Grid.Row="2" Margin="16,10,16,0" TextWrapping="Wrap"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                   Text="No password is ever imported and no credential is created. Imported connections start without one — add credentials afterwards from Manage credentials." />
+                   Text="No password is ever imported and no credential is created. Imported connections start without one — add credentials afterwards from Manage credentials. Ticked rows are imported, including the ones flagged as duplicates." />
 
         <ui:InfoBar Grid.Row="3" x:Name="StatusBar" Margin="16,8,16,0" IsOpen="False" IsClosable="True" />
 

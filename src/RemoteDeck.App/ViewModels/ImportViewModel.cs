@@ -50,14 +50,38 @@ public sealed partial class ImportRow : ObservableObject
     /// <summary>True while <see cref="Status"/> is <see cref="NewStatus"/>; drives <c>Select all new</c>.</summary>
     public bool IsNew => Status == NewStatus;
 
-    /// <summary>Everything the row has to say that does not fit a column: the source, what the reader
-    /// dropped, and the duplicate it matches.</summary>
+    /// <summary>
+    /// The one thing the reader found that the import deliberately leaves behind: the source's user name,
+    /// with its domain when there is one. An identity belongs to a credential, and import creates none, so
+    /// the name is said here — visible in the preview, before anything is written — and stored nowhere.
+    /// </summary>
+    /// <remarks>
+    /// Computed rather than pushed into <see cref="ImportCandidate.Warnings"/>: that list is the reader's
+    /// account of what it could not use, and this is the importer's account of what it chose not to carry.
+    /// The tooltip shows both, so the distinction costs the user nothing.
+    /// </remarks>
+    public string? CredentialWarning
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Candidate.UserName)) return null;
+
+            var user = string.IsNullOrWhiteSpace(Candidate.Domain)
+                ? Candidate.UserName
+                : $"{Candidate.Domain}\\{Candidate.UserName}";
+            return $"User name “{user}” is not imported: attach a credential instead.";
+        }
+    }
+
+    /// <summary>Everything the row has to say that does not fit a column: the source, the duplicate it
+    /// matches, the user name that is not carried, and what the reader had to drop.</summary>
     public string ToolTipText
     {
         get
         {
             var lines = new List<string> { Candidate.Source };
             if (Detail.Length > 0) lines.Add(Detail);
+            if (CredentialWarning is { } credential) lines.Add(credential);
             lines.AddRange(Candidate.Warnings);
             return string.Join(Environment.NewLine, lines);
         }
@@ -307,9 +331,10 @@ public sealed partial class ImportViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Everything an external source may legitimately fill, and nothing else: no group, no favourite,
-    /// and above all no credential — an imported user name is written to the notes as plain text, where
-    /// it informs without pretending to be a saved identity.
+    /// Everything an external source may legitimately fill, and nothing else: no group, no favourite, no
+    /// notes — that field is the user's own free text and import has no business writing in it — and above
+    /// all no credential. The user name a source carries is dropped here and named in the preview instead,
+    /// by <see cref="ImportRow.CredentialWarning"/>.
     /// </summary>
     private static Connection ToConnection(ImportCandidate candidate) => new()
     {
@@ -325,7 +350,6 @@ public sealed partial class ImportViewModel : ObservableObject
         RedirectAudio = candidate.RedirectAudio,
         UseWebAccount = candidate.UseWebAccount,
         AuthenticationLevel = candidate.AuthenticationLevel,
-        Notes = NotesFor(candidate),
     };
 
     /// <summary>The file name a <c>.rdp</c> carries is not bound by the editor's limit; the column is.</summary>
@@ -333,16 +357,6 @@ public sealed partial class ImportViewModel : ObservableObject
     {
         var trimmed = name.Trim();
         return trimmed.Length <= ConnectionRules.MaxNameLength ? trimmed : trimmed[..ConnectionRules.MaxNameLength];
-    }
-
-    private static string NotesFor(ImportCandidate candidate)
-    {
-        if (string.IsNullOrWhiteSpace(candidate.UserName)) return "";
-
-        var user = string.IsNullOrWhiteSpace(candidate.Domain)
-            ? candidate.UserName
-            : $"{candidate.Domain}\\{candidate.UserName}";
-        return $"Imported user name: {user}. No password was imported and no credential was created.";
     }
 
     private static string AddressKey(string host, int port) => $"{host}:{port}";
