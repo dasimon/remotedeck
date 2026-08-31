@@ -130,8 +130,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // low-level hook swallows the keystroke it handles, so WPF never sees it.
         InputBindings.Add(new KeyBinding(new RelayCommand(FocusSearch), Key.F, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(NewConnection), Key.N, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(TogglePane), Key.B, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(CloseActiveTab), Key.W, ModifierKeys.Control));
+        // Ctrl+B and Ctrl+W carry a canExecute, Ctrl+F, Ctrl+N and Ctrl+K do not: the first two are
+        // the ones a text field needs back (Ctrl+W deletes a word, Ctrl+B moves by one), and the hook
+        // already declines them there. Without the same guard on this path the pane would still fold
+        // and the tab would still close, so both paths ask the one helper. CommandManager re-asks
+        // CanExecute on every matching key press (TranslateInput calls command.CanExecute inline;
+        // there is no cached verdict), so nothing needs invalidating when the focus moves.
+        InputBindings.Add(new KeyBinding(new RelayCommand(TogglePane, () => ShouldInterceptShortcut("Ctrl+B")), Key.B, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(new RelayCommand(CloseActiveTab, () => ShouldInterceptShortcut("Ctrl+W")), Key.W, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(OpenCommandPalette), Key.K, ModifierKeys.Control));
 
         Loaded += OnLoaded;
@@ -320,7 +326,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- shortcuts
 
     /// <summary>
-    /// Whether an intercepted shortcut is the application's to take, or the focused input's.
+    /// Whether a shortcut is the application's to take, or the focused input's. The single
+    /// definition of that rule: the low-level hook asks it before swallowing a keystroke, and the
+    /// window's Ctrl+B / Ctrl+W key bindings ask it as their <c>canExecute</c> — a shortcut reaching
+    /// WPF through the message pump never went past the hook, so one path alone would not do.
     /// Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+W and Ctrl+B all mean something inside a text field — move
     /// between fields, delete the word to the left, jump back a word — and a system-wide hook that
     /// swallows them makes typing in the shell feel broken. Ctrl+K is never filtered: it is the
@@ -330,6 +339,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// Runs inside the hook callback (see <see cref="ShortcutInterceptor.ShouldIntercept"/>), so it
     /// reads WPF state and nothing else — no I/O, no synchronous dispatcher hop. Off the UI thread
     /// there is no safe way to read the focus at all, so the shortcut is taken, as before.
+    /// <para>
+    /// On the key-binding path a <c>false</c> verdict stops the command but still marks the key
+    /// handled (<c>CommandManager.TranslateInput</c> sets <c>Handled</c> whenever a binding matched,
+    /// executed or not). That costs nothing here: no WPF text control does anything with Ctrl+W or
+    /// Ctrl+B, so the keystroke had nowhere else to go.
+    /// </para>
     /// </remarks>
     private static bool ShouldInterceptShortcut(string shortcut)
     {
