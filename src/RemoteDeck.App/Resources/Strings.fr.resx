@@ -653,4 +653,13 @@
   <data name="Import_ImportedMessage" xml:space="preserve">
     <value>Elles ont été enregistrées sans identifiant ; ajoutez-en un depuis Gérer les identifiants le moment venu.</value>
   </data>
+  <data name="SessionWindow_Reattach" xml:space="preserve">
+    <value>Rattacher</value>
+  </data>
+  <data name="SessionWindow_FullScreen" xml:space="preserve">
+    <value>Plein écran (F11)</value>
+  </data>
+  <data name="SessionWindow_Close" xml:space="preserve">
+    <value>Fermer la session</value>
+  </data>
 </root>
