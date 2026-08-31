@@ -4,6 +4,8 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using RemoteDeck.App.Rdp;
 using RemoteDeck.App.Services;
+using RemoteDeck.App.Views;
+using RemoteDeck.Core.Sessions;
 
 namespace RemoteDeck.App.ViewModels;
 
@@ -15,6 +17,10 @@ namespace RemoteDeck.App.ViewModels;
 /// <c>WindowsFormsHost</c> it has to be shown through. Adding and removing that host from the
 /// shell's container is delegated to the two callbacks handed to the constructor, so the
 /// view-model never names a XAML element.
+///
+/// It is also the only thing allowed to move a host between containers — that is what
+/// <see cref="Detach"/> and <see cref="Reattach"/> are — because a host that is in two trees, or in
+/// none, is a live session nobody can see.
 /// </summary>
 /// <remarks>
 /// Everything below runs on the UI thread — the sessions raise their events there and the
@@ -41,6 +47,13 @@ internal sealed partial class SessionsViewModel : ObservableObject
     /// wait for the §6.5 protocol to finish, never dispose the control out from under it.
     /// </summary>
     private readonly Dictionary<SessionTabViewModel, Task> _closing = [];
+
+    /// <summary>
+    /// The window showing each detached tab. The tab itself never leaves <see cref="Tabs"/>: the
+    /// strip hides it, everything that counts or closes sessions still sees it, and this map is the
+    /// only record of where its host currently lives.
+    /// </summary>
+    private readonly Dictionary<SessionTabViewModel, SessionWindow> _detached = [];
 
     /// <param name="attach">Puts a session's host in the shell's container. Called by
     /// <see cref="Open"/>, before the shell starts the session.</param>
@@ -108,10 +121,15 @@ internal sealed partial class SessionsViewModel : ObservableObject
         return tab;
     }
 
-    /// <summary>Brings <paramref name="tab"/> to the front. Unknown or null tabs are ignored.</summary>
+    /// <summary>
+    /// Brings <paramref name="tab"/> to the front. Unknown and null tabs are ignored, and so are
+    /// detached ones: <see cref="Active"/> names the session the shell's container shows, and a
+    /// detached session is not in that container — activating it would blank the docked area while
+    /// changing nothing on screen. The caller brings its window forward instead.
+    /// </summary>
     public void Activate(SessionTabViewModel? tab)
     {
-        if (tab is not null && !Tabs.Contains(tab))
+        if (tab is not null && (!Tabs.Contains(tab) || tab.IsDetached))
         {
             return;
         }
@@ -138,8 +156,42 @@ internal sealed partial class SessionsViewModel : ObservableObject
             return;
         }
 
-        // Modulo of a negative is negative in C#; the extra Count keeps -1 at the far right.
-        Active = Tabs[((index + delta) % Tabs.Count + Tabs.Count) % Tabs.Count];
+        // Detached tabs are stepped over: they are not in the strip the user is cycling through.
+        for (int step = 1; step < Tabs.Count; step++)
+        {
+            // Modulo of a negative is negative in C#; the extra Count keeps -1 at the far right.
+            var candidate = Tabs[((index + delta * step) % Tabs.Count + Tabs.Count) % Tabs.Count];
+            if (!candidate.IsDetached)
+            {
+                Active = candidate;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// What the shell's container should show once the tab at <paramref name="index"/> has left it —
+    /// closed or detached: the neighbour on its right, wrapping around, skipping detached tabs since
+    /// those are on screen already in windows of their own. <c>null</c> when nothing is left to dock.
+    /// </summary>
+    private SessionTabViewModel? DockedNear(int index)
+    {
+        if (Tabs.Count == 0)
+        {
+            return null;
+        }
+
+        int start = Math.Clamp(index, 0, Tabs.Count - 1);
+        for (int step = 0; step < Tabs.Count; step++)
+        {
+            var candidate = Tabs[(start + step) % Tabs.Count];
+            if (!candidate.IsDetached)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Reorders the strip. Out-of-range or identical indices are ignored, so the drag
@@ -153,6 +205,192 @@ internal sealed partial class SessionsViewModel : ObservableObject
 
         Tabs.Move(from, to);
     }
+
+    // ---------------------------------------------------------------- detach / reattach
+
+    /// <summary>The window showing <paramref name="tab"/>, or <c>null</c> when it is docked.</summary>
+    public SessionWindow? DetachedWindowOf(SessionTabViewModel? tab) =>
+        tab is null ? null : _detached.GetValueOrDefault(tab);
+
+    /// <summary>
+    /// Moves a session's host out of the shell's container and into <paramref name="window"/>, which
+    /// the caller has already created and shown. The tab stays in <see cref="Tabs"/>, marked
+    /// <see cref="SessionTabViewModel.IsDetached"/>, and the docked area falls back to a neighbour.
+    ///
+    /// Moving the host — rather than re-creating the control in the new window — is what keeps the
+    /// HWND, its Win32 parent and therefore the remote session alive (design §2).
+    /// </summary>
+    /// <returns>False when the tab is unknown, already detached, or when the move failed; the
+    /// session then stays docked, exactly where the caller found it.</returns>
+    public bool Detach(SessionTabViewModel tab, SessionWindow window)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+        ArgumentNullException.ThrowIfNull(window);
+
+        if (!Tabs.Contains(tab) || tab.IsDetached || _closing.ContainsKey(tab))
+        {
+            return false;
+        }
+
+        var session = tab.Session;
+        try
+        {
+            // Out of the docked container first: a host that still has a parent cannot be given
+            // another one, and WPF answers that with an InvalidOperationException.
+            _detach(session);
+            window.HostArea.Child = session.Host;
+
+            // The window owns the session's size and DPI from now on.
+            session.AttachedTo(window.HostArea);
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("session", $"'{tab.Title}': detach failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            Redock(session, window);
+            return false;
+        }
+
+        // A detached host is always visible: it is the whole content of its window, and the
+        // activation pass below must not hide it on its way to the neighbour.
+        session.Host.Visibility = Visibility.Visible;
+        _detached[tab] = window;
+        tab.IsDetached = true;
+        ProbeLog.Write("session", $"'{tab.Title}' detached ({_detached.Count} window(s))");
+
+        if (ReferenceEquals(Active, tab))
+        {
+            Active = DockedNear(Tabs.IndexOf(tab));
+        }
+        else
+        {
+            // Active did not move, but the strip and the empty-state did.
+            ActiveChanged?.Invoke();
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The reverse: the host goes back into the shell's container, the tab becomes an ordinary tab
+    /// again and is activated, and the now-empty window is closed.
+    /// </summary>
+    /// <returns>False when the tab is not detached, or when the move failed — and a failed move
+    /// leaves the session in its window, still visible and still usable, rather than alive with
+    /// nothing to show it.</returns>
+    public bool Reattach(SessionTabViewModel tab)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+
+        if (!_detached.TryGetValue(tab, out var window))
+        {
+            return false;
+        }
+
+        var session = tab.Session;
+        try
+        {
+            window.HostArea.Child = null;
+            _attach(session);
+            session.AttachedTo(ParentOf(session));
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("session", $"'{tab.Title}': reattach failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            Undock(session, window);
+            return false;
+        }
+
+        _detached.Remove(tab);
+        tab.IsDetached = false;
+        ProbeLog.Write("session", $"'{tab.Title}' reattached ({_detached.Count} window(s) left)");
+
+        // Before the window goes: it now holds nothing, and the tab is the one the user just
+        // dragged back, so it takes the docked area.
+        Close(window, tab);
+        Activate(tab);
+        if (!ReferenceEquals(Active, tab))
+        {
+            // Activation refused — the strip changed anyway.
+            ActiveChanged?.Invoke();
+        }
+
+        return true;
+    }
+
+    /// <summary>Puts a host back in the shell's container after a failed <see cref="Detach"/>.
+    /// Never throws: the caller is already handling one failure.</summary>
+    private void Redock(RdpSession session, SessionWindow window)
+    {
+        try
+        {
+            if (ReferenceEquals(window.HostArea.Child, session.Host))
+            {
+                window.HostArea.Child = null;
+            }
+
+            if (session.Host.Parent is null)
+            {
+                _attach(session);
+                session.AttachedTo(ParentOf(session));
+            }
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("session", $"'{session.Connection.Name}': could not be docked again: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    /// <summary>Puts a host back in its window after a failed <see cref="Reattach"/>. Never
+    /// throws.</summary>
+    private void Undock(RdpSession session, SessionWindow window)
+    {
+        try
+        {
+            if (session.Host.Parent is not null)
+            {
+                _detach(session);
+            }
+
+            window.HostArea.Child = session.Host;
+            session.Host.Visibility = Visibility.Visible;
+            session.AttachedTo(window.HostArea);
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("session", $"'{session.Connection.Name}': could not be put back in its window: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// The element a host now sits in, read back from the host itself: the shell hands this
+    /// view-model two callbacks, never the container they write to, and
+    /// <see cref="RdpSession.AttachedTo"/> only needs the new parent to re-arm its size
+    /// subscription. The host is its own fallback — measuring it is what the session does anyway.
+    /// </summary>
+    private static FrameworkElement ParentOf(RdpSession session) =>
+        session.Host.Parent as FrameworkElement ?? session.Host;
+
+    /// <summary>
+    /// Closes a detached window whose session is gone or has moved back to the shell. The window
+    /// refuses every close until <see cref="SessionWindow.AllowClose"/> has been called — that is
+    /// how it makes sure the §6.5 protocol runs — so both happen here, and neither may throw: this
+    /// runs on shutdown paths that have to finish.
+    /// </summary>
+    private static void Close(SessionWindow window, SessionTabViewModel tab)
+    {
+        try
+        {
+            window.HostArea.Child = null;
+            window.AllowClose();
+            window.Close();
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("session", $"'{tab.Title}': its window would not close: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    // ---------------------------------------------------------------- closing
 
     /// <summary>Closes one tab with the default per-tab budget.</summary>
     public Task CloseAsync(SessionTabViewModel? tab) => CloseAsync(tab, DefaultCloseTimeout);
@@ -222,13 +460,25 @@ internal sealed partial class SessionsViewModel : ObservableObject
         tab.CloseRequested -= OnTabCloseRequested;
         tab.Changed -= OnTabChanged;
         Tabs.Remove(tab);
-        _detach(tab.Session);
+
+        // The host is wherever this tab last put it: the shell's container, or the window that was
+        // showing it — which is now empty and goes with the session it was holding.
+        if (_detached.Remove(tab, out var window))
+        {
+            tab.IsDetached = false;
+            Close(window, tab);
+        }
+        else
+        {
+            _detach(tab.Session);
+        }
+
         tab.Dispose();
         ProbeLog.Write("tabs", $"'{tab.Title}' closed ({Tabs.Count} tab(s) left)");
 
         if (ReferenceEquals(Active, tab))
         {
-            Active = Tabs.Count == 0 ? null : Tabs[Math.Clamp(index, 0, Tabs.Count - 1)];
+            Active = DockedNear(index);
         }
         else
         {
@@ -238,13 +488,14 @@ internal sealed partial class SessionsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Closes every tab, one after another (§6.5 is a per-control protocol: two controls closing at
-    /// once would interleave their <c>RequestClose</c> waits). Each tab gets
-    /// <paramref name="perTab"/>, and the whole pass is capped at <paramref name="overall"/> — once
-    /// that is spent the remaining tabs are torn down without waiting, so a hung control can never
-    /// trap the user in a window that refuses to close.
+    /// Closes every session, one after another (§6.5 is a per-control protocol: two controls closing
+    /// at once would interleave their <c>RequestClose</c> waits) — detached ones included, each
+    /// followed by the window that was showing it. The budget is <see cref="ClosePlan"/>'s: five
+    /// seconds per session under a thirty-second ceiling, and once that is spent the rest is torn
+    /// down without waiting, so a hung control can never trap the user in a window that refuses to
+    /// close.
     /// </summary>
-    public async Task CloseAllAsync(TimeSpan perTab, TimeSpan overall)
+    public async Task CloseAllAsync()
     {
         var pending = Tabs.ToArray();
         if (pending.Length == 0)
@@ -252,25 +503,26 @@ internal sealed partial class SessionsViewModel : ObservableObject
             return;
         }
 
-        ProbeLog.Write("close", $"Closing {pending.Length} session(s), {perTab.TotalSeconds:F0}s each, {overall.TotalSeconds:F0}s overall");
+        ProbeLog.Write("close", $"Closing {pending.Length} session(s), {ClosePlan.PerSessionSeconds}s each, {ClosePlan.OverallSeconds}s overall");
         var clock = Stopwatch.StartNew();
 
-        foreach (var tab in pending)
+        for (int i = 0; i < pending.Length; i++)
         {
-            var remaining = overall - clock.Elapsed;
-            if (remaining <= TimeSpan.Zero)
+            var tab = pending[i];
+            var budget = ClosePlan.For(pending.Length - i, clock.Elapsed);
+            if (budget <= TimeSpan.Zero)
             {
                 ProbeLog.Write("close", $"Overall budget spent; '{tab.Title}' is closed without waiting");
                 await CloseAsync(tab, TimeSpan.Zero).ConfigureAwait(true);
                 continue;
             }
 
-            // A tab the user closed a moment ago already has a protocol in flight with a budget
-            // of its own; CloseAsync hands that task back rather than starting a second
-            // RequestClose. Skipping it here is what used to let DisposeAll tear the control down
-            // mid-protocol, i.e. exactly the zombie session §6.5 exists to prevent.
+            // A tab the user closed a moment ago — or the cross of a detached window — already has a
+            // protocol in flight with a budget of its own; CloseAsync hands that task back rather
+            // than starting a second RequestClose. Skipping it here is what used to let DisposeAll
+            // tear the control down mid-protocol, i.e. exactly the zombie session §6.5 prevents.
             bool joined = _closing.ContainsKey(tab);
-            var close = CloseAsync(tab, remaining < perTab ? remaining : perTab);
+            var close = CloseAsync(tab, budget);
             if (!joined)
             {
                 await close.ConfigureAwait(true);
@@ -278,7 +530,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
             }
 
             // Waiting on someone else's budget: bounded by what is left of ours.
-            if (await Task.WhenAny(close, Task.Delay(remaining)).ConfigureAwait(true) != close)
+            if (await Task.WhenAny(close, Task.Delay(budget)).ConfigureAwait(true) != close)
             {
                 ProbeLog.Write("close", $"'{tab.Title}': the close already in flight outlived the overall budget");
             }
@@ -286,6 +538,13 @@ internal sealed partial class SessionsViewModel : ObservableObject
 
         ProbeLog.Write("close", $"All sessions closed in {clock.Elapsed.TotalSeconds:F1}s");
     }
+
+    /// <summary>
+    /// The shell's current call site, which still keeps budgets of its own. Both are now
+    /// <see cref="ClosePlan"/>'s — per session and overall — so the arguments are ignored; this
+    /// overload goes when the shell stops passing them.
+    /// </summary>
+    public Task CloseAllAsync(TimeSpan perTab, TimeSpan overall) => CloseAllAsync();
 
     /// <summary>
     /// Last-resort teardown for the second closing pass: whatever survived <see cref="CloseAllAsync"/>
@@ -298,11 +557,21 @@ internal sealed partial class SessionsViewModel : ObservableObject
             try
             {
                 tab.Session.Dispose();
-                _detach(tab.Session);
+                if (!_detached.ContainsKey(tab))
+                {
+                    _detach(tab.Session);
+                }
             }
             catch (Exception ex)
             {
                 ProbeLog.Write("close", $"'{tab.Title}': dispose failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            }
+
+            // A window still showing a session that has just been disposed has nothing left to show.
+            if (_detached.Remove(tab, out var window))
+            {
+                tab.IsDetached = false;
+                Close(window, tab);
             }
 
             tab.CloseRequested -= OnTabCloseRequested;
@@ -311,6 +580,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
         }
 
         Tabs.Clear();
+        _detached.Clear();
         _closing.Clear();
         Active = null;
     }
@@ -323,7 +593,11 @@ internal sealed partial class SessionsViewModel : ObservableObject
         {
             bool active = ReferenceEquals(tab, value);
             tab.IsActive = active;
-            tab.Session.Host.Visibility = active ? Visibility.Visible : Visibility.Hidden;
+
+            // A detached session stays visible whatever the docked area is showing: it is the only
+            // content of its own window, and hiding it there would blank a window the user is
+            // looking at.
+            tab.Session.Host.Visibility = active || tab.IsDetached ? Visibility.Visible : Visibility.Hidden;
         }
 
         if (value is not null)
