@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Controls;
+using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Model;
@@ -29,7 +30,7 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
     {
         List.ItemsSource = _repository.GetAll();
         _pendingDelete = null;
-        DeleteButton.Content = "Delete";
+        DeleteButton.Content = Strings.Credentials_Delete;
         OnSelectionChanged(this, null!);
     }
 
@@ -41,7 +42,7 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         if (_pendingDelete is not null && !ReferenceEquals(_pendingDelete, Selected))
         {
             _pendingDelete = null;
-            DeleteButton.Content = "Delete";
+            DeleteButton.Content = Strings.Credentials_Delete;
         }
     }
 
@@ -66,9 +67,9 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         if (!ReferenceEquals(_pendingDelete, c))
         {
             _pendingDelete = c;
-            DeleteButton.Content = "Confirm delete";
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Delete credential?",
-                $"'{c.Label}' will be removed; connections using it will need a new credential. Click again to confirm.");
+            DeleteButton.Content = Strings.Credentials_ConfirmDelete;
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Credentials_DeleteConfirmTitle,
+                Text.Of(Strings.Credentials_DeleteConfirmMessage, c.Label));
             return;
         }
         try
@@ -80,7 +81,7 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         }
         catch (Exception ex)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Delete failed", ex.Message);
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Common_DeleteFailedTitle, ex.Message);
         }
     }
 }

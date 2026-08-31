@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:views="clr-namespace:RemoteDeck.App.Views"
+                 xmlns:res="clr-namespace:RemoteDeck.App.Resources"
                  Title="RemoteDeck"
                  Width="1280" Height="800"
                  MinWidth="800" MinHeight="500"
@@ -37,7 +38,7 @@
                        Margin="16" TextWrapping="Wrap" TextAlignment="Center"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Text="Saved connections are unavailable: the database could not be opened. See the log." />
+                       Text="{x:Static res:Strings.Pane_Unavailable}" />
         </Grid>
 
         <GridSplitter x:Name="PaneSplitter"
@@ -74,41 +75,41 @@
                               Content="&#xE700;"
                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                               FontSize="14"
-                              ToolTip="Show or hide the connection pane (Ctrl+B)"
+                              ToolTip="{x:Static res:Strings.Shell_PaneToggleToolTip}"
                               Click="OnPaneToggleClick" />
 
                 <TextBlock x:Name="SessionLabel" Grid.Column="1"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
-                           Text="No session" />
+                           Text="{x:Static res:Strings.Shell_NoSession}" />
 
                 <ui:Button x:Name="ReconnectButton" Grid.Column="2" Margin="8,0,0,0"
-                           Content="Reconnect"
+                           Content="{x:Static res:Strings.Shell_Reconnect}"
                            Icon="{ui:SymbolIcon ArrowClockwise20}"
                            Visibility="Collapsed"
-                           ToolTip="Connect this session again"
+                           ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
                            Click="OnReconnectClick" />
 
                 <ui:Button x:Name="CancelRetryButton" Grid.Column="3" Margin="8,0,0,0"
-                           Content="Cancel"
+                           Content="{x:Static res:Strings.Common_Cancel}"
                            Visibility="Collapsed"
-                           ToolTip="Stop the scheduled reconnection"
+                           ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
                            Click="OnCancelRetryClick" />
 
                 <ui:Button x:Name="DiagnosticsButton" Grid.Column="4" Margin="8,0,0,0"
                            Icon="{ui:SymbolIcon Copy20}"
                            IsEnabled="False"
-                           ToolTip="Copy diagnostics for this session to the clipboard"
+                           ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                            Click="OnCopyDiagnosticsClick" />
 
                 <ui:Button Grid.Column="5" Margin="8,0,0,0"
                            Icon="{ui:SymbolIcon Key24}"
-                           ToolTip="Manage credentials"
+                           ToolTip="{x:Static res:Strings.Shell_CredentialsToolTip}"
                            Click="OnManageCredentials" />
 
                 <ui:Button x:Name="DisconnectButton" Grid.Column="6" Margin="8,0,0,0"
-                           Content="Disconnect" IsEnabled="False"
-                           ToolTip="Close this session (Ctrl+W)"
+                           Content="{x:Static res:Strings.Shell_Disconnect}" IsEnabled="False"
+                           ToolTip="{x:Static res:Strings.Session_CloseToolTip}"
                            Click="OnDisconnectClick" />
             </Grid>
 
@@ -123,7 +124,7 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            TextAlignment="Center" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="Select a connection and press Enter" />
+                           Text="{x:Static res:Strings.Shell_EmptySessions}" />
 
                 <!-- One child per open session, added by SessionsViewModel; the active one is
                      Visible and the others Hidden. Collapsed when there is no tab at all, so the

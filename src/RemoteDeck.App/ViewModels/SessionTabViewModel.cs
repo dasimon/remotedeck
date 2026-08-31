@@ -1,6 +1,8 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RemoteDeck.App.Rdp;
+using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Diagnostics;
 
 namespace RemoteDeck.App.ViewModels;
@@ -96,7 +98,7 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
         State = _session.State;
         StatusBrushKey = BrushKeyFor(_session.State);
         CountdownText = _session.NextRetryIn is { } remaining
-            ? $"retry in {remaining.TotalSeconds:F0} s"
+            ? Text.Of(Strings.Session_Countdown, remaining.TotalSeconds.ToString("F0", CultureInfo.CurrentCulture))
             : "";
         StateText = DescribeState();
     }
@@ -112,17 +114,19 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
     private string DescribeState() => _session.State switch
     {
         SessionState.Idle => _session.LastDisconnect is { IsError: false } ended
-            ? $"Disconnected — {ended.Title}"
-            : "Not connected",
-        SessionState.Connecting => "Connecting…",
-        SessionState.Connected => "Connected",
+            ? Text.Of(Strings.Session_StateDisconnected, ended.Title)
+            : Strings.Session_StateNotConnected,
+        SessionState.Connecting => Strings.Session_StateConnecting,
+        SessionState.Connected => Strings.Session_StateConnected,
         SessionState.Interrupted => CountdownText.Length == 0
-            ? $"Interrupted (attempt {_session.Attempt})"
-            : $"Interrupted — {CountdownText} (attempt {_session.Attempt})",
-        SessionState.Reconnecting => $"Reconnecting (attempt {_session.Attempt})",
-        SessionState.Failed => _session.LastDisconnect is { } failure ? $"Failed — {failure.Title}" : "Failed",
-        SessionState.Closing => "Closing…",
-        SessionState.Closed => "Closed",
+            ? Text.Of(Strings.Session_StateInterrupted, _session.Attempt)
+            : Text.Of(Strings.Session_StateInterruptedCountdown, CountdownText, _session.Attempt),
+        SessionState.Reconnecting => Text.Of(Strings.Session_StateReconnecting, _session.Attempt),
+        SessionState.Failed => _session.LastDisconnect is { } failure
+            ? Text.Of(Strings.Session_StateFailedReason, failure.Title)
+            : Strings.Session_StateFailed,
+        SessionState.Closing => Strings.Session_StateClosing,
+        SessionState.Closed => Strings.Session_StateClosed,
         _ => _session.State.ToString(),
     };
 

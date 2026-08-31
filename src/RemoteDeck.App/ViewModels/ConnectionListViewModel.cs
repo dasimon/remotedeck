@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Search;
@@ -36,10 +37,10 @@ public sealed partial class ConnectionListViewModel : ObservableObject
 {
     /// <summary>Group name for favorites. The star keeps it visually distinct; the leading character
     /// also happens to sort it first, but group order is decided by <see cref="Refresh"/>, not by the name.</summary>
-    public const string FavoritesGroup = "★ Favorites";
+    public static string FavoritesGroup => Strings.Pane_GroupFavorites;
 
     /// <summary>Group name for connections whose <see cref="Connection.GroupName"/> is blank.</summary>
-    public const string UngroupedGroup = "Ungrouped";
+    public static string UngroupedGroup => Strings.Pane_GroupUngrouped;
 
     /// <summary>Search debounce. Short enough to feel instant, long enough that a fast typist
     /// filters once instead of once per keystroke.</summary>
@@ -86,7 +87,7 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// empty list is a first-run state, a filtered one is a failed search.</summary>
     [ObservableProperty] private string _emptyMessage = DefaultEmptyMessage;
 
-    private const string DefaultEmptyMessage = "No connections yet — press Ctrl+N to add one.";
+    private static string DefaultEmptyMessage => Strings.Pane_EmptyDefault;
 
     /// <summary>The connection behind <see cref="Selected"/>, for callers that only care about the model.</summary>
     public Connection? SelectedConnection => Selected?.Connection;
@@ -124,7 +125,7 @@ public sealed partial class ConnectionListViewModel : ObservableObject
         IsEmpty = Items.Count == 0;
         EmptyMessage = string.IsNullOrWhiteSpace(SearchText)
             ? DefaultEmptyMessage
-            : $"No connection matches “{SearchText.Trim()}”.";
+            : Text.Of(Strings.Pane_EmptyNoMatch, SearchText.Trim());
     }
 
     /// <summary>The group a match belongs to: favorites win over the connection's own group name.</summary>

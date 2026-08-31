@@ -32,6 +32,34 @@
   </ItemGroup>
 
   <!-- ===================================================================================
+       Localisation (spec §9). Strings.resx is the neutral (English) resource and
+       Strings.fr.resx its complete French translation; the satellite assembly is produced
+       automatically from the .fr file's culture suffix.
+
+       Strings.Designer.cs is committed rather than generated into obj/ by the GenerateResource
+       task. XAML binds the strings through {x:Static res:Strings.*}; naming a type of its own
+       assembly sends every such view through the WPF markup compiler's second pass, which
+       builds a temporary project (RemoteDeck.App_*_wpftmp.csproj) carrying only the plain
+       Compile items of this one — its compile chain does not include PrepareResources, so a
+       designer produced there is invisible to it and pass 2 fails with CS0103. A committed
+       file is an ordinary Compile item and is therefore present in both passes.
+
+       PublicResXFileCodeGenerator keeps it in step inside Visual Studio; the class must be
+       public because {x:Static} resolves its member by reflection at load time.
+       ================================================================================== -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <Compile Update="Resources\Strings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <!-- ===================================================================================
        MSTSCLib interop.
 
        An <COMReference> would be the natural way to express this, but the MSBuild task it

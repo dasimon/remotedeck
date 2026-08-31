@@ -3,7 +3,8 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
-                 Title="Command palette"
+                 xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+                 Title="{x:Static res:Strings.Palette_Title}"
                  Width="560"
                  SizeToContent="Height"
                  MaxHeight="420"
@@ -41,7 +42,7 @@
             <ui:TextBox x:Name="SearchBox"
                         Grid.Row="0"
                         Margin="0,0,0,8"
-                        PlaceholderText="Search connections and commands"
+                        PlaceholderText="{x:Static res:Strings.Palette_SearchPlaceholder}"
                         ClearButtonEnabled="False"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Services;
@@ -28,6 +29,7 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        ApplyOverriddenCulture();
         ProbeLog.Write("startup", $"RemoteDeck starting, log at {ProbeLog.Path}");
         try
         {
@@ -58,5 +60,36 @@ public partial class App : System.Windows.Application
         }
         services.AddSingleton<ICredentialVault, DpapiCredentialVault>();
         Services = services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// The UI language is Windows' own (<see cref="CultureInfo.CurrentUICulture"/>) and v1 offers no
+    /// setting to change it — spec §9. REMOTEDECK_UI_CULTURE overrides it for verification only: it is
+    /// how the French pass is checked without changing the machine's language, and it is read here,
+    /// before any window exists, because a <c>{x:Static}</c> binding reads its resource when the window
+    /// is loaded and never again.
+    /// </summary>
+    private static void ApplyOverriddenCulture()
+    {
+        var name = Environment.GetEnvironmentVariable("REMOTEDECK_UI_CULTURE");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        try
+        {
+            var culture = CultureInfo.GetCultureInfo(name);
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+            CultureInfo.CurrentCulture = culture;
+            ProbeLog.Write("startup", $"REMOTEDECK_UI_CULTURE={culture.Name}: UI culture overridden");
+        }
+        catch (CultureNotFoundException)
+        {
+            // A typo in the variable must not cost the launch; the system culture stands.
+            ProbeLog.Write("startup", $"REMOTEDECK_UI_CULTURE=\"{name}\" is not a known culture; keeping the system one");
+        }
     }
 }

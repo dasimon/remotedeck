@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Controls;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Rdp;
+using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Data;
@@ -155,8 +156,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _version = RdpControlCatalog.Select(ClsidRegistry.IsUsable);
         if (_version is null)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "No Remote Desktop control found",
-                "None of the known mstscax.dll CLSIDs is registered on this machine.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_NoControlTitle,
+                Strings.Shell_NoControlMessage);
             return;
         }
 
@@ -200,8 +201,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // without application shortcuts; Ctrl+Alt+Left / Ctrl+Alt+Right remain the way out.
             _shortcuts = null;
             ProbeLog.Write("startup", $"ShortcutInterceptor({mechanism}) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Keyboard shortcuts unavailable",
-                $"{ex.Message} Ctrl+Alt+Left / Ctrl+Alt+Right still release the focus. See {ProbeLog.Path}.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_ShortcutsUnavailableTitle,
+                Text.Of(Strings.Shell_ShortcutsUnavailableMessage, ex.Message, ProbeLog.Path));
         }
 
         // R5 probe: one reflection pass over the interop assembly, once per launch, to record
@@ -210,8 +211,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (_shortcuts is not null && _list is not null)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"RDP control v{_version.Label} ready",
-                "Pick a connection and press Enter, or press Ctrl+N to create one.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                Text.Of(Strings.Shell_ReadyTitle, _version.Label), Strings.Shell_ReadyMessage);
         }
     }
 
@@ -228,8 +229,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             Pane.Visibility = Visibility.Collapsed;
             PaneUnavailable.Visibility = Visibility.Visible;
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable",
-                $"Saved connections cannot be read, so nothing can be connected. See {ProbeLog.Path}.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Text.Of(Strings.Shell_DatabaseUnreadableMessage, ProbeLog.Path));
             return;
         }
 
@@ -384,8 +385,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 OpenCommandPalette();
                 break;
             default:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"{shortcut} intercepted",
-                    $"via {mechanism} — no action is wired to it yet");
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
+                    Text.Of(Strings.Shell_ShortcutInterceptedTitle, shortcut),
+                    Text.Of(Strings.Shell_ShortcutInterceptedMessage, mechanism));
                 break;
         }
     }
@@ -449,7 +451,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 ? ConnectionListViewModel.UngroupedGroup
                 : connection.GroupName;
             items.Add(new PaletteItem(PaletteItemKind.Connection, $"{ConnectionIdPrefix}{connection.Id}",
-                connection.Name, $"{group} · {connection.Host}", ConnectionPriority));
+                connection.Name, Text.Of(Strings.Palette_ConnectionSubtitle, group, connection.Host),
+                ConnectionPriority));
         }
 
         // By index, not by connection id: an index is what Activate needs, and the strip cannot be
@@ -458,25 +461,25 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             var tab = _sessions.Tabs[i];
             items.Add(new PaletteItem(PaletteItemKind.Command, $"{TabIdPrefix}{i}",
-                $"Switch to {tab.Title}", tab.Subtitle, TabPriority));
+                Text.Of(Strings.Palette_SwitchToTab, tab.Title), tab.Subtitle, TabPriority));
         }
 
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
-            "New connection", "Ctrl+N", CommandPriority));
+            Strings.Palette_NewConnection, "Ctrl+N", CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
-            "Import connections…", "From .rdp files or the mstsc history", CommandPriority));
+            Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:credentials",
-            "Manage credentials…", "Saved user names and passwords", CommandPriority));
+            Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
-            "Toggle connection pane", "Ctrl+B", CommandPriority));
+            Strings.Palette_TogglePane, "Ctrl+B", CommandPriority));
         // One entry, not two: RemoteDeck has no disconnect that keeps the tab behind — the toolbar's
         // own Disconnect button is CloseActiveTab as well — so a second "Disconnect" row would name
         // the same action twice. The subtitle carries the other half of the vocabulary instead, and
         // PaletteFilter searches it, so typing "disconnect" still finds this row.
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
-            "Close current session", "Disconnect it and close its tab (Ctrl+W)", CommandPriority));
+            Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
-            "Reconnect current tab", "Connect the active session again", CommandPriority));
+            Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority));
 
         return items;
     }
@@ -536,7 +539,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             case "cmd:disconnect":
                 if (_sessions.Active is null)
                 {
-                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "No session", "There is no tab to close.");
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, Strings.Shell_NoSession,
+                        Strings.Shell_NoTabToCloseMessage);
                     break;
                 }
 
@@ -546,7 +550,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             case "cmd:reconnect":
                 if (_sessions.Active is null)
                 {
-                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, "No session", "There is no tab to reconnect.");
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, Strings.Shell_NoSession,
+                        Strings.Shell_NoTabToReconnectMessage);
                     break;
                 }
 
@@ -585,8 +590,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (_version is null)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "RDP session unavailable",
-                $"No usable Remote Desktop control was found at startup. See {ProbeLog.Path}.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_SessionUnavailableTitle,
+                Text.Of(Strings.Shell_SessionUnavailableMessage, ProbeLog.Path));
             return;
         }
 
@@ -608,8 +613,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         catch (Exception ex)
         {
             ProbeLog.Write("session", $"Opening '{connection.Name}' failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Connect failed",
-                $"{ex.GetType().Name} (0x{ex.HResult:X8}): {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_ConnectFailedTitle,
+                Text.Of(Strings.Shell_ConnectFailedMessage, ex.GetType().Name,
+                    ex.HResult.ToString("X8", CultureInfo.InvariantCulture), ex.Message));
         }
         finally
         {
@@ -736,14 +742,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             // Qualified: UseWindowsForms puts System.Windows.Forms.Clipboard in scope too.
             System.Windows.Clipboard.SetText(tab.Session.BuildDiagnostics());
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, "Diagnostics copied",
-                $"The state of '{tab.Title}' is on the clipboard.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, Strings.Shell_DiagnosticsCopiedTitle,
+                Text.Of(Strings.Shell_DiagnosticsCopiedMessage, tab.Title));
         }
         catch (Exception ex)
         {
             ProbeLog.Write("session", $"Clipboard.SetText failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Diagnostics not copied",
-                $"The clipboard refused the text ({ex.GetType().Name}).");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DiagnosticsNotCopiedTitle,
+                Text.Of(Strings.Shell_DiagnosticsNotCopiedMessage, ex.GetType().Name));
         }
     }
 
@@ -793,7 +799,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private void UpdateSessionBar()
     {
         var tab = _sessions.Active;
-        SessionLabel.Text = tab is null ? "No session" : $"{tab.Title} — {tab.Subtitle} · {tab.StateText}";
+        SessionLabel.Text = tab is null
+            ? Strings.Shell_NoSession
+            : Text.Of(Strings.Shell_SessionLabel, tab.Title, tab.Subtitle, tab.StateText);
 
         bool live = tab is not null && !_closeInProgress;
         ReconnectButton.Visibility = live && tab!.State is SessionState.Failed or SessionState.Idle
@@ -824,34 +832,45 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 break;
 
             case SessionState.Idle:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"'{tab.Title}' disconnected",
-                    disconnect!.Title);
+                // disconnect.Title comes from RemoteDeck.Core and stays English in v1 (spec §9):
+                // only the wording around it is localised.
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    Text.Of(Strings.Session_DisconnectedTitle, tab.Title), disconnect!.Title);
                 break;
 
             case SessionState.Connecting:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"Connecting to {tab.Title}", tab.Subtitle);
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    Text.Of(Strings.Session_ConnectingTitle, tab.Title), tab.Subtitle);
                 break;
 
             case SessionState.Connected:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, $"Connected to {tab.Title}", tab.Subtitle);
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
+                    Text.Of(Strings.Session_ConnectedTitle, tab.Title), tab.Subtitle);
                 break;
 
             case SessionState.Interrupted:
                 // The countdown is empty for the tick between the drop and the first timer tick;
                 // the attempt then stands on its own rather than behind a leading space.
-                string progress = $"attempt {session.Attempt} of {ReconnectPolicy.MaxAttempts}";
-                StatusBar.Show(SeverityFor(disconnect), $"'{tab.Title}' interrupted — {disconnect?.Title ?? "connection lost"}",
-                    Join(tab.CountdownText.Length == 0 ? progress : $"{tab.CountdownText} ({progress})",
+                string progress = Text.Of(Strings.Session_AttemptProgress, session.Attempt, ReconnectPolicy.MaxAttempts);
+                StatusBar.Show(SeverityFor(disconnect),
+                    Text.Of(Strings.Session_InterruptedTitle, tab.Title,
+                        disconnect?.Title ?? Strings.Session_ConnectionLost),
+                    Join(tab.CountdownText.Length == 0
+                            ? progress
+                            : Text.Of(Strings.Session_CountdownWithProgress, tab.CountdownText, progress),
                         WindowsWording(session)));
                 break;
 
             case SessionState.Reconnecting:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, $"Reconnecting to {tab.Title}",
-                    $"Attempt {session.Attempt} of {ReconnectPolicy.MaxAttempts}.");
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+                    Text.Of(Strings.Session_ReconnectingTitle, tab.Title),
+                    Text.Of(Strings.Session_ReconnectingMessage, session.Attempt, ReconnectPolicy.MaxAttempts));
                 break;
 
             case SessionState.Failed:
-                StatusBar.Show(SeverityFor(disconnect), $"'{tab.Title}' failed — {disconnect?.Title ?? "the connection could not be established"}",
+                StatusBar.Show(SeverityFor(disconnect),
+                    Text.Of(Strings.Session_FailedTitle, tab.Title,
+                        disconnect?.Title ?? Strings.Session_CouldNotConnect),
                     WindowsWording(session));
                 break;
 
@@ -885,7 +904,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             : session.LastWindowsDescription ?? "";
 
     private static string Join(string first, string second) =>
-        second.Length == 0 ? first : $"{first} — {second}";
+        second.Length == 0 ? first : Text.Of(Strings.Session_DetailSeparator, first, second);
 
     // ---------------------------------------------------------------- editor and delete
 
@@ -894,8 +913,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_connections is null)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable",
-                "Connections cannot be edited until the database opens.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoEditMessage);
             return;
         }
 
@@ -926,8 +945,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (_connections is null)
         {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable",
-                "Connections cannot be deleted until the database opens.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoDeleteMessage);
             return;
         }
 
@@ -938,28 +957,30 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             {
                 if (_sessions.Find(connection.Id) is { } tab)
                 {
-                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, $"Closing '{connection.Name}'…",
-                        "Its session is closed before the connection is deleted.");
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                        Text.Of(Strings.Shell_ClosingConnectionTitle, connection.Name),
+                        Strings.Shell_ClosingConnectionMessage);
                     await _sessions.CloseAsync(tab);
                 }
 
                 _connections.Delete(connection.Id);
                 ProbeLog.Write("connections", $"'{connection.Name}' deleted");
                 _list?.Reload();
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, "Connection deleted", $"'{connection.Name}' is gone.");
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, Strings.Shell_ConnectionDeletedTitle,
+                    Text.Of(Strings.Shell_ConnectionDeletedMessage, connection.Name));
             }
             catch (Exception ex)
             {
                 ProbeLog.Write("connections", $"Delete failed: {ex.GetType().Name}: {ex.Message}");
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Delete failed", ex.Message);
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Common_DeleteFailedTitle, ex.Message);
             }
 
             return;
         }
 
         _pendingDelete = connection;
-        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, $"Delete '{connection.Name}'?",
-            "Press Delete again to confirm.");
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+            Text.Of(Strings.Shell_DeleteConfirmTitle, connection.Name), Strings.Shell_DeleteConfirmMessage);
         _deleteDisarm.Stop();
         _deleteDisarm.Start();
     }
@@ -987,8 +1008,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             // ImportWindow resolves the repository with GetRequiredService: opening it without a
             // database would throw instead of showing anything.
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable",
-                "Connections cannot be imported until the database opens.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoImportMessage);
             return;
         }
 
@@ -998,8 +1019,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             _list?.Reload();
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
-                import.ImportedCount == 1 ? "1 connection imported" : $"{import.ImportedCount} connections imported",
-                "They were saved without a credential; add one from Manage credentials when you need it.");
+                Text.Plural(import.ImportedCount, Strings.Import_ImportedOne, Strings.Import_ImportedMany,
+                    import.ImportedCount),
+                Strings.Import_ImportedMessage);
         }
     }
 
@@ -1012,7 +1034,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             // CredentialsWindow resolves the repository with GetRequiredService: opening it without
             // a database would throw instead of showing anything.
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, "Database unavailable", "Credentials cannot be managed until the database opens.");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoCredentialsMessage);
             return;
         }
 
@@ -1152,7 +1175,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         int count = _sessions.Tabs.Count;
         UpdateSessionBar();
         StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-            $"Closing {count} session{(count == 1 ? "" : "s")}…", "");
+            Text.Plural(count, Strings.Shell_ClosingSessionsOne, Strings.Shell_ClosingSessionsMany, count), "");
 
         try
         {

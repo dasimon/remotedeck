@@ -1,6 +1,7 @@
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Controls;
+using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Data;
@@ -47,7 +48,7 @@ public partial class ImportWindow : Wpf.Ui.Controls.FluentWindow
 
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "Choose the folder holding the .rdp files",
+            Title = Strings.Import_FolderDialogTitle,
             Multiselect = false,
         };
         if (dialog.ShowDialog(this) != true) return;
@@ -61,7 +62,7 @@ public partial class ImportWindow : Wpf.Ui.Controls.FluentWindow
         catch (Exception ex)
         {
             ProbeLog.Write("import", $"Folder read failed: {ex.GetType().Name}: {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Could not read that folder", ex.Message);
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Import_FolderFailedTitle, ex.Message);
         }
         finally
         {
@@ -82,7 +83,7 @@ public partial class ImportWindow : Wpf.Ui.Controls.FluentWindow
         catch (Exception ex)
         {
             ProbeLog.Write("import", $"Registry read failed: {ex.GetType().Name}: {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Could not read the Remote Desktop history", ex.Message);
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Import_RegistryFailedTitle, ex.Message);
         }
         finally
         {
@@ -102,13 +103,13 @@ public partial class ImportWindow : Wpf.Ui.Controls.FluentWindow
             ImportedCount += imported;
             ProbeLog.Write("import", $"{imported} connection(s) imported");
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
-                imported == 1 ? "1 connection imported" : $"{imported} connections imported",
-                "They were saved without a credential; add one from Manage credentials when you need it.");
+                Text.Plural(imported, Strings.Import_ImportedOne, Strings.Import_ImportedMany, imported),
+                Strings.Import_ImportedMessage);
         }
         catch (Exception ex)
         {
             ProbeLog.Write("import", $"Import failed: {ex.GetType().Name}: {ex.Message}");
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Import failed", ex.Message);
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Import_FailedTitle, ex.Message);
         }
     }
 

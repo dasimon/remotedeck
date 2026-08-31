@@ -1,7 +1,8 @@
 <UserControl x:Class="RemoteDeck.App.Views.SessionTabStrip"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:res="clr-namespace:RemoteDeck.App.Resources">
     <UserControl.Resources>
         <!-- The 8 px status dot. The view-model publishes a resource *key* (StatusBrushKey) rather
              than a Brush, and the mapping key -> brush happens here through DynamicResource: a
@@ -117,7 +118,7 @@
                             <ui:Button Style="{StaticResource TabCloseStyle}"
                                        Icon="{ui:SymbolIcon Dismiss16}"
                                        Command="{Binding CloseCommand}"
-                                       ToolTip="Close this session (Ctrl+W)" />
+                                       ToolTip="{x:Static res:Strings.Session_CloseToolTip}" />
                         </StackPanel>
                     </Border>
                 </DataTemplate>

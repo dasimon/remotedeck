@@ -792,6 +792,35 @@ c'est fait immédiatement, et pénible ensuite.
 Les messages de log restent en anglais, non localisés : ils sont destinés au
 diagnostic et aux rapports d'incident.
 
+**Règles arrêtées à la livraison (lot 5, tâche 6) :**
+
+- **Périmètre.** `RemoteDeck.App` seul est localisé. `RemoteDeck.Core` ne l'est pas
+  en v1 : les titres de `DisconnectReason` (§6.4) et les messages de `ConnectionRules`
+  / `CredentialRules` restent en anglais et sont affichés tels quels. La coquille les
+  encadre d'un libellé localisé (« *« X » interrompue — {titre anglais}* ») et ne
+  touche pas au texte lui-même. Une base de codes RDP traduite viendra si le besoin
+  se présente ; elle appartient à `Core`, pas à l'application.
+- **`ProbeLog`** n'écrit que de l'anglais, jamais une ressource.
+- **Nommage.** Une clé par chaîne, `Zone_Element` (`Pane_SearchPlaceholder`,
+  `Common_Save`, `Session_StateReconnecting`, `Import_Title`…). La zone `Common_`
+  porte les chaînes qu'au moins deux écrans partagent mot pour mot.
+- **Composition.** Toute phrase composée passe par `string.Format` avec des marqueurs
+  positionnels (`Resources/Text.cs` : `Text.Of`, `Text.Plural`), jamais par
+  concaténation — une traduction doit pouvoir déplacer ses marqueurs. Les pluriels
+  ont deux clés (`…One` / `…Many`) prenant toutes deux le compte en `{0}` : l'anglais
+  y écrit deux fois la même chose, le français y décline.
+- **Liaison XAML.** `{x:Static res:Strings.Clé}` partout, pas d'extension de balisage
+  maison : la clé est vérifiée à la compilation, et il n'y a rien à résoudre à chaud
+  puisque la culture est fixée avant la première fenêtre. Conséquence de build :
+  citer un type de son propre assembly envoie chaque vue dans la seconde passe du
+  compilateur de balisage, dont le projet temporaire ne porte que les `Compile`
+  ordinaires — `Strings.Designer.cs` est donc **versionné**, pas généré dans `obj/`.
+- **Culture.** Celle de Windows (`CultureInfo.CurrentUICulture`) ; aucun réglage
+  utilisateur en v1. `[assembly: NeutralResourcesLanguage("en")]` évite la recherche
+  d'un satellite anglais. La variable d'environnement `REMOTEDECK_UI_CULTURE`
+  (lue dans `App.OnStartup`, avant toute fenêtre) force la culture : outil de
+  vérification, pas fonctionnalité.
+
 ---
 
 ## 10. Tests
