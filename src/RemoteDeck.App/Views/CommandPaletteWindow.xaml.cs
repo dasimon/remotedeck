@@ -119,14 +119,24 @@ public partial class CommandPaletteWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>
     /// A single click on a row runs it — a palette is a chooser, and a first click that only
-    /// highlights would leave the user hunting for the Enter key. Guarded by a container hit-test so
-    /// the empty space below the last row, the scrollbar and the padding do nothing.
+    /// highlights would leave the user hunting for the Enter key. That makes an accidental click
+    /// expensive, so nothing but a real, currently listed row is allowed through.
     /// </summary>
+    /// <remarks>
+    /// The four tests below are the whole guard. A click on the scrollbar, on the list's own
+    /// padding, or anywhere outside a row reaches this handler but sits under no item container, so
+    /// <see cref="System.Windows.Controls.ItemsControl.ContainerFromElement"/> answers <c>null</c>
+    /// and the click is dropped. The remaining three cover a container that is not one of ours, a
+    /// container holding something the current query no longer lists, and a release that happened
+    /// away from the row the press was reported against.
+    /// </remarks>
     private void OnListMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is not DependencyObject source) return;
         if (List.ContainerFromElement(source) is not System.Windows.Controls.ListViewItem container) return;
-        if (container.Content is not PaletteMatch match) return;
+        if (System.Windows.Controls.ItemsControl.ItemsControlFromItemContainer(container) != List) return;
+        if (container.Content is not PaletteMatch match || !_viewModel.Results.Contains(match)) return;
+        if (!container.IsMouseOver) return;
 
         ChosenId = match.Item.Id;
         CloseOnce();
