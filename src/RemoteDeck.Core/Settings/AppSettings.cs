@@ -16,4 +16,11 @@ public sealed class AppSettings
 
     /// <summary>Connection selected when the app was last closed, if it still exists.</summary>
     public long? LastConnectionId { get; set; }
+
+    /// <summary>
+    /// Geometry of each detached session window, keyed by connection id written as invariant text.
+    /// A string key on purpose: System.Text.Json only round-trips dictionaries keyed by string
+    /// without a converter. Never null after a Load().
+    /// </summary>
+    public Dictionary<string, DetachedWindowPlacement> DetachedWindows { get; set; } = [];
 }
