@@ -653,4 +653,13 @@
   <data name="Import_ImportedMessage" xml:space="preserve">
     <value>They were saved without a credential; add one from Manage credentials when you need it.</value>
   </data>
+  <data name="SessionWindow_Reattach" xml:space="preserve">
+    <value>Reattach</value>
+  </data>
+  <data name="SessionWindow_FullScreen" xml:space="preserve">
+    <value>Full screen (F11)</value>
+  </data>
+  <data name="SessionWindow_Close" xml:space="preserve">
+    <value>Close session</value>
+  </data>
 </root>

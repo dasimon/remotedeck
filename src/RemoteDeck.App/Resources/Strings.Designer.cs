@@ -1844,5 +1844,32 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Import_ImportedMessage", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reattach.
+        /// </summary>
+        public static string SessionWindow_Reattach {
+            get {
+                return ResourceManager.GetString("SessionWindow_Reattach", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Full screen (F11).
+        /// </summary>
+        public static string SessionWindow_FullScreen {
+            get {
+                return ResourceManager.GetString("SessionWindow_FullScreen", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Close session.
+        /// </summary>
+        public static string SessionWindow_Close {
+            get {
+                return ResourceManager.GetString("SessionWindow_Close", resourceCulture);
+            }
+        }
     }
 }

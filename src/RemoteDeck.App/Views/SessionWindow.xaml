@@ -1,0 +1,156 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.SessionWindow"
+                 x:ClassModifier="internal"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+                 Title="{Binding Title}"
+                 Width="1024" Height="720"
+                 MinWidth="640" MinHeight="480"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowStyle="SingleBorderWindow"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="Manual">
+    <!-- One detached session and nothing else: a 32 px strip that doubles as the caption, this
+         session's InfoBar, and the area the shell drops the WindowsFormsHost into. No pane, no tab
+         strip, no palette button — the application chrome stays in the shell.
+
+         There is no ui:TitleBar: ExtendsContentIntoTitleBar leaves the strip below as the only
+         caption, which is what makes it 32 px rather than the Fluent default, and the code-behind
+         supplies the drag through DragMove(). WindowStyle is declared even though it is the
+         default, because full screen swaps it for None and puts this value back. -->
+    <ui:FluentWindow.Resources>
+        <!-- Same four keys and the same DynamicResource indirection as SessionTabStrip: the
+             view-model publishes a resource *key*, not a Brush, so the dot follows a light/dark
+             switch. Kept local rather than shared because the two dots differ in nothing but their
+             margin, and a shared dictionary would be a third file for one Setter. -->
+        <Style x:Key="StatusDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="12,0,8,0" />
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorSuccessBrush">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCautionBrush">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCriticalBrush">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The caption's own buttons. Transparent so the strip reads as one surface, and small
+             enough that three of them plus the session actions fit in 32 px. -->
+        <Style x:Key="CaptionButtonStyle" TargetType="ui:Button">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Appearance" Value="Transparent" />
+        </Style>
+
+        <!-- Reconnect and Cancel keep their wording — they are exceptional, and an icon alone would
+             not say which of the two is on screen. -->
+        <Style x:Key="CaptionTextButtonStyle" TargetType="ui:Button">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Visibility" Value="Collapsed" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Background is Transparent rather than unset: a null Background is not hit-testable, and
+             the whole strip has to answer the drag. -->
+        <Grid x:Name="TitleBarRow" Grid.Row="0" Height="32"
+              Background="Transparent"
+              MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
+
+            <TextBlock Grid.Column="1"
+                       Text="{Binding Title}"
+                       VerticalAlignment="Center"
+                       MaxWidth="240"
+                       TextTrimming="CharacterEllipsis" />
+
+            <TextBlock Grid.Column="2"
+                       Text="{Binding Subtitle}"
+                       VerticalAlignment="Center"
+                       Margin="8,0,8,0"
+                       Opacity="0.7"
+                       TextTrimming="CharacterEllipsis" />
+
+            <ui:Button x:Name="ReconnectButton" Grid.Column="3"
+                       Style="{StaticResource CaptionTextButtonStyle}"
+                       Content="{x:Static res:Strings.Shell_Reconnect}"
+                       Icon="{ui:SymbolIcon ArrowClockwise20}"
+                       ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
+                       Click="OnReconnectClick" />
+
+            <ui:Button x:Name="CancelRetryButton" Grid.Column="4"
+                       Style="{StaticResource CaptionTextButtonStyle}"
+                       Content="{x:Static res:Strings.Common_Cancel}"
+                       ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
+                       Click="OnCancelRetryClick" />
+
+            <ui:Button x:Name="DiagnosticsButton" Grid.Column="5"
+                       Style="{StaticResource CaptionButtonStyle}"
+                       Icon="{ui:SymbolIcon Copy20}"
+                       ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
+                       Click="OnCopyDiagnosticsClick" />
+
+            <ui:Button Grid.Column="6"
+                       Style="{StaticResource CaptionButtonStyle}"
+                       Icon="{ui:SymbolIcon TabDesktop20}"
+                       ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
+                       Click="OnReattachClick" />
+
+            <ui:Button Grid.Column="7"
+                       Style="{StaticResource CaptionButtonStyle}"
+                       Icon="{ui:SymbolIcon FullScreenMaximize20}"
+                       ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
+                       Click="OnFullScreenClick" />
+
+            <ui:Button Grid.Column="8"
+                       Style="{StaticResource CaptionButtonStyle}"
+                       Margin="2,0,4,0"
+                       Icon="{ui:SymbolIcon Dismiss24}"
+                       ToolTip="{x:Static res:Strings.SessionWindow_Close}"
+                       Click="OnCloseClick" />
+        </Grid>
+
+        <ui:InfoBar Grid.Row="1" x:Name="StatusBar" Margin="8,0,8,6" IsOpen="False" IsClosable="True" />
+
+        <!-- Named HostAreaBorder so the Decorator the shell writes into can be the public HostArea
+             property; black for the same reason as the shell's session area — no theme text colour
+             reads well against a remote desktop. -->
+        <Border x:Name="HostAreaBorder" Grid.Row="2" Margin="8,0,8,8"
+                CornerRadius="6" Background="#FF000000" />
+    </Grid>
+</ui:FluentWindow>
