@@ -1,13 +1,15 @@
 # RemoteDeck
 
 A keyboard-first Remote Desktop (RDP) connection manager for Windows 10/11.
-Tabs, groups, fuzzy search, a command palette, and a credential vault backed by
-Windows DPAPI — built on the native Remote Desktop ActiveX control, so the RDP
-protocol itself is Microsoft's, not ours.
+Tabs, groups, fuzzy search, a `Ctrl+K` command palette, import from `.rdp` files and
+from the machines `mstsc` remembers, and a credential vault backed by Windows DPAPI —
+built on the native Remote Desktop ActiveX control, so the RDP protocol itself is
+Microsoft's, not ours. The interface is available in English and French.
 
-> Status: **pre-alpha**. Lots 0–4 are done: multi-session tabs, automatic
-> reconnection, dynamic resolution, a searchable connection pane, an editor and the
-> credential vault. The command palette and `.rdp` import land in lot 5.
+> Status: **pre-alpha**. Lots 0–5 are done: multi-session tabs, automatic
+> reconnection, dynamic resolution, a searchable connection pane, an editor, the
+> credential vault, the command palette, connection import and a fully translated
+> interface. See [`CHANGELOG.md`](CHANGELOG.md) for what 0.1.0 contains.
 
 ## Requirements
 
@@ -47,6 +49,48 @@ connection pane.
    CredSSP prompt.
 3. Select a connection and press `Enter`.
 
+Already using Remote Desktop Connection? Skip step 1 and **import** what you have —
+see below.
+
+### Command palette
+
+`Ctrl+K` opens a palette over everything, including a live remote desktop. Type a
+couple of letters and press `Enter`. One list holds three kinds of entry:
+
+- **Commands** — *New connection*, *Import connections…*, *Manage credentials*,
+  *Toggle the pane*, *Close session*, *Reconnect*.
+- **Open tabs** — jump straight to a session you already have.
+- **Every saved connection** — including the ones the search box is currently
+  filtering out. Choosing one connects it, or brings its tab forward if it is
+  already open.
+
+Matching is fuzzy and ignores case and accents, and the characters your query hit are
+highlighted. `↑`/`↓` move, `Enter` runs, `Escape` closes, a single click on a row runs
+it, and clicking outside closes the palette.
+
+### Importing existing connections
+
+*Import connections…* (from the palette) reads two sources:
+
+- **A folder of `.rdp` files** — every file with a `full address` becomes a proposed
+  connection: host and port, user name, domain, resolution, clipboard, printer, drive
+  and audio redirection, server authentication level. Anything RemoteDeck does not map
+  is counted and reported as `n unsupported entries ignored`, never guessed.
+- **The machines `mstsc` remembers** — `HKCU\Software\Microsoft\Terminal Server
+  Client\Servers`. Those carry a host name and sometimes a user name, nothing else.
+
+Nothing is written until you click *Import*. Each proposed row is dated against what
+you already have, on host and port: **New** (ticked), **Already imported** (unticked,
+and it names the connection it matches) or **Duplicate of …** for a repeat inside the
+same batch. That status is advice, not a veto — tick a duplicate deliberately and it
+is imported.
+
+**No password is ever imported, and no credential is ever created.** The encrypted
+blob in an `.rdp` file belongs to another Windows profile and is discarded without
+being read. A user name found in a source is shown to you in the preview and is *not*
+written into the connection — create the credential yourself and pick it in the
+editor.
+
 ### Sessions
 
 Each connection you open gets its **own tab**, and every session stays live in the
@@ -82,6 +126,7 @@ falls back to its defaults without complaining.
 
 | Shortcut | Action |
 |---|---|
+| `Ctrl+K` | Command palette — connections, open tabs and commands in one list |
 | `Ctrl+N` | New connection |
 | `Ctrl+F` | Focus the search box (expands the pane if it is collapsed) |
 | `Enter` | Connect the selected connection |
@@ -94,15 +139,30 @@ falls back to its defaults without complaining.
 Search is fuzzy and ignores case and accents; it matches on name, host and group
 name, sorts favorites first, and highlights the characters your query hit.
 
-`Ctrl+K` (command palette) is part of the design but ships with lot 5. Until then,
-shortcuts are also swallowed inside text boxes: `Ctrl+W` closes a tab even while you
-are typing in the search box or the editor. Lot 5 filters the hook on the focused
-control.
+**Shortcuts and text fields.** RemoteDeck grabs shortcuts with a low-level keyboard
+hook, which is the only mechanism that reaches them while the remote desktop has
+focus. So that typing never feels broken, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W` and
+`Ctrl+B` are **left to the text field that has the keyboard focus** — a text box, a
+password box or an editable combo box. Everywhere else they do what the table says.
+`Ctrl+K` is the exception: it always opens the palette, from inside a text field
+included.
 
 If a security policy blocks the low-level keyboard hook, application shortcuts
 cannot be intercepted while the remote desktop has focus. `Ctrl+Alt+Left` /
 `Ctrl+Alt+Right` still hand the focus back to RemoteDeck — the control raises
 that one itself, hook or no hook.
+
+### Language
+
+The interface ships in **English and French** and follows your Windows display
+language — there is nothing to configure. To check the other one without changing
+Windows, set `REMOTEDECK_UI_CULTURE` before starting (`en-US`, `fr-FR`); an
+unrecognised value is ignored and the system language is kept.
+
+Two things stay in English whatever the interface language: the log file, which is
+meant for diagnosis and bug reports, and the disconnect reasons and validation
+messages, which come from the core library. A French interface therefore shows a
+French sentence around an English reason. Translating them is a v2 job.
 
 ## Credentials
 

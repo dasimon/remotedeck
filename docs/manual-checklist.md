@@ -227,9 +227,110 @@ probe has not been run. The lot is not closed until this section is.
 
 ### Known limitations to confirm (not regressions)
 
-- [ ] `Ctrl+W` typed inside a **text box** still closes the active tab: the low-level
-      hook does not filter on the focused control yet (lot 5, §7.3). Confirm this is
-      still the known behaviour.
+- [x] ~~`Ctrl+W` typed inside a **text box** still closes the active tab~~ — **fixed in
+      lot 5**. The hook now asks the shell before swallowing a keystroke (§7.3, reserve 1).
+      This is checked in the "Lot 5 — palette, import, language" section below, not here.
+
+## Lot 5 — palette, import, language
+
+None of these boxes is ticked yet: lot 5 shipped its code on 2026-08-31, its human probe
+has not been run. The lot is not closed until this section is, and neither are the five
+success criteria of §1.
+
+### Command palette (`Ctrl+K`)
+
+- [ ] `Ctrl+K` opens the palette **while the remote desktop has focus** (low-level hook
+      path) as well as from the connection pane. The palette appears centred on the main
+      window and does **not** float above other applications.
+- [ ] With no query, the list shows, in that order: the six commands (*New connection*,
+      *Import connections…*, *Manage credentials*, *Toggle the pane*, *Close session*,
+      *Reconnect*), then one row per **open session tab**, then the saved connections
+      alphabetically. Every saved connection is listed, **even those the pane's search box
+      is currently filtering out**.
+- [ ] Type **two letters** of a connection name: it is on top, and the matched characters
+      are **highlighted** in the title and in the subtitle. Accents and case are ignored —
+      `ser` finds *Serveur*, `SER` and `sér` find it too.
+- [ ] Type a word that matches nothing: the list is empty, an explanatory line replaces
+      it, and `Enter` does **not** close the palette (you are mid-query).
+- [ ] `↓` and `↑` move the selection, and moving past the last drawn row **scrolls** it
+      into view.
+- [ ] `Enter` runs the selected row: a connection opens its tab (or brings its existing
+      tab forward), a command runs, a tab row switches to that tab.
+- [ ] `Escape` closes the palette and does nothing else. Clicking **outside** the palette
+      closes it too — and it does **not** close itself the instant it opens.
+- [ ] A **single click** on a row runs it, without needing a second click. A click on the
+      scrollbar, in the list's padding, or anywhere that is not a row does **nothing**.
+- [ ] Typing `disconnect` still finds the *Close session* row (the word lives in its
+      subtitle; there is deliberately no second *Disconnect* entry).
+- [ ] With no database available (degraded mode), the palette still opens and offers the
+      commands alone, without throwing.
+
+### Import (`Ctrl+K` → *Import connections…*)
+
+- [ ] **Folder of `.rdp` files**: pick a folder, and every `.rdp` carrying a
+      `full address` shows up — name from the file name, address, source, status. A file
+      with no `full address` produces no row.
+- [ ] A file using `full address:s:host:3390` shows **port 3390**; one using
+      `server port:i:3390` shows **3389** and counts that entry as ignored (`server port`
+      is deliberately not read — §8).
+- [ ] A file with unknown or malformed entries carries **one** warning of the form
+      `4 unsupported entries ignored` in its tooltip — not four separate ones.
+- [ ] A file containing `password 51:b:…` imports cleanly and **no warning mentions a
+      password**. Check the log too: the blob must appear nowhere.
+- [ ] A file carrying `username:s:` shows the user name as a **warning in the preview**;
+      after import, open the connection editor: the user name is **not** in the notes and
+      **no credential** was created (the credential field is empty). Open *Manage
+      credentials*: the list is unchanged.
+- [ ] **Registry source**: *From the mstsc registry* lists the hosts Remote Desktop
+      Connection remembers, port 3389, no credential. On a machine that never used
+      `mstsc`, it says the preview is empty — it does not report an error.
+- [ ] **Duplicates**: import a folder twice. The second time every row is *Already
+      imported*, names the saved connection it matches, and is **unticked**. Two files
+      pointing at the same host and port in one batch: the second is *Duplicate of « X »*
+      and unticked.
+- [ ] **Tick a duplicate by hand and import**: it *is* imported (the status is advice,
+      not a veto) and the second copy appears in the pane.
+- [ ] *Select all new* ticks only the new rows; *Clear* unticks everything.
+- [ ] Nothing is written before *Import* is clicked: browse both sources, close the
+      window, and the connection pane is unchanged.
+- [ ] After a successful import the connections appear in the pane and connect normally
+      (the Remote Desktop control raises its own CredSSP prompt, since there is no
+      credential).
+
+### Keyboard hook and text inputs (§7.3, reserve 1)
+
+- [ ] In the pane's **search box**, `Ctrl+W` no longer closes the active tab, `Ctrl+B` no
+      longer collapses the pane, and `Ctrl+Tab` moves the focus instead of switching tabs.
+      Same in the connection editor's text fields and in a password field.
+- [ ] With the focus **anywhere else** (the connection list, the tab strip, the remote
+      desktop), `Ctrl+W`, `Ctrl+B` and `Ctrl+Tab` behave exactly as in lot 4.
+- [ ] `Ctrl+K` opens the palette **even from inside a text box** — it is never handed
+      back to the input.
+- [ ] With the connection editor or the credentials window in front, `Ctrl+W` does **not**
+      close the session hidden behind it (the shell ignores shortcuts while it is not the
+      active window).
+
+### Language
+
+- [ ] On a French Windows, the application starts **in French** with no configuration.
+- [ ] `set REMOTEDECK_UI_CULTURE=en-US` then start: the interface is in English.
+      `REMOTEDECK_UI_CULTURE=zz` starts normally in the system language and says so in
+      the log — it must never prevent startup.
+- [ ] French pass over the **four modal windows** — *Connection editor*, *Credentials*,
+      *Credential editor*, *Import*: every label, button, title, placeholder, tooltip and
+      status message is in French, with no leftover English and no missing string.
+- [ ] **Watch for truncation**: the label columns of the connection editor and the
+      credential editor are fixed at **120 px** and **110 px**. French labels are longer
+      than English ones — check that none is cut off or ellipsised at those widths, at
+      the default window size and after a resize.
+- [ ] Also check the import window's column headers (200/200/180/180 px) and its summary
+      line, and the palette's placeholder and empty-state lines.
+- [ ] **Known and expected**: disconnect reasons and validation messages come from
+      `RemoteDeck.Core` and stay **in English** inside the French interface — the shell
+      wraps them in a French sentence but does not translate them (§9). Confirm this is
+      the known behaviour, not a missing translation.
+- [ ] Plurals read correctly in French for 0, 1 and several items (import tallies,
+      reconnection attempts).
 
 ## Build prerequisites (any lot)
 

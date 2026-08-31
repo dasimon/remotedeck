@@ -3,7 +3,8 @@
 **Date** : 2026-08-29
 **Auteur** : David Simon (conception assistée)
 **Statut** : validé — **amendé le 2026-08-29 par les résultats du lot 0**
-(D2, D3, §2, §3, §5.2, §6.1, §6.4, §6.5, §6.6, §6.7, §7.1, §7.3, §11, §12, §13, §14).
+(D2, D3, §2, §3, §5.2, §6.1, §6.4, §6.5, §6.6, §6.7, §7.1, §7.3, §11, §12, §13, §14),
+puis **le 2026-08-31 par la livraison du lot 5** (§1, §3, §7.3, §7.4, §8, §9, §10, §12).
 Les sondes et leurs traces sont consignées dans
 `docs/superpowers/probes/l0-probe-results.md` ; ce qui n'a pu être vérifié y est dit
 comme tel et reporté sur `docs/manual-checklist.md`.
@@ -34,6 +35,19 @@ Windows (`mstscax.dll`). Le projet apporte la gestion, pas le protocole.
    jamais un code brut seul ni une `MessageBox` générique.
 5. Une coupure réseau se rétablit seule, sans boucle infinie ni verrouillage de
    compte Active Directory.
+
+**Ce qui vérifie chacun, au 2026-08-31 (fin du lot 5).** Un critère n'est acquis que
+lorsque la ligne « reste à vérifier » est vide. Aucun ne l'est encore : les cinq
+dépendent tous, pour leur dernière marche, d'une sonde humaine sur du matériel réel —
+c'est la limite assumée du §10 (ni COM ni WPF ne se testent automatiquement).
+
+| # | Vérifié aujourd'hui par | Reste à vérifier |
+|---|---|---|
+| **1** — ouverture au clavier en < 3 s | *Automatique* : `ConnectionFilterTests` (9 cas) et `PaletteFilterTests` (9 cas) couvrent le chemin de sélection — recherche floue, accents, ordre, plages de surlignage — donc la partie « trouver la bonne ligne en deux lettres ». Le chemin est complet dans le produit : `Ctrl+F` puis `Entrée` depuis le panneau (L3), `Ctrl+K` puis `Entrée` depuis la palette (L5). | *Sonde humaine, lot 5* : `Ctrl+K` → deux lettres → `Entrée` ouvre bien la session, et le **délai réel** tient sous 3 s contre une machine réelle. Le chronomètre n'a pas d'équivalent automatisé. |
+| **2** — aucun mot de passe en clair | *Automatique* : `DpapiCredentialVaultTests` (8 cas), dont le **test de réflexion** qui interdit toute surface `string` sur `ICredentialVault` ; `RdpFileImporterTests` (11 cas) vérifie que `password 51:b:` n'est **jamais lu** ni recopié dans un avertissement. Par construction : D5 (`BSTR` natif, §5.2) et l'import qui ne crée **aucun** identifiant (§8). | *Sonde humaine, lot 2* : connexion réelle avec un identifiant du coffre, puis relecture du journal — jamais jouée. Un examen de dump managé n'a pas été fait ; il reste une vérification ponctuelle, pas un test de non-régression. |
+| **3** — sessions simultanées, sans zombie | *Rien d'automatique* : onglets, `WindowsFormsHost` et fermeture propre sont hors du périmètre testable (§10). Par construction : D12 (`Hidden`, jamais `Collapsed`) et la séquence de fermeture du §6.5. | *Sonde humaine, lot 4* : trois onglets vivants, changement d'onglet sans coupure, puis `query session` côté serveur après fermeture — section « Lot 4 » de `docs/manual-checklist.md`, non cochée. |
+| **4** — erreur explicite et actionnable | *Automatique* : `DisconnectReasonTests` (10 cas) — 47 codes documentés, 8 catégories, et un code inconnu qui **conserve le code brut** dans un message générique. Par construction : plus aucune `MessageBox` dans l'application, tout passe par l'`InfoBar` partagée. | *Sonde humaine, lot 4* : provoquer trois pannes distinctes (mot de passe refusé, hôte introuvable, coupure) et lire les libellés à l'écran ; vérifier *Copy diagnostics*. Réserve connue : les titres viennent de `Core` et restent **en anglais** même en interface française (§9). |
+| **5** — reprise après coupure, sans verrouillage AD | *Automatique* : `ReconnectPolicyTests` (8 cas) — suite exacte des délais 2/5/10/30/60 s, arrêt à la 5ᵉ tentative, **non-déclenchement sur le code 3** et sur un échec d'authentification (le cas qui verrouille un compte AD). | *Sonde humaine, lot 4* : vraie coupure réseau (adaptateur désactivé), retour pendant le compte à rebours, puis budget épuisé ; et le cas « compte expiré » qui doit ne produire **aucune** tentative. |
 
 ---
 
@@ -110,9 +124,12 @@ remotedeck/
 │  │  │                 CredentialRules
 │  │  ├─ Search/        TextNormalizer            (repli casse + accents, un caractère pour un)
 │  │  │                 ConnectionFilter          (correspondance floue + plages de surlignage)
+│  │  │                 PaletteFilter             (PaletteItem/PaletteMatch, §7.4)   [lot 5]
 │  │  ├─ Settings/      AppSettings, SettingsStore (settings.json, §7.2)
 │  │  ├─ Sessions/      ReconnectPolicy           (§6.3 : ShouldReconnect + DelayFor, backoff)
-│  │  ├─ Import/        RdpFileImporter           (.rdp + registre)              [lot 5]
+│  │  ├─ Import/        ImportCandidate           (§8)                            [lot 5]
+│  │  │                 RdpFileImporter           (fichiers .rdp, pur)            [lot 5]
+│  │  │                 MstscRegistryImporter     (entrées du registre, pur)      [lot 5]
 │  │  └─ Diagnostics/   DisconnectReason          (§6.4 : code → DisconnectDescription,
 │  │                                               catégorie + libellé court)
 │  └─ RemoteDeck.App/                     net10.0-windows, UseWPF + UseWindowsForms
@@ -126,11 +143,13 @@ remotedeck/
 │     ├─ ViewModels/    ConnectionListViewModel, SessionsViewModel (onglets, D12),
 │     │                 SessionTabViewModel (un onglet : état, pastille, compte à rebours),
 │     │                 ConnectionEditorViewModel, CredentialEditorViewModel,
-│     │                 CommandPaletteViewModel                                  [lot 5]
+│     │                 CommandPaletteViewModel, ImportViewModel (+ ImportRow)   [lot 5]
 │     ├─ Views/         ShellWindow, ConnectionPane, SessionTabStrip (§7.1/§7.2),
 │     │                 ConnectionEditorWindow, CredentialsWindow,
-│     │                 CredentialEditorWindow, CommandPaletteWindow             [lot 5]
-│     ├─ Resources/     Strings.resx (en) · Strings.fr.resx · PasswordBox.xaml (§7.1) · Theme/
+│     │                 CredentialEditorWindow, CommandPaletteWindow,
+│     │                 ImportWindow                                             [lot 5]
+│     ├─ Resources/     Strings.resx (en, neutre) · Strings.fr.resx · Strings.Designer.cs
+│     │                 (versionné, §9) · Text.cs (Of/Plural) · PasswordBox.xaml (§7.1) · Theme/
 │     └─ Services/      FileLogger, DialogService
 └─ tests/
    └─ RemoteDeck.Core.Tests/              xUnit
@@ -722,10 +741,35 @@ seule la trace d'interception en est une.
 
 Deux réserves à traiter, écrites ici pour ne pas être redécouvertes plus tard :
 
-1. **Portée trop large.** Le hook est global au bureau et n'est filtré que sur la
-   fenêtre de premier plan. Il avale donc `Ctrl+K` et `Ctrl+Tab` **partout dans
-   l'application**, y compris dans les `TextBox`. **Lot 5** : ne pas intercepter quand
-   le focus clavier est sur un contrôle de saisie WPF.
+1. ~~**Portée trop large.**~~ **Levée au lot 5 (2026-08-31).** Le hook reste global au
+   bureau et filtré sur la fenêtre de premier plan, mais il demande désormais au shell,
+   avant d'avaler une frappe, si celle-ci lui revient : `ShortcutInterceptor.ShouldIntercept`
+   est un prédicat `Func<string, bool>` que `ShellWindow` renseigne au démarrage. **La règle
+   effective** :
+
+   - `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W` et `Ctrl+B` **ne sont pas interceptés** tant
+     qu'un contrôle de saisie a le focus clavier — `TextBoxBase` (donc `TextBox` et
+     `RichTextBox`), `PasswordBox`, et un `ComboBox` **éditable** seulement. Ces quatre
+     combinaisons ont un sens dans un champ de texte (naviguer entre champs, supprimer le
+     mot à gauche, reculer d'un mot) et un hook qui les avale donne l'impression que la
+     saisie est cassée. Un `ComboBox` en lecture seule n'a pas de curseur : la frappe est
+     donc bien pour l'application.
+   - `Ctrl+K` est **toujours** intercepté, sans exception : c'est la seule entrée de la
+     palette de commandes et il n'a aucune signification dans un champ WPF. Il en va de
+     même de toute combinaison que l'interception apprendrait plus tard sans l'ajouter à
+     la liste ci-dessus — le prédicat est une liste blanche à quatre entrées, pas un
+     filtre général.
+   - Le prédicat est appelé **dans** le callback du hook : il ne lit que l'état WPF
+     (`Keyboard.FocusedElement`), sans E/S ni saut synchrone de dispatcher, ce qui garde
+     la règle 2 ci-dessous. Appelé hors du thread d'interface, il n'y a aucun moyen sûr de
+     lire le focus : la frappe est alors prise, comme avant. Un prédicat qui lève est
+     journalisé sur le chemin différé et lu comme `true`, soit exactement le comportement
+     d'avant le prédicat.
+
+   Reste inchangé : le hook voit toutes les fenêtres du processus, donc `ShellWindow`
+   ignore en plus tout raccourci reçu pendant qu'une de ses fenêtres possédées est au
+   premier plan (`IsActive == false`) — sans quoi `Ctrl+W` fermerait, derrière un modal,
+   une session que l'utilisateur ne voit même pas.
 2. **Aucune E/S synchrone dans le callback — règle tenue.** Windows applique
    `LowLevelHooksTimeout` (300 ms par défaut) et **désinstalle silencieusement** un hook
    trop lent. `LowLevelHookCallback` ne fait plus que **décider** (quelques
@@ -758,6 +802,15 @@ la documentation au lot 0, voir §2.
 | `Entrée` | Connecter la sélection |
 | `Ctrl+N` | Nouvelle connexion |
 
+Livrés en totalité au 2026-08-31. Quatre d'entre eux — `Ctrl+Tab`, `Ctrl+Shift+Tab`,
+`Ctrl+W`, `Ctrl+B` — rendent la main au champ de saisie qui a le focus ; `Ctrl+K` ne la
+rend jamais (§7.3, réserve 1). La palette elle-même : `↑`/`↓` déplacent la sélection en
+faisant défiler la liste, `Entrée` exécute la ligne sélectionnée, `Échap` ferme sans rien
+faire, un clic sur une ligne l'exécute directement (un clic à côté d'une ligne, sur la
+barre de défilement ou dans la marge, ne fait rien), et un clic hors de la fenêtre la
+ferme. Une liste de résultats vide ne ferme pas la palette sur `Entrée` : l'utilisateur
+est en train de taper.
+
 ### 7.5 Recherche
 
 Filtrage en mémoire sur `Name`, `Host` et `GroupName`, insensible à la casse et aux
@@ -769,17 +822,81 @@ caractères correspondantes pour le surlignage — d'où sa présence dans `Core
 
 ## 8. Import
 
-`RdpFileImporter` lit deux sources :
+Deux sources, deux lecteurs purs dans `Core` (aucune E/S : l'appelant fournit les lignes
+ou les entrées, l'accès disque et registre reste dans `RemoteDeck.App`) :
 
-1. Les fichiers `.rdp` d'un dossier choisi — format `clé:type:valeur`, clés
-   `full address:s:`, `username:s:`, `server port:i:`, `screen mode id:i:`.
-2. `HKCU\Software\Microsoft\Terminal Server Client\Servers` — hôtes déjà utilisés
-   par `mstsc.exe`.
+1. **`RdpFileImporter`** — les fichiers `.rdp` d'un dossier choisi, format
+   `clé:type:valeur`. Le fichier donne le nom proposé (nom de fichier sans extension) et
+   la colonne *Source*.
+2. **`MstscRegistryImporter`** — `HKCU\Software\Microsoft\Terminal Server Client\Servers`,
+   les hôtes déjà utilisés par `mstsc.exe`. Une sous-clé par hôte, une seule valeur lue
+   (`UsernameHint`, souvent absente). Le registre ne porte **ni port ni mot de passe** :
+   toutes ces lignes gardent 3389 et ne proposent aucun identifiant. Clé absente = client
+   jamais utilisé ou historique effacé : prévisualisation vide, pas une erreur. Les hôtes
+   qui ne diffèrent que par la casse sont réduits au premier vu.
 
-L'import est **non destructif** : prévisualisation, dédoublonnage sur
-`(Host, Port)`, l'utilisateur coche ce qu'il conserve. Aucun mot de passe n'est
-importé — les fichiers `.rdp` ne contiennent qu'un blob DPAPI lié à un autre
-contexte, inexploitable et sans intérêt à transcrire.
+**Clés `.rdp` réellement lues — quatorze, et rien d'autre.** Chacune est mappée telle que
+Microsoft la documente ; aucune valeur n'est devinée.
+
+| Clé | Cible dans `ImportCandidate` | Détail |
+|---|---|---|
+| `full address:s:` | `Host`, éventuellement `Port` | **Obligatoire** : sans elle le fichier ne produit aucun candidat. `hôte:port` est scindé ; une valeur à plusieurs deux-points est un littéral IPv6, gardée entière ; un port hors 1–65535 déclenche un avertissement et laisse 3389. |
+| `username:s:` | `UserName` | Repris pour information seulement — voir « aucun identifiant » plus bas. |
+| `domain:s:` | `Domain` | Idem. |
+| `desktopwidth:i:` | `FixedWidth` | Accepté entre 200 et 8192 ; hors bornes ou non numérique = ignoré et compté. |
+| `desktopheight:i:` | `FixedHeight` | Idem. |
+| `desktop size id:i:` | `FixedWidth`/`FixedHeight` | Table documentée 0→4 : 640×480, 800×600, 1024×768, 1280×1024, 1600×1200. Utilisée seulement si largeur **et** hauteur explicites manquent. |
+| `screen mode id:i:` | *(rien)* | `1` fenêtré, `2` plein écran. Une préférence de fenêtre n'est pas une résolution : `2` produit un avertissement lisible, pas un réglage. |
+| `dynamic resolution:i:` | `DisplayMode` | `1` force `Dynamic` et fait ignorer toute taille fixe ; sinon une taille fixe donne `Scaled`, et à défaut `Dynamic` (le défaut d'une connexion neuve, D6). |
+| `audiomode:i:` | `RedirectAudio` | `0` jouer ici, `1` jouer sur la machine distante, `2` ne pas jouer. Seul `0` coche la redirection. |
+| `redirectclipboard:i:` | `RedirectClipboard` | Défaut `true`, comme une connexion neuve. |
+| `redirectprinters:i:` | `RedirectPrinters` | |
+| `drivestoredirect:s:` | `RedirectDrives` | Vide = aucun lecteur ; `*` ou une liste = au moins un. Le détail de la liste n'est pas conservé, le modèle est booléen (§4). |
+| `authentication level:i:` | `AuthenticationLevel` | `0`/`1`/`2` repris ; `3` (« non spécifié ») devient `null`. |
+| `enablerdsaadauth:i:` | `UseWebAccount` | Compte web Entra ID, expérimental (§6.7, R7). |
+
+Une entrée `:i:` n'est booléenne que si sa valeur est exactement `0` ou `1` ; toute autre
+forme est refusée, jamais interprétée.
+
+**Ce qui est ignoré.** `server port:i:` — que la version précédente de ce document citait
+comme lue —, `administrative session:i:`, `connect to console:i:` et toute autre clé du
+format sont **comptées puis abandonnées**, jamais devinées. S'y ajoutent les lignes
+malformées (moins de trois segments séparés par `:`) et les clés connues portant une
+valeur hors du domaine documenté. Le total remonte en **un seul avertissement** par
+fichier, de la forme `4 unsupported entries ignored`, visible dans l'infobulle de la
+ligne. Le port ne se lit **que** dans `full address`. Les lignes vides et les commentaires
+(`;`, `#`) sont sautés en silence : ce ne sont pas des entrées.
+
+**`password 51:b:` n'est jamais lu.** La clé est reconnue et abandonnée avant toute
+lecture de sa valeur : elle n'est ni comptée dans les entrées ignorées, ni nommée dans un
+avertissement, ni recopiée où que ce soit. C'est un blob DPAPI lié à un autre profil
+Windows, inexploitable et sans intérêt à transcrire.
+
+**Aucun identifiant n'est créé.** Une ligne importée arrive avec `CredentialId` à `null`,
+toujours. Le nom d'utilisateur trouvé dans la source n'est pas non plus écrit dans les
+notes de la connexion — ce champ est le texte libre de l'utilisateur — il est **affiché
+dans la prévisualisation** comme un avertissement, à charge pour l'utilisateur de créer
+l'identifiant lui-même. Rien d'autre qu'une connexion n'est écrit : ni groupe, ni favori,
+ni notes.
+
+**Import non destructif.** Rien n'est écrit avant le clic sur *Import*. La
+prévisualisation date chaque ligne contre la base et contre les lignes au-dessus d'elle,
+sur l'identité **`(Host, Port)` comparée sans tenir compte de la casse** :
+
+- *New* — inconnue : **cochée** d'office.
+- *Already imported* — une connexion enregistrée vise déjà cette adresse ; l'infobulle
+  nomme laquelle. **Décochée.**
+- *Duplicate of « X »* — une ligne plus haut dans le même lot vise la même adresse.
+  **Décochée.**
+
+Le statut est un conseil, pas un veto : **une ligne dupliquée cochée à la main est
+importée**. Deux connexions sur le même hôte avec des noms ou des options différents sont
+légitimes, et c'est l'utilisateur qui tranche. *Select all new* ne coche que les lignes
+neuves ; *Clear* décoche tout. Les statuts sont recalculés après l'écriture, y compris si
+une insertion échoue en cours de route : les lignes déjà écrites passent en *Already
+imported*, donc un second clic ne peut pas les dupliquer. Une source se **parcourt**, elle
+ne s'accumule pas : chaque chargement remplace la prévisualisation. Un fichier illisible
+(verrouillé, disparu, refusé) est sauté, jamais fatal au dossier entier.
 
 ---
 
@@ -791,6 +908,25 @@ c'est fait immédiatement, et pénible ensuite.
 
 Les messages de log restent en anglais, non localisés : ils sont destinés au
 diagnostic et aux rapports d'incident.
+
+**État à la livraison du lot 5 (2026-08-31).**
+
+*Localisé* — **198 clés**, et le même nombre des deux côtés :
+`Resources/Strings.resx` (anglais, culture **neutre**) et `Resources/Strings.fr.resx`
+(français, **complet** : aucune clé sans traduction, donc aucun repli visible en cours
+d'écran). Cela couvre la totalité de l'interface livrée — coquille, panneau de
+connexions, barre d'onglets, `InfoBar`, palette de commandes, fenêtre d'import, éditeur de
+connexion, fenêtres d'identifiants —, libellés, titres, textes indicatifs, infobulles et
+messages d'état compris. La culture est celle de Windows (`CultureInfo.CurrentUICulture`),
+fixée dans `App.OnStartup` avant la première fenêtre ; aucun réglage utilisateur en v1.
+`REMOTEDECK_UI_CULTURE` force la culture — outil de vérification, pas fonctionnalité : une
+valeur inconnue est journalisée et la culture système est conservée, le démarrage n'échoue
+jamais.
+
+*Non localisé* — assumé : les messages de `RemoteDeck.Core` (titres et catégories de
+`DisconnectReason`, messages de `ConnectionRules` et `CredentialRules`) restent en anglais
+et s'affichent tels quels dans une interface française ; et `ProbeLog`, qui n'écrit que de
+l'anglais et ne lit jamais une ressource.
 
 **Règles arrêtées à la livraison (lot 5, tâche 6) :**
 
@@ -833,7 +969,9 @@ diagnostic et aux rapports d'incident.
 | Repositories | CRUD ; `ON DELETE SET NULL` ; unicité de `Credential.Label` ; migration depuis une base vide et depuis la version précédente ; refus d'une base plus récente |
 | `ConnectionFilter` | Casse et accents ; correspondance sur nom/hôte/groupe ; favoris en tête ; plages de surlignage exactes |
 | `ReconnectPolicy` | Suite exacte des délais ; arrêt à la 5ᵉ tentative ; **non-déclenchement sur le code 3** ; non-déclenchement sur échec d'authentification |
-| `RdpFileImporter` | Parsing des clés attendues ; lignes malformées ignorées ; dédoublonnage `(Host, Port)` |
+| `PaletteFilter` | Casse et accents ; correspondance sur titre et sous-titre ; tous les mots exigés ; priorité des commandes ; plafond appliqué **après** tri |
+| `RdpFileImporter` | Parsing des quatorze clés documentées ; lignes malformées, clés inconnues et valeurs hors domaine comptées en un avertissement ; `password 51:b:` jamais lu ; `hôte:port` et IPv6 |
+| `MstscRegistryImporter` | Hôtes vides écartés ; hôtes différant par la casse réduits au premier |
 | `DisconnectReason` | Correspondance code → clé de message ; code inconnu → message générique conservant le code brut |
 
 **Non testable automatiquement** : interop COM, rendu WPF, comportement du contrôle
@@ -872,7 +1010,7 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 | **L2** | `DpapiCredentialVault`, éditeur d'identifiants, chaîne du secret | **Fait** (2026-08-29). `Seal`/`UseSecret` sur DPAPI CurrentUser + entropie de 32 octets par identifiant, `CredentialsWindow` / `CredentialEditorWindow`, secret jamais matérialisé en `string` (test de réflexion sur `ICredentialVault`), fourniture du mot de passe au contrôle depuis le coffre. Modèle de menace du §5.4 publié dans `SECURITY.md`. La sonde humaine de fin de lot (connexion réelle avec un identifiant du coffre) reste à jouer par David. |
 | **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | **Fait** (2026-08-30). Coquille à deux colonnes (`Grid` + `GridSplitter`, panneau repliable) autour d'une zone de session unique. Panneau : liste virtualisée de 32 px, groupée (`★ Favorites` en tête, puis les groupes, puis `Ungrouped`), recherche floue insensible à la casse et aux accents avec surlignage des caractères touchés (`TextNormalizer` + `ConnectionFilter` dans `Core`, debounce 120 ms, filtrage de l'instantané mémoire — aucune requête SQL par frappe), étoile de favori, état vide rappelant les raccourcis, repli propre en « base indisponible ». Éditeur de connexion modal (`ConnectionEditorWindow`, validation par `ConnectionRules`) ; connexion depuis la liste avec l'identifiant du coffre, ou invite CredSSP du contrôle quand il n'y en a pas. Réglages d'interface dans `%APPDATA%\RemoteDeck\settings.json` (§7.2). `PasswordBox` natif restylé Fluent + texte indicatif par `Adorner`, champs qui s'étirent (§7.1) — les deux réserves d'ergonomie de R4 sont levées. Raccourcis : `Ctrl+B`, `Ctrl+F`, `F2`, `Entrée`, `Ctrl+N`, `Suppr` (suppression en deux temps dans l'`InfoBar`, désarmée après 5 s — jamais de `MessageBox`). 65 tests verts à la clôture. **Reporté** : résolution dynamique (D6) au lot 4, palette `Ctrl+K` au lot 5 ; en-têtes de groupe **non collants**, la virtualisation est conservée (§7.2). |
 | **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | **Fait** (2026-08-30). Onglets multi-sessions selon D12 : barre custom (`SessionTabStrip`, onglets de 34 px, coins arrondis, pastille d'état verte/ambre/rouge, réordonnancement au glisser, fermeture au clic milieu, animation 150 ms) au-dessus d'un `Grid` où **tous** les `WindowsFormsHost` restent instanciés — seul l'actif est `Visible`, les autres `Hidden`, donc changer d'onglet ne coupe aucune session. Une connexion a au plus un onglet : la reconnecter ramène le sien au premier plan. `RdpSession` (une session = un onglet) porte la machine à états à 8 valeurs du §6.2, le compte à rebours de reconnexion et la boucle de résolution. Reconnexion automatique (§6.3) : `ReconnectPolicy` dans `Core`, six codes réseau seulement, backoff 2/5/10/30/60 s, 5 tentatives, compte à rebours visible et annulable, **secret re-fourni par le coffre à chaque tentative**. Diagnostic (§6.4) : `DisconnectReason` (47 codes documentés, 8 catégories) pilote le libellé et la sévérité de l'`InfoBar` ; actions *Reconnect*, *Cancel*, *Copy diagnostics*, *Disconnect*. Résolution dynamique (D6) livrée : `UpdateSessionDisplaySettings` après un anti-rebond de 300 ms, taille en pixels physiques (`VisualTreeHelper.GetDpi`), plancher 640×480, et **repli une-fois-pour-toutes sur `SmartSizing`** si le contrôle refuse le redimensionnement — un contrôle qui en refuse un les refuse tous, on ne réessaie plus pour cette session. Fermeture propre (§6.5) appliquée à chaque onglet et à la sortie (5 s par onglet, 15 s au total, séquentiel). Raccourcis : `Ctrl+Tab` / `Ctrl+Shift+Tab` (cyclique), `Ctrl+W`. 130 tests verts à la clôture. **Reste au lot 5** : palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (`Ctrl+W` reste avalé dans un `TextBox`, §7.3), `.resx` fr. **Sonde humaine de fin de lot à jouer par David** — coupure réseau réelle, redimensionnement, `query session` : voir la section « Lot 4 » de `docs/manual-checklist.md`, non cochée à ce jour. |
-| **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | Critères de succès du §1 tous vérifiés |
+| **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | **Fait** (2026-08-31). Palette de commandes (`CommandPaletteWindow`, fenêtre possédée et non `Topmost` — §7.3 airspace) sur `Ctrl+K` : connexions enregistrées, onglets ouverts et six commandes dans une même liste, filtrage flou insensible à la casse et aux accents avec surlignage (`PaletteFilter` dans `Core`, tous les mots exigés, priorité des commandes, plafond après tri) ; `↑`/`↓`, `Entrée`, `Échap`, clic sur une ligne, clic hors de la fenêtre pour fermer. Import (§8) : `RdpFileImporter` et `MstscRegistryImporter` purs dans `Core`, quatorze clés `.rdp` documentées, `password 51:b:` jamais lu, registre `mstsc` ; `ImportWindow` prévisualise, date chaque ligne sur `(Host, Port)` sans casse (*New* / *Already imported* / *Duplicate of « X »*), n'écrit rien avant *Import* et ne crée **aucun** identifiant — le nom d'utilisateur trouvé est signalé, pas stocké. Réserve 1 du §7.3 **levée** : `ShortcutInterceptor.ShouldIntercept` rend `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W` et `Ctrl+B` au champ de saisie qui a le focus ; `Ctrl+K` reste toujours intercepté. Localisation (§9) : 198 clés, anglais neutre + français complet, culture de Windows, `REMOTEDECK_UI_CULTURE` pour vérifier. 155 tests verts à la clôture. **Sonde humaine de fin de lot à jouer par David** — palette, import réel, `Ctrl+W` dans un champ de texte, passe en français : voir la section « Lot 5 » de `docs/manual-checklist.md`, non cochée à ce jour. Les cinq critères du §1 restent donc suspendus à cette sonde et à celles des lots 2 et 4 (§1). |
 
 La politique de certificat n'est plus un contenu de lot : R5 a fermé le sujet
 (§6.6, négatif confirmé).
