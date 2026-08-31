@@ -74,6 +74,14 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
     /// <summary>True for the tab whose session is visible. Drives the strip's active styling.</summary>
     [ObservableProperty] private bool _isActive;
 
+    /// <summary>
+    /// True while the session is shown by a <c>SessionWindow</c> of its own rather than by the
+    /// shell's container. The tab stays in <c>SessionsViewModel.Tabs</c> — the palette, the session
+    /// count and the close-all pass all keep working precisely because it does — and the strip hides
+    /// it by binding <c>Visibility</c> to this flag.
+    /// </summary>
+    [ObservableProperty] private bool _isDetached;
+
     /// <summary>Closes the tab. Raises <see cref="CloseRequested"/>; the actual protocol is
     /// <see cref="SessionsViewModel.CloseAsync"/>'s.</summary>
     public IRelayCommand CloseCommand { get; }
