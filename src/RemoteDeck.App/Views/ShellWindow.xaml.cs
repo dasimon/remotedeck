@@ -625,14 +625,22 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             Strings.Palette_TogglePane, "Ctrl+B", CommandPriority));
-        // One entry, not two: RemoteDeck has no disconnect that keeps the tab behind — the toolbar's
-        // own Disconnect button is CloseActiveTab as well — so a second "Disconnect" row would name
-        // the same action twice. The subtitle carries the other half of the vocabulary instead, and
-        // PaletteFilter searches it, so typing "disconnect" still finds this row.
-        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
-            Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority));
-        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
-            Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority));
+        // The session this palette is about: the one the window it was opened from is showing, or
+        // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
+        // only thing that can name the session in front of the user here, and offering these two
+        // rows unconditionally would aim them at whatever happens to be docked behind it.
+        if ((from?.Tab ?? _sessions.Active) is not null)
+        {
+            // One entry, not two: RemoteDeck has no disconnect that keeps the tab behind — the
+            // toolbar's own Disconnect button is CloseActiveTab as well — so a second "Disconnect"
+            // row would name the same action twice. The subtitle carries the other half of the
+            // vocabulary instead, and PaletteFilter searches it, so typing "disconnect" still finds
+            // this row.
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
+                Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority));
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
+                Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority));
+        }
 
         // Exactly one of the two, and only when it would do something: from a detached window the
         // session can only go back, and from the shell only a docked active tab can leave. Offering
@@ -706,25 +714,36 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // words. The old id is still accepted here — it costs a line and can mean nothing else.
             case "cmd:close":
             case "cmd:disconnect":
-                if (_sessions.Active is null)
+                if (from is not null)
+                {
+                    // Its own close, i.e. the very path Ctrl+W and the cross take in that window:
+                    // the geometry is remembered before §6.5 takes the session down.
+                    if (!_closeInProgress)
+                    {
+                        from.Close();
+                    }
+                }
+                else if (_sessions.Active is null)
                 {
                     StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, Strings.Shell_NoSession,
                         Strings.Shell_NoTabToCloseMessage);
-                    break;
+                }
+                else
+                {
+                    CloseActiveTab();
                 }
 
-                CloseActiveTab();
                 break;
 
             case "cmd:reconnect":
-                if (_sessions.Active is null)
+                if ((from?.Tab ?? _sessions.Active) is not { } toReconnect)
                 {
                     StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational, Strings.Shell_NoSession,
                         Strings.Shell_NoTabToReconnectMessage);
                     break;
                 }
 
-                ReconnectActiveTab();
+                ReconnectTab(toReconnect);
                 break;
 
             case "cmd:detach":
@@ -1169,11 +1188,15 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnReconnectClick(object sender, RoutedEventArgs e) => ReconnectActiveTab();
 
-    /// <summary><em>Reconnect</em>, from the button or from the palette. <c>async void</c> is the
-    /// only shape an awaiting handler can take, hence the fully guarded body.</summary>
-    private async void ReconnectActiveTab()
+    /// <summary><em>Reconnect</em> from the toolbar, which only ever means the docked session.</summary>
+    private void ReconnectActiveTab() => ReconnectTab(_sessions.Active);
+
+    /// <summary><em>Reconnect</em> one session — the docked one from the toolbar, the window's own
+    /// from a palette opened there. <c>async void</c> is the only shape an awaiting handler can
+    /// take, hence the fully guarded body.</summary>
+    private async void ReconnectTab(SessionTabViewModel? tab)
     {
-        if (_sessions.Active is not { } tab)
+        if (tab is null)
         {
             return;
         }
