@@ -149,7 +149,7 @@
                 <ui:Button Grid.Column="8"
                            Style="{StaticResource CaptionButtonStyle}"
                            Margin="2,0,4,0"
-                           Icon="{ui:SymbolIcon Dismiss24}"
+                           Icon="{ui:SymbolIcon Dismiss20}"
                            ToolTip="{x:Static res:Strings.SessionWindow_Close}"
                            Click="OnCloseClick" />
             </Grid>

@@ -5,8 +5,9 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:res="clr-namespace:RemoteDeck.App.Resources"
                  Title="{Binding Title}"
-                 Height="32"
-                 SizeToContent="Width"
+                 SizeToContent="WidthAndHeight"
+                 MinWidth="0"
+                 MinHeight="0"
                  Topmost="True"
                  ShowActivated="False"
                  ShowInTaskbar="False"
@@ -77,7 +78,13 @@
          own Background, this surface has to stay opaque — it is read against a remote desktop, not
          against a theme. One line underneath and nothing else: the bar is flush against the top of
          the screen, so its other three edges have no edge to draw. -->
-    <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+    <!-- The bar's height lives here rather than on the window: MinWidth and MinHeight arrive at
+         460x320 before Show() is ever called (measured — a plain WPF Window does the same, so this
+         is not WPF-UI), and a window-level Height would be raised to that floor, turning a 32 px
+         strip into a dialog-sized black box over the remote desktop. Zeroing the floor and letting
+         SizeToContent measure this Border is what keeps the bar a bar. -->
+    <Border Height="32"
+            Background="{DynamicResource ApplicationBackgroundBrush}"
             BorderThickness="0,0,0,1"
             BorderBrush="{DynamicResource ControlElevationBorderBrush}">
         <Grid>
@@ -123,7 +130,7 @@
             <ui:Button Grid.Column="5"
                        Style="{StaticResource BarButtonStyle}"
                        Margin="2,0,4,0"
-                       Icon="{ui:SymbolIcon Dismiss24}"
+                       Icon="{ui:SymbolIcon Dismiss20}"
                        ToolTip="{x:Static res:Strings.SessionWindow_Close}"
                        Click="OnCloseClick" />
         </Grid>
