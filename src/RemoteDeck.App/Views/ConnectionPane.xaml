@@ -113,12 +113,12 @@
                                                 CornerRadius="{StaticResource RdRadius}"
                                                 Background="{DynamicResource RdSurface2}"
                                                 Opacity="0" />
-                                        <!-- The focused-but-unselected ground. Neutral on purpose: the
-                                             accent on this row is spent on the outline below. -->
-                                        <Border x:Name="FocusGround"
-                                                CornerRadius="{StaticResource RdRadius}"
-                                                Background="{DynamicResource RdSurface3}"
-                                                Opacity="0" />
+                                        <!-- Focus has no ground of its own: measured, RdSurface3 lands on
+                                             #80F9F9F9 over a #FAFAFA pane in the light theme — no contrast
+                                             at all — so a focused row would have been carried by the
+                                             outline in one theme and by two signals in the other. The
+                                             outline alone reads in both, and spends the row's one accent
+                                             exactly once. -->
                                         <Border x:Name="Selection"
                                                 CornerRadius="{StaticResource RdRadius}"
                                                 Background="{DynamicResource RdAccentSoft}"
@@ -173,14 +173,12 @@
                                              outline behind, and this list is walked far more often
                                              than it is clicked. -->
                                         <Trigger Property="IsKeyboardFocused" Value="True">
-                                            <Setter TargetName="FocusGround" Property="Opacity" Value="1" />
                                             <Setter TargetName="FocusRing" Property="Opacity" Value="1" />
                                         </Trigger>
 
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter TargetName="Selection" Property="Opacity" Value="1" />
                                             <Setter TargetName="Rail" Property="Visibility" Value="Visible" />
-                                            <Setter TargetName="FocusGround" Property="Opacity" Value="0" />
                                         </Trigger>
 
                                         <!-- Selected and focused at once — the ordinary case after an
