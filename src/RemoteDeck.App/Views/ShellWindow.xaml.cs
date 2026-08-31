@@ -468,12 +468,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             "Manage credentials…", "Saved user names and passwords", CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             "Toggle connection pane", "Ctrl+B", CommandPriority));
+        // One entry, not two: RemoteDeck has no disconnect that keeps the tab behind — the toolbar's
+        // own Disconnect button is CloseActiveTab as well — so a second "Disconnect" row would name
+        // the same action twice. The subtitle carries the other half of the vocabulary instead, and
+        // PaletteFilter searches it, so typing "disconnect" still finds this row.
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
-            "Close current tab", "Ctrl+W", CommandPriority));
+            "Close current session", "Disconnect it and close its tab (Ctrl+W)", CommandPriority));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
             "Reconnect current tab", "Connect the active session again", CommandPriority));
-        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:disconnect",
-            "Disconnect current tab", "End the active session and close its tab", CommandPriority));
 
         return items;
     }
@@ -527,8 +529,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 TogglePane();
                 break;
 
-            // Two entries, one action: RemoteDeck has no disconnect that keeps the tab behind — the
-            // toolbar's own Disconnect button is CloseActiveTab as well — so both words find it.
+            // BuildPaletteItems no longer produces "cmd:disconnect": RemoteDeck has no disconnect
+            // that keeps the tab behind, so "Close current session" is the one entry covering both
+            // words. The old id is still accepted here — it costs a line and can mean nothing else.
             case "cmd:close":
             case "cmd:disconnect":
                 if (_sessions.Active is null)
