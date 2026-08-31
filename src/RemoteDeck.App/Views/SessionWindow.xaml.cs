@@ -404,6 +404,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         {
             _tab.Changed -= OnTabChanged;
             _tab.Session.FullScreenRequested -= OnFullScreenRequested;
+
+            // The watcher keeps every watched window in a static list of its own; without this,
+            // each detach/reattach — the feature's main gesture — leaves an entry behind holding
+            // this window, its tab and the session behind it.
+            SystemThemeWatcher.UnWatch(this);
             return;
         }
 
