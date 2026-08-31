@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Win32;
+using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Import;
 using RemoteDeck.Core.Model;
@@ -19,10 +20,10 @@ namespace RemoteDeck.App.ViewModels;
 public sealed partial class ImportRow : ObservableObject
 {
     /// <summary>The row is not already known, neither in the database nor earlier in the same batch.</summary>
-    public const string NewStatus = "New";
+    public static string NewStatus => Strings.Import_StatusNew;
 
     /// <summary>A saved connection already uses this host and port.</summary>
-    public const string AlreadyImportedStatus = "Already imported";
+    public static string AlreadyImportedStatus => Strings.Import_StatusAlreadyImported;
 
     /// <summary>What the reader proposes. Never carries a password: <see cref="ImportCandidate"/> has no such field.</summary>
     public required ImportCandidate Candidate { get; init; }
@@ -37,7 +38,7 @@ public sealed partial class ImportRow : ObservableObject
     [ObservableProperty] private string _detail = "";
 
     /// <summary><c>Duplicate of &lt;name&gt;</c>, where <paramref name="name"/> is the earlier row in this same batch.</summary>
-    public static string DuplicateOf(string name) => $"Duplicate of {name}";
+    public static string DuplicateOf(string name) => Text.Of(Strings.Import_StatusDuplicateOf, name);
 
     public string Name => Candidate.Name;
 
@@ -69,7 +70,7 @@ public sealed partial class ImportRow : ObservableObject
             var user = string.IsNullOrWhiteSpace(Candidate.Domain)
                 ? Candidate.UserName
                 : $"{Candidate.Domain}\\{Candidate.UserName}";
-            return $"User name “{user}” is not imported: attach a credential instead.";
+            return Text.Of(Strings.Import_CredentialWarning, user);
         }
     }
 
@@ -131,12 +132,13 @@ public sealed partial class ImportViewModel : ObservableObject
     public ObservableCollection<ImportRow> Rows { get; } = [];
 
     /// <summary>One sentence about the last load — what was read, and how the rows break down.</summary>
-    [ObservableProperty] private string _summary = "Choose a source above to see what can be imported.";
+    [ObservableProperty] private string _summary = Strings.Import_SummaryInitial;
 
     /// <summary>How many rows are ticked. Drives <see cref="ImportButtonText"/> and <see cref="CanImport"/>.</summary>
     [ObservableProperty] private int _selectedCount;
 
-    public string ImportButtonText => SelectedCount == 1 ? "Import 1 connection" : $"Import {SelectedCount} connections";
+    public string ImportButtonText =>
+        Text.Plural(SelectedCount, Strings.Import_ButtonOne, Strings.Import_ButtonMany, SelectedCount);
 
     public bool CanImport => SelectedCount > 0;
 
@@ -176,11 +178,20 @@ public sealed partial class ImportViewModel : ObservableObject
             return (RdpFileImporter.ParseFolder(folder, ReadLines, found), found.Count, failed);
         }).ConfigureAwait(true);
 
-        var parts = new List<string> { $"{Plural(files, ".rdp file")} in {folder}" };
-        if (unreadable > 0) parts.Add($"{unreadable} could not be read");
+        var parts = new List<string>
+        {
+            Text.Plural(files, Strings.Import_HeadRdpFilesOne, Strings.Import_HeadRdpFilesMany, files, folder),
+        };
+        if (unreadable > 0)
+        {
+            parts.Add(Text.Plural(unreadable, Strings.Import_HeadUnreadableOne, Strings.Import_HeadUnreadableMany, unreadable));
+        }
 
         var hostless = files - unreadable - candidates.Count;
-        if (hostless > 0) parts.Add($"{hostless} carried no usable address");
+        if (hostless > 0)
+        {
+            parts.Add(Text.Plural(hostless, Strings.Import_HeadHostlessOne, Strings.Import_HeadHostlessMany, hostless));
+        }
 
         _head = string.Join(", ", parts) + ".";
         Populate(candidates);
@@ -196,8 +207,9 @@ public sealed partial class ImportViewModel : ObservableObject
     {
         var entries = ReadRememberedServers();
         _head = entries.Count == 0
-            ? "Remote Desktop Connection remembers no server."
-            : $"{Plural(entries.Count, "server")} remembered by Remote Desktop Connection.";
+            ? Strings.Import_HeadRegistryEmpty
+            : Text.Plural(entries.Count, Strings.Import_HeadRegistryServersOne,
+                Strings.Import_HeadRegistryServersMany, entries.Count);
         Populate(MstscRegistryImporter.FromServers(entries));
     }
 
@@ -298,13 +310,13 @@ public sealed partial class ImportViewModel : ObservableObject
             if (saved.TryGetValue(key, out var savedName))
             {
                 row.Status = ImportRow.AlreadyImportedStatus;
-                row.Detail = $"Already saved as “{savedName}”.";
+                row.Detail = Text.Of(Strings.Import_DetailAlreadySaved, savedName);
                 already++;
             }
             else if (batch.TryGetValue(key, out var firstName))
             {
                 row.Status = ImportRow.DuplicateOf(firstName);
-                row.Detail = "Another row above targets the same host and port.";
+                row.Detail = Strings.Import_DetailDuplicateInBatch;
                 duplicate++;
             }
             else
@@ -319,13 +331,24 @@ public sealed partial class ImportViewModel : ObservableObject
             row.Selected = row.IsNew;
         }
 
-        var tally = new List<string> { $"{fresh} new" };
-        if (already > 0) tally.Add($"{already} already imported");
-        if (duplicate > 0) tally.Add($"{duplicate} duplicate in this batch");
+        var tally = new List<string>
+        {
+            Text.Plural(fresh, Strings.Import_TallyNewOne, Strings.Import_TallyNewMany, fresh),
+        };
+        if (already > 0)
+        {
+            tally.Add(Text.Plural(already, Strings.Import_TallyAlreadyOne, Strings.Import_TallyAlreadyMany, already));
+        }
+
+        if (duplicate > 0)
+        {
+            tally.Add(Text.Plural(duplicate, Strings.Import_TallyDuplicateOne, Strings.Import_TallyDuplicateMany, duplicate));
+        }
 
         Summary = Rows.Count == 0
-            ? $"{_head} Nothing to import.".Trim()
-            : $"{_head} {Plural(Rows.Count, "connection")}: {string.Join(", ", tally)}.".Trim();
+            ? Text.Of(Strings.Import_SummaryNothing, _head).Trim()
+            : Text.Plural(Rows.Count, Strings.Import_SummaryConnectionsOne, Strings.Import_SummaryConnectionsMany,
+                _head, Rows.Count, string.Join(", ", tally)).Trim();
 
         Recount();
     }
@@ -361,7 +384,6 @@ public sealed partial class ImportViewModel : ObservableObject
 
     private static string AddressKey(string host, int port) => $"{host}:{port}";
 
-    private static string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count} {noun}s";
 
     private void OnRowChanged(object? sender, PropertyChangedEventArgs e)
     {

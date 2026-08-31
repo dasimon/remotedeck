@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Neutral (English) UI strings. Strings.fr.resx is the complete French translation: every key below exists there too, with the same placeholders. -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common_Domain" xml:space="preserve">
+    <value>Domain</value>
+  </data>
+  <data name="Common_RequiredHint" xml:space="preserve">
+    <value>* required</value>
+  </data>
+  <data name="Common_DeleteFailedTitle" xml:space="preserve">
+    <value>Delete failed</value>
+  </data>
+  <data name="Pane_SearchPlaceholder" xml:space="preserve">
+    <value>Search  (Ctrl+F)</value>
+  </data>
+  <data name="Pane_New" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Pane_NewToolTip" xml:space="preserve">
+    <value>New connection (Ctrl+N)</value>
+  </data>
+  <data name="Pane_ImportToolTip" xml:space="preserve">
+    <value>Import connections from .rdp files or the Remote Desktop history</value>
+  </data>
+  <data name="Pane_Unavailable" xml:space="preserve">
+    <value>Saved connections are unavailable: the database could not be opened. See the log.</value>
+  </data>
+  <data name="Pane_GroupFavorites" xml:space="preserve">
+    <value>★ Favorites</value>
+  </data>
+  <data name="Pane_GroupUngrouped" xml:space="preserve">
+    <value>Ungrouped</value>
+  </data>
+  <data name="Pane_EmptyDefault" xml:space="preserve">
+    <value>No connections yet — press Ctrl+N to add one.</value>
+  </data>
+  <data name="Pane_EmptyNoMatch" xml:space="preserve">
+    <value>No connection matches “{0}”.</value>
+  </data>
+  <data name="Shell_PaneToggleToolTip" xml:space="preserve">
+    <value>Show or hide the connection pane (Ctrl+B)</value>
+  </data>
+  <data name="Shell_NoSession" xml:space="preserve">
+    <value>No session</value>
+  </data>
+  <data name="Shell_Reconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="Shell_ReconnectToolTip" xml:space="preserve">
+    <value>Connect this session again</value>
+  </data>
+  <data name="Shell_CancelRetryToolTip" xml:space="preserve">
+    <value>Stop the scheduled reconnection</value>
+  </data>
+  <data name="Shell_DiagnosticsToolTip" xml:space="preserve">
+    <value>Copy diagnostics for this session to the clipboard</value>
+  </data>
+  <data name="Shell_CredentialsToolTip" xml:space="preserve">
+    <value>Manage credentials</value>
+  </data>
+  <data name="Shell_Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="Shell_EmptySessions" xml:space="preserve">
+    <value>Select a connection and press Enter</value>
+  </data>
+  <data name="Shell_SessionLabel" xml:space="preserve">
+    <value>{0} — {1} · {2}</value>
+  </data>
+  <data name="Shell_NoControlTitle" xml:space="preserve">
+    <value>No Remote Desktop control found</value>
+  </data>
+  <data name="Shell_NoControlMessage" xml:space="preserve">
+    <value>None of the known mstscax.dll CLSIDs is registered on this machine.</value>
+  </data>
+  <data name="Shell_ShortcutsUnavailableTitle" xml:space="preserve">
+    <value>Keyboard shortcuts unavailable</value>
+  </data>
+  <data name="Shell_ShortcutsUnavailableMessage" xml:space="preserve">
+    <value>{0} Ctrl+Alt+Left / Ctrl+Alt+Right still release the focus. See {1}.</value>
+  </data>
+  <data name="Shell_ReadyTitle" xml:space="preserve">
+    <value>RDP control v{0} ready</value>
+  </data>
+  <data name="Shell_ReadyMessage" xml:space="preserve">
+    <value>Pick a connection and press Enter, or press Ctrl+N to create one.</value>
+  </data>
+  <data name="Shell_DatabaseUnavailableTitle" xml:space="preserve">
+    <value>Database unavailable</value>
+  </data>
+  <data name="Shell_DatabaseUnreadableMessage" xml:space="preserve">
+    <value>Saved connections cannot be read, so nothing can be connected. See {0}.</value>
+  </data>
+  <data name="Shell_DatabaseNoEditMessage" xml:space="preserve">
+    <value>Connections cannot be edited until the database opens.</value>
+  </data>
+  <data name="Shell_DatabaseNoDeleteMessage" xml:space="preserve">
+    <value>Connections cannot be deleted until the database opens.</value>
+  </data>
+  <data name="Shell_DatabaseNoImportMessage" xml:space="preserve">
+    <value>Connections cannot be imported until the database opens.</value>
+  </data>
+  <data name="Shell_DatabaseNoCredentialsMessage" xml:space="preserve">
+    <value>Credentials cannot be managed until the database opens.</value>
+  </data>
+  <data name="Shell_ShortcutInterceptedTitle" xml:space="preserve">
+    <value>{0} intercepted</value>
+  </data>
+  <data name="Shell_ShortcutInterceptedMessage" xml:space="preserve">
+    <value>via {0} — no action is wired to it yet</value>
+  </data>
+  <data name="Shell_NoTabToCloseMessage" xml:space="preserve">
+    <value>There is no tab to close.</value>
+  </data>
+  <data name="Shell_NoTabToReconnectMessage" xml:space="preserve">
+    <value>There is no tab to reconnect.</value>
+  </data>
+  <data name="Shell_SessionUnavailableTitle" xml:space="preserve">
+    <value>RDP session unavailable</value>
+  </data>
+  <data name="Shell_SessionUnavailableMessage" xml:space="preserve">
+    <value>No usable Remote Desktop control was found at startup. See {0}.</value>
+  </data>
+  <data name="Shell_ConnectFailedTitle" xml:space="preserve">
+    <value>Connect failed</value>
+  </data>
+  <data name="Shell_ConnectFailedMessage" xml:space="preserve">
+    <value>{0} (0x{1}): {2}</value>
+  </data>
+  <data name="Shell_DiagnosticsCopiedTitle" xml:space="preserve">
+    <value>Diagnostics copied</value>
+  </data>
+  <data name="Shell_DiagnosticsCopiedMessage" xml:space="preserve">
+    <value>The state of '{0}' is on the clipboard.</value>
+  </data>
+  <data name="Shell_DiagnosticsNotCopiedTitle" xml:space="preserve">
+    <value>Diagnostics not copied</value>
+  </data>
+  <data name="Shell_DiagnosticsNotCopiedMessage" xml:space="preserve">
+    <value>The clipboard refused the text ({0}).</value>
+  </data>
+  <data name="Shell_ConnectionDeletedTitle" xml:space="preserve">
+    <value>Connection deleted</value>
+  </data>
+  <data name="Shell_ConnectionDeletedMessage" xml:space="preserve">
+    <value>'{0}' is gone.</value>
+  </data>
+  <data name="Shell_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete '{0}'?</value>
+  </data>
+  <data name="Shell_DeleteConfirmMessage" xml:space="preserve">
+    <value>Press Delete again to confirm.</value>
+  </data>
+  <data name="Shell_ClosingConnectionTitle" xml:space="preserve">
+    <value>Closing '{0}'…</value>
+  </data>
+  <data name="Shell_ClosingConnectionMessage" xml:space="preserve">
+    <value>Its session is closed before the connection is deleted.</value>
+  </data>
+  <data name="Shell_ClosingSessionsOne" xml:space="preserve">
+    <value>Closing {0} session…</value>
+  </data>
+  <data name="Shell_ClosingSessionsMany" xml:space="preserve">
+    <value>Closing {0} sessions…</value>
+  </data>
+  <data name="Session_CloseToolTip" xml:space="preserve">
+    <value>Close this session (Ctrl+W)</value>
+  </data>
+  <data name="Session_DisconnectedTitle" xml:space="preserve">
+    <value>'{0}' disconnected</value>
+  </data>
+  <data name="Session_ConnectingTitle" xml:space="preserve">
+    <value>Connecting to {0}</value>
+  </data>
+  <data name="Session_ConnectedTitle" xml:space="preserve">
+    <value>Connected to {0}</value>
+  </data>
+  <data name="Session_InterruptedTitle" xml:space="preserve">
+    <value>'{0}' interrupted — {1}</value>
+  </data>
+  <data name="Session_ConnectionLost" xml:space="preserve">
+    <value>connection lost</value>
+  </data>
+  <data name="Session_AttemptProgress" xml:space="preserve">
+    <value>attempt {0} of {1}</value>
+  </data>
+  <data name="Session_CountdownWithProgress" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Session_ReconnectingTitle" xml:space="preserve">
+    <value>Reconnecting to {0}</value>
+  </data>
+  <data name="Session_ReconnectingMessage" xml:space="preserve">
+    <value>Attempt {0} of {1}.</value>
+  </data>
+  <data name="Session_FailedTitle" xml:space="preserve">
+    <value>'{0}' failed — {1}</value>
+  </data>
+  <data name="Session_CouldNotConnect" xml:space="preserve">
+    <value>the connection could not be established</value>
+  </data>
+  <data name="Session_DetailSeparator" xml:space="preserve">
+    <value>{0} — {1}</value>
+  </data>
+  <data name="Session_Countdown" xml:space="preserve">
+    <value>retry in {0} s</value>
+  </data>
+  <data name="Session_StateDisconnected" xml:space="preserve">
+    <value>Disconnected — {0}</value>
+  </data>
+  <data name="Session_StateNotConnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="Session_StateConnecting" xml:space="preserve">
+    <value>Connecting…</value>
+  </data>
+  <data name="Session_StateConnected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Session_StateInterrupted" xml:space="preserve">
+    <value>Interrupted (attempt {0})</value>
+  </data>
+  <data name="Session_StateInterruptedCountdown" xml:space="preserve">
+    <value>Interrupted — {0} (attempt {1})</value>
+  </data>
+  <data name="Session_StateReconnecting" xml:space="preserve">
+    <value>Reconnecting (attempt {0})</value>
+  </data>
+  <data name="Session_StateFailedReason" xml:space="preserve">
+    <value>Failed — {0}</value>
+  </data>
+  <data name="Session_StateFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Session_StateClosing" xml:space="preserve">
+    <value>Closing…</value>
+  </data>
+  <data name="Session_StateClosed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="Palette_Title" xml:space="preserve">
+    <value>Command palette</value>
+  </data>
+  <data name="Palette_SearchPlaceholder" xml:space="preserve">
+    <value>Search connections and commands</value>
+  </data>
+  <data name="Palette_EmptyNothingToRun" xml:space="preserve">
+    <value>Nothing to run.</value>
+  </data>
+  <data name="Palette_EmptyNoMatch" xml:space="preserve">
+    <value>No connection or command matches “{0}”.</value>
+  </data>
+  <data name="Palette_SwitchToTab" xml:space="preserve">
+    <value>Switch to {0}</value>
+  </data>
+  <data name="Palette_ConnectionSubtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Palette_NewConnection" xml:space="preserve">
+    <value>New connection</value>
+  </data>
+  <data name="Palette_ImportConnections" xml:space="preserve">
+    <value>Import connections…</value>
+  </data>
+  <data name="Palette_ImportSubtitle" xml:space="preserve">
+    <value>From .rdp files or the mstsc history</value>
+  </data>
+  <data name="Palette_ManageCredentials" xml:space="preserve">
+    <value>Manage credentials…</value>
+  </data>
+  <data name="Palette_ManageCredentialsSubtitle" xml:space="preserve">
+    <value>Saved user names and passwords</value>
+  </data>
+  <data name="Palette_TogglePane" xml:space="preserve">
+    <value>Toggle connection pane</value>
+  </data>
+  <data name="Palette_CloseSession" xml:space="preserve">
+    <value>Close current session</value>
+  </data>
+  <data name="Palette_CloseSessionSubtitle" xml:space="preserve">
+    <value>Disconnect it and close its tab (Ctrl+W)</value>
+  </data>
+  <data name="Palette_ReconnectTab" xml:space="preserve">
+    <value>Reconnect current tab</value>
+  </data>
+  <data name="Palette_ReconnectTabSubtitle" xml:space="preserve">
+    <value>Connect the active session again</value>
+  </data>
+  <data name="Editor_Title" xml:space="preserve">
+    <value>Connection</value>
+  </data>
+  <data name="Editor_SectionGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Editor_Name" xml:space="preserve">
+    <value>Name *</value>
+  </data>
+  <data name="Editor_Host" xml:space="preserve">
+    <value>Host *</value>
+  </data>
+  <data name="Editor_HostPlaceholder" xml:space="preserve">
+    <value>server.example.com</value>
+  </data>
+  <data name="Editor_Port" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Editor_Group" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="Editor_Favorite" xml:space="preserve">
+    <value>Favorite</value>
+  </data>
+  <data name="Editor_SectionSignIn" xml:space="preserve">
+    <value>Sign-in</value>
+  </data>
+  <data name="Editor_Credential" xml:space="preserve">
+    <value>Credential</value>
+  </data>
+  <data name="Editor_Authentication" xml:space="preserve">
+    <value>Authentication</value>
+  </data>
+  <data name="Editor_UseWebAccount" xml:space="preserve">
+    <value>Use web account (experimental)</value>
+  </data>
+  <data name="Editor_SectionDisplay" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="Editor_DisplayMode" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Editor_FixedSize" xml:space="preserve">
+    <value>Fixed size</value>
+  </data>
+  <data name="Editor_WidthPlaceholder" xml:space="preserve">
+    <value>width</value>
+  </data>
+  <data name="Editor_HeightPlaceholder" xml:space="preserve">
+    <value>height</value>
+  </data>
+  <data name="Editor_SectionRedirections" xml:space="preserve">
+    <value>Redirections</value>
+  </data>
+  <data name="Editor_RedirectClipboard" xml:space="preserve">
+    <value>Clipboard</value>
+  </data>
+  <data name="Editor_RedirectDrives" xml:space="preserve">
+    <value>Drives</value>
+  </data>
+  <data name="Editor_RedirectPrinters" xml:space="preserve">
+    <value>Printers</value>
+  </data>
+  <data name="Editor_RedirectAudio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="Editor_SectionAdvanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Editor_AdminSession" xml:space="preserve">
+    <value>Admin session (/admin)</value>
+  </data>
+  <data name="Editor_NotesPlaceholder" xml:space="preserve">
+    <value>notes</value>
+  </data>
+  <data name="Editor_CheckFormTitle" xml:space="preserve">
+    <value>Check the form</value>
+  </data>
+  <data name="Editor_CouldNotSaveTitle" xml:space="preserve">
+    <value>Could not save</value>
+  </data>
+  <data name="Editor_CredentialNone" xml:space="preserve">
+    <value>(none)</value>
+  </data>
+  <data name="Editor_AuthDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Editor_AuthNoServerAuth" xml:space="preserve">
+    <value>No server auth</value>
+  </data>
+  <data name="Editor_AuthRequired" xml:space="preserve">
+    <value>Required</value>
+  </data>
+  <data name="Editor_AuthPromptIfFailed" xml:space="preserve">
+    <value>Prompt if failed</value>
+  </data>
+  <data name="Editor_DisplayDynamic" xml:space="preserve">
+    <value>Dynamic</value>
+  </data>
+  <data name="Editor_DisplayScaled" xml:space="preserve">
+    <value>Scaled</value>
+  </data>
+  <data name="Editor_DisplayFixed" xml:space="preserve">
+    <value>Fixed</value>
+  </data>
+  <data name="CredEditor_Title" xml:space="preserve">
+    <value>Credential</value>
+  </data>
+  <data name="CredEditor_Label" xml:space="preserve">
+    <value>Label *</value>
+  </data>
+  <data name="CredEditor_UserName" xml:space="preserve">
+    <value>User name *</value>
+  </data>
+  <data name="CredEditor_DomainPlaceholder" xml:space="preserve">
+    <value>optional</value>
+  </data>
+  <data name="CredEditor_PasswordRequired" xml:space="preserve">
+    <value>Password *</value>
+  </data>
+  <data name="CredEditor_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="CredEditor_PasswordPlaceholderNew" xml:space="preserve">
+    <value>password</value>
+  </data>
+  <data name="CredEditor_PasswordPlaceholderExisting" xml:space="preserve">
+    <value>•••••••• (unchanged — type to replace)</value>
+  </data>
+  <data name="CredEditor_PasswordRequiredError" xml:space="preserve">
+    <value>Password is required.</value>
+  </data>
+  <data name="CredEditor_CouldNotSave" xml:space="preserve">
+    <value>Could not save: {0}</value>
+  </data>
+  <data name="Credentials_Title" xml:space="preserve">
+    <value>Credentials</value>
+  </data>
+  <data name="Credentials_ColumnLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="Credentials_ColumnUser" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="Credentials_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Credentials_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Credentials_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Credentials_ConfirmDelete" xml:space="preserve">
+    <value>Confirm delete</value>
+  </data>
+  <data name="Credentials_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete credential?</value>
+  </data>
+  <data name="Credentials_DeleteConfirmMessage" xml:space="preserve">
+    <value>'{0}' will be removed; connections using it will need a new credential. Click again to confirm.</value>
+  </data>
+  <data name="Import_Title" xml:space="preserve">
+    <value>Import connections</value>
+  </data>
+  <data name="Import_FromFolder" xml:space="preserve">
+    <value>From a folder…</value>
+  </data>
+  <data name="Import_FromFolderToolTip" xml:space="preserve">
+    <value>Read every .rdp file directly inside a folder</value>
+  </data>
+  <data name="Import_FromRegistry" xml:space="preserve">
+    <value>From Remote Desktop Connection</value>
+  </data>
+  <data name="Import_FromRegistryToolTip" xml:space="preserve">
+    <value>Read the servers the Windows Remote Desktop client remembers</value>
+  </data>
+  <data name="Import_Promise" xml:space="preserve">
+    <value>No password is ever imported and no credential is created. Imported connections start without one — add credentials afterwards from Manage credentials. Ticked rows are imported, including the ones flagged as duplicates.</value>
+  </data>
+  <data name="Import_ColumnName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Import_ColumnAddress" xml:space="preserve">
+    <value>Host:port</value>
+  </data>
+  <data name="Import_ColumnSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Import_ColumnStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Import_SelectAllNew" xml:space="preserve">
+    <value>Select all new</value>
+  </data>
+  <data name="Import_Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Import_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Import_ButtonOne" xml:space="preserve">
+    <value>Import {0} connection</value>
+  </data>
+  <data name="Import_ButtonMany" xml:space="preserve">
+    <value>Import {0} connections</value>
+  </data>
+  <data name="Import_StatusNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Import_StatusAlreadyImported" xml:space="preserve">
+    <value>Already imported</value>
+  </data>
+  <data name="Import_StatusDuplicateOf" xml:space="preserve">
+    <value>Duplicate of {0}</value>
+  </data>
+  <data name="Import_DetailAlreadySaved" xml:space="preserve">
+    <value>Already saved as “{0}”.</value>
+  </data>
+  <data name="Import_DetailDuplicateInBatch" xml:space="preserve">
+    <value>Another row above targets the same host and port.</value>
+  </data>
+  <data name="Import_CredentialWarning" xml:space="preserve">
+    <value>User name “{0}” is not imported: attach a credential instead.</value>
+  </data>
+  <data name="Import_SummaryInitial" xml:space="preserve">
+    <value>Choose a source above to see what can be imported.</value>
+  </data>
+  <data name="Import_HeadRdpFilesOne" xml:space="preserve">
+    <value>{0} .rdp file in {1}</value>
+  </data>
+  <data name="Import_HeadRdpFilesMany" xml:space="preserve">
+    <value>{0} .rdp files in {1}</value>
+  </data>
+  <data name="Import_HeadUnreadableOne" xml:space="preserve">
+    <value>{0} could not be read</value>
+  </data>
+  <data name="Import_HeadUnreadableMany" xml:space="preserve">
+    <value>{0} could not be read</value>
+  </data>
+  <data name="Import_HeadHostlessOne" xml:space="preserve">
+    <value>{0} carried no usable address</value>
+  </data>
+  <data name="Import_HeadHostlessMany" xml:space="preserve">
+    <value>{0} carried no usable address</value>
+  </data>
+  <data name="Import_HeadRegistryEmpty" xml:space="preserve">
+    <value>Remote Desktop Connection remembers no server.</value>
+  </data>
+  <data name="Import_HeadRegistryServersOne" xml:space="preserve">
+    <value>{0} server remembered by Remote Desktop Connection.</value>
+  </data>
+  <data name="Import_HeadRegistryServersMany" xml:space="preserve">
+    <value>{0} servers remembered by Remote Desktop Connection.</value>
+  </data>
+  <data name="Import_TallyNewOne" xml:space="preserve">
+    <value>{0} new</value>
+  </data>
+  <data name="Import_TallyNewMany" xml:space="preserve">
+    <value>{0} new</value>
+  </data>
+  <data name="Import_TallyAlreadyOne" xml:space="preserve">
+    <value>{0} already imported</value>
+  </data>
+  <data name="Import_TallyAlreadyMany" xml:space="preserve">
+    <value>{0} already imported</value>
+  </data>
+  <data name="Import_TallyDuplicateOne" xml:space="preserve">
+    <value>{0} duplicate in this batch</value>
+  </data>
+  <data name="Import_TallyDuplicateMany" xml:space="preserve">
+    <value>{0} duplicates in this batch</value>
+  </data>
+  <data name="Import_SummaryNothing" xml:space="preserve">
+    <value>{0} Nothing to import.</value>
+  </data>
+  <data name="Import_SummaryConnectionsOne" xml:space="preserve">
+    <value>{0} {1} connection: {2}.</value>
+  </data>
+  <data name="Import_SummaryConnectionsMany" xml:space="preserve">
+    <value>{0} {1} connections: {2}.</value>
+  </data>
+  <data name="Import_FolderDialogTitle" xml:space="preserve">
+    <value>Choose the folder holding the .rdp files</value>
+  </data>
+  <data name="Import_FolderFailedTitle" xml:space="preserve">
+    <value>Could not read that folder</value>
+  </data>
+  <data name="Import_RegistryFailedTitle" xml:space="preserve">
+    <value>Could not read the Remote Desktop history</value>
+  </data>
+  <data name="Import_FailedTitle" xml:space="preserve">
+    <value>Import failed</value>
+  </data>
+  <data name="Import_ImportedOne" xml:space="preserve">
+    <value>{0} connection imported</value>
+  </data>
+  <data name="Import_ImportedMany" xml:space="preserve">
+    <value>{0} connections imported</value>
+  </data>
+  <data name="Import_ImportedMessage" xml:space="preserve">
+    <value>They were saved without a credential; add one from Manage credentials when you need it.</value>
+  </data>
+</root>

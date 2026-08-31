@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
+             xmlns:res="clr-namespace:RemoteDeck.App.Resources"
              MinWidth="220"
              PreviewKeyDown="OnPanePreviewKeyDown">
     <UserControl.Resources>
@@ -30,7 +31,7 @@
         <ui:TextBox x:Name="SearchBox"
                     Grid.Row="0"
                     Margin="0,0,0,6"
-                    PlaceholderText="Search  (Ctrl+F)"
+                    PlaceholderText="{x:Static res:Strings.Pane_SearchPlaceholder}"
                     ClearButtonEnabled="True"
                     Icon="{ui:SymbolIcon Search24}"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
@@ -45,16 +46,16 @@
             <ui:Button Grid.Column="0"
                        HorizontalAlignment="Stretch"
                        HorizontalContentAlignment="Center"
-                       Content="New"
+                       Content="{x:Static res:Strings.Pane_New}"
                        Icon="{ui:SymbolIcon Add24}"
                        Command="{Binding NewCommand}"
-                       ToolTip="New connection (Ctrl+N)" />
+                       ToolTip="{x:Static res:Strings.Pane_NewToolTip}" />
 
             <ui:Button Grid.Column="1"
                        Margin="6,0,0,0"
                        Icon="{ui:SymbolIcon ArrowImport24}"
                        Command="{Binding ImportCommand}"
-                       ToolTip="Import connections from .rdp files or the Remote Desktop history" />
+                       ToolTip="{x:Static res:Strings.Pane_ImportToolTip}" />
         </Grid>
 
         <Grid Grid.Row="2">

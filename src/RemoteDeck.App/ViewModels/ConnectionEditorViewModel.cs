@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Model;
 
 // The view-model exposes a DisplayMode property whose type is also named DisplayMode; the alias keeps
@@ -12,6 +13,13 @@ namespace RemoteDeck.App.ViewModels;
 /// <param name="Value">The RDP client authentication level, or <c>null</c> for the default.</param>
 /// <param name="Label">What the combo shows.</param>
 public sealed record AuthenticationLevelOption(int? Value, string Label);
+
+/// <summary>One entry of the display-mode combo. <see cref="Value"/> is the persisted enum value;
+/// <see cref="Label"/> is its localised wording, which is why the combo can no longer bind the enum
+/// directly (it would show the member name, in English, whatever the UI language).</summary>
+/// <param name="Value">The persisted display mode.</param>
+/// <param name="Label">What the combo shows.</param>
+public sealed record DisplayModeOption(CoreDisplayMode Value, string Label);
 
 /// <summary>
 /// Form state for the connection editor: one observable property per <see cref="Connection"/> column
@@ -27,18 +35,23 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
 
     /// <summary>Placeholder row of the credential combo. Its <c>Id</c> stays 0, which is how
     /// <see cref="CredentialId"/> recognises it and stores <c>null</c>.</summary>
-    public static Credential NoCredential { get; } = new() { Label = "(none)", UserName = "", SecretBlob = [], Entropy = [] };
+    public static Credential NoCredential { get; } = new() { Label = Strings.Editor_CredentialNone, UserName = "", SecretBlob = [], Entropy = [] };
 
     // Values verified against the Microsoft RDP client documentation in lot 0; never renumber.
     private static readonly IReadOnlyList<AuthenticationLevelOption> AllAuthenticationLevels =
     [
-        new(null, "Default"),
-        new(0, "No server auth"),
-        new(1, "Required"),
-        new(2, "Prompt if failed"),
+        new(null, Strings.Editor_AuthDefault),
+        new(0, Strings.Editor_AuthNoServerAuth),
+        new(1, Strings.Editor_AuthRequired),
+        new(2, Strings.Editor_AuthPromptIfFailed),
     ];
 
-    private static readonly IReadOnlyList<CoreDisplayMode> AllDisplayModes = Enum.GetValues<CoreDisplayMode>();
+    private static readonly IReadOnlyList<DisplayModeOption> AllDisplayModes =
+    [
+        new(CoreDisplayMode.Dynamic, Strings.Editor_DisplayDynamic),
+        new(CoreDisplayMode.Scaled, Strings.Editor_DisplayScaled),
+        new(CoreDisplayMode.Fixed, Strings.Editor_DisplayFixed),
+    ];
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _host = "";
@@ -47,9 +60,12 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private Credential? _selectedCredential = NoCredential;
     [ObservableProperty] private bool _isFavorite;
 
+    /// <summary>The row the display-mode combo shows. Bound through <c>SelectedItem</c>, like the two
+    /// other combos of this window; the persisted value is <see cref="DisplayMode"/>.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayMode))]
     [NotifyPropertyChangedFor(nameof(IsFixedSizeEnabled))]
-    private CoreDisplayMode _displayMode = CoreDisplayMode.Dynamic;
+    private DisplayModeOption _selectedDisplayMode = AllDisplayModes[0];
 
     [ObservableProperty] private double? _fixedWidth;
     [ObservableProperty] private double? _fixedHeight;
@@ -70,10 +86,19 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     public IReadOnlyList<string> KnownGroups { get; init; } = [];
 
     /// <summary>Instance views on the fixed option lists: the binding engine only walks instance properties.</summary>
-    public IReadOnlyList<CoreDisplayMode> DisplayModes => AllDisplayModes;
+    public IReadOnlyList<DisplayModeOption> DisplayModes => AllDisplayModes;
 
     /// <inheritdoc cref="DisplayModes" />
     public IReadOnlyList<AuthenticationLevelOption> AuthenticationLevels => AllAuthenticationLevels;
+
+    /// <summary>The persisted display mode, read and written through the selected combo row. An enum
+    /// value no row carries — a database written by a newer build — falls back to the first row rather
+    /// than throwing in a property setter.</summary>
+    public CoreDisplayMode DisplayMode
+    {
+        get => SelectedDisplayMode.Value;
+        set => SelectedDisplayMode = AllDisplayModes.FirstOrDefault(o => o.Value == value) ?? AllDisplayModes[0];
+    }
 
     /// <summary>The stored foreign key: the placeholder row means "no credential".</summary>
     public long? CredentialId => SelectedCredential is { Id: > 0 } credential ? credential.Id : null;

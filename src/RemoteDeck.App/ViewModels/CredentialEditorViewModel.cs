@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Security;
 
 namespace RemoteDeck.App.ViewModels;
@@ -15,11 +16,13 @@ public sealed partial class CredentialEditorViewModel : ObservableObject
 
     /// <summary>Field label. The asterisk marks the password as required only when creating:
     /// on edit an empty box means "keep the stored secret".</summary>
-    public string PasswordLabel => IsNew ? "Password *" : "Password";
+    public string PasswordLabel => IsNew ? Strings.CredEditor_PasswordRequired : Strings.CredEditor_Password;
 
     /// <summary>Placeholder for the password box. The stored secret is encrypted and never decrypted
     /// for display, so on edit the placeholder states the intent instead of faking masked characters.</summary>
-    public string PasswordPlaceholder => IsNew ? "password" : "•••••••• (unchanged — type to replace)";
+    public string PasswordPlaceholder => IsNew
+        ? Strings.CredEditor_PasswordPlaceholderNew
+        : Strings.CredEditor_PasswordPlaceholderExisting;
 
     public bool Validate(IEnumerable<string> otherLabels)
     {

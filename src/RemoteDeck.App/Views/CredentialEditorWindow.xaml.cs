@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Data;
@@ -53,7 +54,7 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
         bool hasPassword = secure.Length > 0;
         if (!_vm.Validate(others) || (_vm.IsNew && !hasPassword))
         {
-            if (_vm.IsNew && !hasPassword) _vm.Errors = string.Join("\n", new[] { _vm.Errors, "Password is required." }.Where(s => s.Length > 0));
+            if (_vm.IsNew && !hasPassword) _vm.Errors = string.Join("\n", new[] { _vm.Errors, Strings.CredEditor_PasswordRequiredError }.Where(s => s.Length > 0));
             ErrorBar.IsOpen = true;
             return;
         }
@@ -82,7 +83,7 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
         catch (Exception ex)
         {
             ProbeLog.Write("vault", $"Save failed: {ex.GetType().Name}: {ex.Message}");
-            _vm.Errors = $"Could not save: {ex.Message}";
+            _vm.Errors = Text.Of(Strings.CredEditor_CouldNotSave, ex.Message);
             ErrorBar.IsOpen = true;
         }
     }

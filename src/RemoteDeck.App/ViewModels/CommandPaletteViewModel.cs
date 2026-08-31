@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Search;
 
 namespace RemoteDeck.App.ViewModels;
@@ -66,8 +67,8 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
         Selected = Results.FirstOrDefault();
         IsEmpty = Results.Count == 0;
         EmptyMessage = string.IsNullOrWhiteSpace(SearchText)
-            ? "Nothing to run."
-            : $"No connection or command matches “{SearchText.Trim()}”.";
+            ? Strings.Palette_EmptyNothingToRun
+            : Text.Of(Strings.Palette_EmptyNoMatch, SearchText.Trim());
     }
 
     /// <summary>

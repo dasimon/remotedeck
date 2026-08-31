@@ -1,6 +1,7 @@
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Controls;
+using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Data;
@@ -49,7 +50,7 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (!_viewModel.Validate())
         {
-            ErrorBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Check the form", _viewModel.Errors);
+            ErrorBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Editor_CheckFormTitle, _viewModel.Errors);
             return;
         }
 
@@ -68,7 +69,7 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         catch (Exception ex)
         {
             ProbeLog.Write("connections", $"Save failed: {ex.GetType().Name}: {ex.Message}");
-            ErrorBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, "Could not save", ex.Message);
+            ErrorBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Editor_CouldNotSaveTitle, ex.Message);
         }
     }
 }
