@@ -1,0 +1,53 @@
+<!--
+    RemoteDeck design tokens — one sheet, read by every view.
+
+    Colours are never literal here. Each brush derives from a WPF-UI theme colour through a
+    DynamicResource on its Color property: the accent stays the user's Windows accent, and a
+    light/dark switch reaches the whole application without a restart. A StaticResource would
+    freeze the value at load time and break both. Merged into App.xaml AFTER the WPF-UI
+    dictionaries — that order is what makes these lookups resolve; merged before, every token
+    would silently stay transparent.
+
+    Metrics are closed sets: three radii and three heights. A value outside them is a styling
+    defect, not a local decision.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- Surfaces, from the window ground up to the selected row. -->
+    <SolidColorBrush x:Key="RdSurface0" Color="{DynamicResource ApplicationBackgroundColor}" />
+    <SolidColorBrush x:Key="RdSurface1" Color="{DynamicResource CardBackgroundFillColorDefault}" />
+    <SolidColorBrush x:Key="RdSurface2" Color="{DynamicResource SubtleFillColorSecondary}" />
+    <SolidColorBrush x:Key="RdSurface3" Color="{DynamicResource ControlFillColorSecondary}" />
+
+    <!-- Borders. -->
+    <SolidColorBrush x:Key="RdBorder" Color="{DynamicResource ControlStrokeColorDefault}" />
+    <SolidColorBrush x:Key="RdBorderStrong" Color="{DynamicResource ControlStrokeColorSecondary}" />
+
+    <!-- Text. -->
+    <SolidColorBrush x:Key="RdText" Color="{DynamicResource TextFillColorPrimary}" />
+    <SolidColorBrush x:Key="RdTextMuted" Color="{DynamicResource TextFillColorSecondary}" />
+
+    <!-- Accent. RdAccentSoft has no equivalent in the theme: it is the same accent colour at low
+         opacity, so it still follows the system accent instead of freezing a tinted literal. -->
+    <SolidColorBrush x:Key="RdAccent" Color="{DynamicResource AccentFillColorDefault}" />
+    <SolidColorBrush x:Key="RdAccentSoft" Color="{DynamicResource AccentFillColorDefault}" Opacity="0.18" />
+    <SolidColorBrush x:Key="RdOnAccent" Color="{DynamicResource TextOnAccentFillColorPrimary}" />
+
+    <!-- States. Semantic, never the accent: connected / reconnecting / offline keep their own
+         three colours, and a view must double them with a text tag to stay readable without hue. -->
+    <SolidColorBrush x:Key="RdOk" Color="{DynamicResource SystemFillColorSuccess}" />
+    <SolidColorBrush x:Key="RdWarn" Color="{DynamicResource SystemFillColorCaution}" />
+    <SolidColorBrush x:Key="RdBad" Color="{DynamicResource SystemFillColorCritical}" />
+
+    <!-- Radii: small for inline chips, default for rows and tabs, large for panels. -->
+    <CornerRadius x:Key="RdRadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="RdRadius">6</CornerRadius>
+    <CornerRadius x:Key="RdRadiusLg">8</CornerRadius>
+
+    <!-- Heights: a list row, a session tab, a button or field inside a bar. -->
+    <sys:Double x:Key="RdRowHeight">32</sys:Double>
+    <sys:Double x:Key="RdTabHeight">34</sys:Double>
+    <sys:Double x:Key="RdControlHeight">28</sys:Double>
+</ResourceDictionary>
