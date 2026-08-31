@@ -2,7 +2,7 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-08-31
 
 First usable version. RemoteDeck is a connection manager for Windows Remote Desktop:
 it keeps your machines organised, opens them in tabs and remembers your passwords
