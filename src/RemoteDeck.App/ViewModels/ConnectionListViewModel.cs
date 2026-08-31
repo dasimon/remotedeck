@@ -72,6 +72,9 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// <summary>Raised when the user asks to delete. The shell owns the confirmation.</summary>
     public event Action<Connection>? DeleteRequested;
 
+    /// <summary>Raised when the user asks for the import window. The shell owns it, like every other window.</summary>
+    public event Action? ImportRequested;
+
     [ObservableProperty] private string _searchText = "";
 
     [ObservableProperty] private ConnectionItem? _selected;
@@ -134,6 +137,9 @@ public sealed partial class ConnectionListViewModel : ObservableObject
 
     [RelayCommand]
     private void New() => EditRequested?.Invoke(null);
+
+    [RelayCommand]
+    private void Import() => ImportRequested?.Invoke();
 
     [RelayCommand]
     private void ConnectSelected()
