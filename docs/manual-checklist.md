@@ -332,6 +332,108 @@ success criteria of §1.
 - [ ] Plurals read correctly in French for 0, 1 and several items (import tallies,
       reconnection attempts).
 
+## Detached session windows
+
+None of these boxes is ticked yet: the feature shipped its code on 2026-09-01, its human
+probe has not been run. It is not closed until this section is. Design:
+`docs/superpowers/specs/2026-09-01-detached-windows-design.md`. Two monitors are needed
+for most of it; `TEST-VM` is the reference target.
+
+### Detaching and reattaching
+
+- [ ] **Drag a tab out.** Press a tab and pull it **more than 40 px downwards**, out of the
+      strip: the drag stops being a reorder and a window appears under the cursor with that
+      session in it. Pulling sideways within the strip still **reorders**, as in lot 4 —
+      the two gestures must not be confused.
+- [ ] The detached session **is still a session**: `Ctrl+K` lists it, the InfoBar's session
+      count includes it, and the tab strip simply no longer draws its tab. With the only
+      tab detached, the main window shows the empty state, not a black rectangle.
+- [ ] `Ctrl+Shift+D` on the active docked session detaches it too — **including while the
+      remote desktop has focus** (low-level hook path). Same from the palette
+      (*Detach current session*), which is offered only when the active tab is docked.
+- [ ] **Detach a second connection** and move its window to the **second monitor**. Both
+      remote desktops keep rendering, and the main window keeps working behind them.
+- [ ] **Reattach by dragging**: grab the detached window by its caption strip and move it
+      over the main window's tab strip. A drop band lights up under the cursor; release,
+      and the session goes back to a tab, still connected, no black frame. With every tab
+      detached the strip is 0 px tall — check the band still appears and can be aimed at.
+- [ ] Reattach the other window with its **Reattach** button, then detach again and
+      reattach with `Ctrl+Shift+D` (from inside the detached window) and from the palette
+      (*Reattach this session to the main window*). All four paths give the same result,
+      and none of them leaves an empty window behind.
+- [ ] The session survives every trip: no reconnection line in the log, no CredSSP prompt,
+      the desktop is the same one throughout.
+
+### Full screen
+
+- [ ] `F11` on a detached window: the caption strip **and the InfoBar disappear** and the
+      remote desktop is edge to edge. Do it on **both** windows: **two remote desktops in
+      full screen on two monitors at once**, while the main window still works.
+- [ ] Move the pointer to the top of a full-screen window: **nothing is revealed** — no
+      caption, no InfoBar. This is deliberate (a reveal band was implemented and removed:
+      resizing the host renegotiates the remote resolution in *Dynamic* mode, so the
+      picture jumped whenever the pointer brushed the top edge). The window size must not
+      change at all for as long as full screen lasts.
+- [ ] `Ctrl+Alt+Pause` inside the remote desktop toggles full screen the same way (it goes
+      through the control's `ContainerHandledFullScreen`), and so does the caption strip's
+      **Full screen** button. `F11` leaves it again.
+- [ ] **Full screen ends by itself when the session stops being connected.** With a window
+      in full screen, cut the network: the window comes out of full screen on its own, and
+      the caption strip and InfoBar are back with the reason, *Reconnect* and *Copy
+      diagnostics* on screen. When the session reconnects it **stays windowed** — there is
+      deliberately no automatic return to full screen; `F11` puts it back.
+- [ ] Full screen can only be **entered on a connected session**: press `F11` on a failed
+      or reconnecting detached window and nothing happens (the log says so). It must never
+      produce a chrome-less window with no way back.
+
+### Dynamic resolution and DPI
+
+- [ ] On a *Dynamic* connection, **resize a detached window**: after a short pause the
+      remote resolution follows, crisp, exactly as it does in a tab. This is the point the
+      design turns on — the session must measure **its own** window, not the main one.
+- [ ] **Mixed DPI.** Drag a detached window between two monitors at different scaling
+      factors (e.g. 100 % and 150 %): the remote desktop stays crisp and the caption strip
+      does not misalign. Known limit, not a defect: remembered geometry is converted with
+      the **main window's** DPI scale, so on a mixed-DPI desktop a reopened window lands
+      approximately, not to the pixel. The guarantee is a window you can reach.
+
+### Closing
+
+- [ ] `Ctrl+W` inside a detached window closes **that session** cleanly, and the window
+      with it. The **cross** of the window does the same thing — it is a session close
+      (§6.5 protocol), not just a window close.
+- [ ] Clicking the cross twice quickly, or pressing `Ctrl+W` while the close is already
+      running, does not close two sessions or throw.
+- [ ] **Close the application with two detached windows open.** The main window announces
+      the sessions are closing and stays up until they are; the detached windows close with
+      them and the process exits (`ShutdownMode.OnMainWindowClose` — the detached windows
+      have no `Owner` on purpose). On `TEST-VM`, `query session` shows each session as
+      **Disc**, not Active, and **no duplicate** session exists. Reconnect afterwards:
+      still one session per user, no zombie.
+- [ ] Budget check: the ceiling is now **5 s per session, 30 s overall** (it was 15 s in
+      lot 4). With several sessions closing slowly, the application must not exit before
+      the protocol has had its 30 s, nor hang beyond it.
+
+### Remembered geometry
+
+- [ ] Detach a connection, move and resize its window, close it, then detach the **same
+      connection** again: the window **comes back to the same place and size**.
+      `%APPDATA%\RemoteDeck\settings.json` carries a `detachedWindows` entry for it.
+- [ ] The geometry is written on all three paths: closing the detached window, **reattaching
+      it**, and closing the application with the window still open. Check the file after
+      each.
+- [ ] **Minimise** a detached window and close the application: the minimised window is
+      **not** persisted — the previous entry stays as it was, and reopening does not produce
+      a window stuck in a corner.
+- [ ] Detach a full-screen window and reopen it: the `fullScreen` flag comes back, and it is
+      only re-applied to a session that is actually connected.
+- [ ] **Unplug the second monitor**, then detach a connection whose remembered geometry was
+      on it: the window opens **on a monitor that is really there**, fully visible, never
+      off-screen. Same rule as the main window's geometry in lot 3.
+- [ ] Corrupt the `detachedWindows` section by hand (set it to `null`, or truncate the
+      file), restart and detach: the app starts and detaches on the default placement, with
+      no error dialog.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the

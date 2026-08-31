@@ -2,6 +2,69 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.2.0 — unreleased
+
+One feature: a session no longer has to live inside the main window. Pull it out, put it
+on a second monitor, make it full screen — and put it back when you are done.
+
+### Detached session windows
+
+- **Detach a session into its own window.** Drag a tab **more than 40 px downwards**, out
+  of the tab strip, and it becomes a window under your cursor. `Ctrl+Shift+D` and the
+  palette entry *Detach current session* do the same thing without the mouse. Dragging
+  sideways inside the strip still reorders tabs, as before.
+- **Put it back** by dragging the window's caption strip onto the tab strip — a drop band
+  lights up where it will land — or with the window's *Reattach* button, `Ctrl+Shift+D`,
+  or the palette.
+- **Nothing reconnects on the way.** Moving a session between the main window and its own
+  window re-parents the Remote Desktop control; it does not open a new connection. No
+  password is presented again, no black frame, no reconnection line in the log.
+- **A detached session is still one of your sessions.** It stays in the command palette
+  and in the session count — it only leaves the visible tab strip. The window's **cross
+  closes the session**, exactly as `Ctrl+W` does, and waits for the server to acknowledge
+  first.
+- **Full screen, one desktop per monitor.** `F11`, `Ctrl+Alt+Pause` or the button in the
+  caption strip hides the strip and the InfoBar and puts the remote desktop edge to edge
+  on the monitor the window sits on. Two windows on two monitors give two full-screen
+  remote desktops at once, with the main window still working behind them.
+- While full screen lasts, the window **never changes size**, and nothing is revealed when
+  you move the pointer to the top of the screen. That is on purpose: showing a bar would
+  resize the remote surface, and in *Dynamic* mode that renegotiates the remote
+  resolution — the picture would jump every time you brushed the top edge. Instead the
+  window **leaves full screen by itself the moment the session stops being connected**, so
+  the reason, *Reconnect* and *Copy diagnostics* are on screen when they matter. After a
+  reconnection it stays windowed; `F11` puts it back when you ask. Full screen can only be
+  entered on a connected session.
+- **Dynamic resolution follows the window it is actually in**, so resizing a detached
+  window resizes the remote desktop just as resizing the main one does.
+- **Closing the main window closes the application**, detached windows included. Every
+  session is still disconnected properly first — 5 seconds per session, 30 seconds
+  overall, raised from the previous 15-second ceiling now that the number of sessions is
+  no longer bounded by what fits in a tab strip.
+- **Where each window was is remembered**, per connection, in `settings.json`: position,
+  size and whether it was full screen, written when the window closes, when the session is
+  reattached, and when the application exits. A minimised window is not recorded. If the
+  monitor it was on is gone, the window opens on one that is actually connected instead of
+  off-screen.
+
+### Known limitations
+
+- **Mixed-DPI placement is approximate.** Screen coordinates are converted using the main
+  window's display scaling, so a remembered window lands exactly where it was on a desktop
+  where every monitor shares one scaling factor, and near enough on one where they do not.
+  What is guaranteed is a window you can reach, not pixel accuracy.
+- **Still one monitor per session.** A detached window fills one display; spanning a
+  single session across several monitors is a different feature and is still out of scope.
+
+### Verification
+
+`RemoteDeck.Core` is covered by **171 automated tests**, up from 155 — the close budget,
+the screen fitting and the saved geometry are all testable and tested. Everything that
+touches windows, drag gestures or the Remote Desktop control is covered by the new
+*Detached session windows* section of
+[`docs/manual-checklist.md`](docs/manual-checklist.md), which is **not yet run** — which
+is why this section says *unreleased*.
+
 ## 0.1.0 — 2026-08-31
 
 First usable version. RemoteDeck is a connection manager for Windows Remote Desktop:

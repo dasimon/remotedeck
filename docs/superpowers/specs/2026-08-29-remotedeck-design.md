@@ -701,6 +701,49 @@ rectangle entier tient encore sur le bureau courant, sinon la fenêtre revient a
 centrage par défaut : une position enregistrée sur un écran depuis débranché ne doit
 pas ouvrir la fenêtre hors de portée.
 
+**Fenêtres de session détachées (livrées le 2026-09-01).** Une session peut quitter la
+zone d'onglets pour sa propre fenêtre (`SessionWindow` : bandeau fin de 32 px, `InfoBar`
+de la session, zone d'accueil — ni panneau, ni barre d'onglets). **Détacher** : glisser
+l'onglet à plus de **40 px vers le bas** hors de la barre, `Ctrl+Shift+D`, ou *Detach
+current session* dans la palette. **Rattacher** : glisser la fenêtre par son bandeau
+au-dessus de la barre d'onglets (une bande d'accueil s'allume sous le curseur), son bouton
+*Reattach*, `Ctrl+Shift+D`, ou la palette. La **croix de la fenêtre ferme la session**, par
+le protocole du §6.5 — exactement comme `Ctrl+W`. Mécanique : le `WindowsFormsHost` change
+de conteneur dans l'arbre visuel WPF, rien de plus — aucune reconnexion, aucun secret
+re-présenté. Un onglet détaché **reste dans la collection `Tabs`** : il quitte la barre
+visible, pas la liste des sessions, de sorte que la palette, le compte de sessions et la
+fermeture globale continuent de le voir. Conception complète et sonde de faisabilité :
+`docs/superpowers/specs/2026-09-01-detached-windows-design.md`.
+
+**Plein écran d'une fenêtre détachée** (`F11`, `Ctrl+Alt+Pause` ou le bouton du bandeau ;
+possible **seulement sur une session connectée**) : le bandeau et l'`InfoBar` disparaissent,
+le bureau distant occupe la fenêtre bord à bord, et **sa taille ne change plus tant que le
+plein écran dure**. Rien n'est révélé au survol : une bande de révélation a été
+implémentée puis retirée, parce que redimensionner l'hôte renégocie la résolution distante
+en mode `Dynamic` — l'image sautait au moindre effleurement du haut de l'écran. À la place,
+la fenêtre **quitte le plein écran d'elle-même dès que la session cesse d'être
+`Connected`**, ce qui remet à l'écran la raison, *Reconnect* et *Copy diagnostics* au
+moment précis où elles servent. Après une reconnexion la fenêtre reste fenêtrée — pas de
+retour automatique, qui ferait sauter l'image une seconde fois à chaque micro-coupure ;
+`F11` la remet bord à bord quand l'utilisateur le décide.
+
+**Fermeture.** Fermer la fenêtre principale ferme l'application
+(`ShutdownMode.OnMainWindowClose`) : les `SessionWindow` sont volontairement **sans
+`Owner`** — une fenêtre possédée se réduirait avec le shell et se peindrait toujours
+au-dessus de lui, le contraire d'une session sur un second écran. `CloseAllAsync` couvre
+les sessions détachées comme les autres, avec le budget de `ClosePlan` : 5 s par session et
+**30 s au total**, contre 15 s au lot 4.
+
+**Géométrie mémorisée.** `settings.json` gagne une section `detachedWindows`, une entrée
+par connexion (position, taille, état plein écran), écrite quand une fenêtre détachée se
+ferme, au rattachement, et à l'extinction de l'application ; une fenêtre **minimisée**
+n'est pas enregistrée — elle ne décrit rien, et l'entrée déjà sur disque est la meilleure
+réponse. À la réouverture, `ScreenFit` ramène le rectangle mémorisé **sur un écran
+réellement connecté** avant de placer la fenêtre. Limite connue, à écrire plutôt qu'à
+redécouvrir : les coordonnées d'écran sont converties avec l'échelle DPI **du shell**, donc
+le placement est exact sur un bureau à DPI uniforme et approximatif en DPI mixte. La
+garantie tenue est une fenêtre que l'utilisateur peut atteindre, pas une position au pixel.
+
 **En-têtes de groupe : non collants, décision assumée.** Le §7.1 annonçait des
 en-têtes collants. Dans une `ListView` WPF ordinaire, le seul moyen de les rendre
 réellement collants est `ScrollViewer.CanContentScroll="False"` — qui désactive la
@@ -801,15 +844,35 @@ la documentation au lot 0, voir §2.
 | `F2` | Éditer la connexion sélectionnée |
 | `Entrée` | Connecter la sélection |
 | `Ctrl+N` | Nouvelle connexion |
+| `Ctrl+Shift+D` | Détacher la session active (shell) / rattacher (fenêtre détachée) |
+| `F11` | Plein écran de la fenêtre détachée active |
+| `Ctrl+Alt+Pause` | Idem `F11`, levé par le contrôle via `ContainerHandledFullScreen` |
 
-Livrés en totalité au 2026-08-31. Quatre d'entre eux — `Ctrl+Tab`, `Ctrl+Shift+Tab`,
+Les huit premiers sont livrés en totalité au 2026-08-31, les trois derniers au 2026-09-01
+avec les fenêtres détachées (§7.2). Quatre d'entre eux — `Ctrl+Tab`, `Ctrl+Shift+Tab`,
 `Ctrl+W`, `Ctrl+B` — rendent la main au champ de saisie qui a le focus ; `Ctrl+K` ne la
 rend jamais (§7.3, réserve 1). La palette elle-même : `↑`/`↓` déplacent la sélection en
 faisant défiler la liste, `Entrée` exécute la ligne sélectionnée, `Échap` ferme sans rien
 faire, un clic sur une ligne l'exécute directement (un clic à côté d'une ligne, sur la
 barre de défilement ou dans la marge, ne fait rien), et un clic hors de la fenêtre la
 ferme. Une liste de résultats vide ne ferme pas la palette sur `Entrée` : l'utilisateur
-est en train de taper.
+est en train de taper. La palette porte deux entrées de plus depuis le 2026-09-01 :
+*Detach current session*, visible depuis le shell quand l'onglet actif est ancré, et
+*Reattach this session to the main window*, visible depuis une fenêtre détachée seulement.
+
+**Routage par fenêtre active (2026-09-01).** Le hook bas niveau ne vise plus la fenêtre
+principale mais la fenêtre **active** de l'application. Au-dessus d'une `SessionWindow` :
+`Ctrl+W` ferme cette session (chemin de la croix, protocole §6.5), `Ctrl+K` ouvre la
+palette centrée sur cette fenêtre, `Ctrl+Shift+D` rattache, `F11` et `Ctrl+Alt+Pause`
+basculent son plein écran. `Ctrl+Tab`, `Ctrl+Shift+Tab` et `Ctrl+B` n'y ont pas de sens :
+ils ne sont **pas** interceptés et repartent vers le bureau distant plutôt que d'être
+avalés pour rien. Symétriquement, `F11` et `Ctrl+Alt+Pause` ne sont pris que lorsqu'une
+fenêtre détachée est active ; `Ctrl+Shift+D`, lui, l'est dans les deux cas — sans quoi on
+ne pourrait pas détacher depuis une session ancrée qui a le focus (défaut trouvé et corrigé
+par la sonde clavier du lot 6). `Ctrl+Alt+Pause` est surveillé sur **deux** codes
+virtuels — `VK_PAUSE` (`0x13`) et `VK_CANCEL` (`0x03`) — parce que Windows transforme
+`Ctrl`+`Pause` en Break : lu dans la table Win32 « Virtual-Key Codes », pas deviné. La
+règle du lot 5 (rendre la frappe au champ de saisie qui a le focus) s'applique inchangée.
 
 ### 7.5 Recherche
 
@@ -1011,6 +1074,7 @@ ActiveX. Couverts par une check-list de vérification manuelle tenue dans
 | **L3** | Panneau de connexions, groupes, recherche floue, favoris, éditeur de connexion, restylage du `PasswordBox` natif (§7.1) | **Fait** (2026-08-30). Coquille à deux colonnes (`Grid` + `GridSplitter`, panneau repliable) autour d'une zone de session unique. Panneau : liste virtualisée de 32 px, groupée (`★ Favorites` en tête, puis les groupes, puis `Ungrouped`), recherche floue insensible à la casse et aux accents avec surlignage des caractères touchés (`TextNormalizer` + `ConnectionFilter` dans `Core`, debounce 120 ms, filtrage de l'instantané mémoire — aucune requête SQL par frappe), étoile de favori, état vide rappelant les raccourcis, repli propre en « base indisponible ». Éditeur de connexion modal (`ConnectionEditorWindow`, validation par `ConnectionRules`) ; connexion depuis la liste avec l'identifiant du coffre, ou invite CredSSP du contrôle quand il n'y en a pas. Réglages d'interface dans `%APPDATA%\RemoteDeck\settings.json` (§7.2). `PasswordBox` natif restylé Fluent + texte indicatif par `Adorner`, champs qui s'étirent (§7.1) — les deux réserves d'ergonomie de R4 sont levées. Raccourcis : `Ctrl+B`, `Ctrl+F`, `F2`, `Entrée`, `Ctrl+N`, `Suppr` (suppression en deux temps dans l'`InfoBar`, désarmée après 5 s — jamais de `MessageBox`). 65 tests verts à la clôture. **Reporté** : résolution dynamique (D6) au lot 4, palette `Ctrl+K` au lot 5 ; en-têtes de groupe **non collants**, la virtualisation est conservée (§7.2). |
 | **L4** | Onglets multi-sessions, `Ctrl+Tab`, `ReconnectPolicy`, fermeture propre, résolution dynamique (D6) | **Fait** (2026-08-30). Onglets multi-sessions selon D12 : barre custom (`SessionTabStrip`, onglets de 34 px, coins arrondis, pastille d'état verte/ambre/rouge, réordonnancement au glisser, fermeture au clic milieu, animation 150 ms) au-dessus d'un `Grid` où **tous** les `WindowsFormsHost` restent instanciés — seul l'actif est `Visible`, les autres `Hidden`, donc changer d'onglet ne coupe aucune session. Une connexion a au plus un onglet : la reconnecter ramène le sien au premier plan. `RdpSession` (une session = un onglet) porte la machine à états à 8 valeurs du §6.2, le compte à rebours de reconnexion et la boucle de résolution. Reconnexion automatique (§6.3) : `ReconnectPolicy` dans `Core`, six codes réseau seulement, backoff 2/5/10/30/60 s, 5 tentatives, compte à rebours visible et annulable, **secret re-fourni par le coffre à chaque tentative**. Diagnostic (§6.4) : `DisconnectReason` (47 codes documentés, 8 catégories) pilote le libellé et la sévérité de l'`InfoBar` ; actions *Reconnect*, *Cancel*, *Copy diagnostics*, *Disconnect*. Résolution dynamique (D6) livrée : `UpdateSessionDisplaySettings` après un anti-rebond de 300 ms, taille en pixels physiques (`VisualTreeHelper.GetDpi`), plancher 640×480, et **repli une-fois-pour-toutes sur `SmartSizing`** si le contrôle refuse le redimensionnement — un contrôle qui en refuse un les refuse tous, on ne réessaie plus pour cette session. Fermeture propre (§6.5) appliquée à chaque onglet et à la sortie (5 s par onglet, 15 s au total, séquentiel). Raccourcis : `Ctrl+Tab` / `Ctrl+Shift+Tab` (cyclique), `Ctrl+W`. 130 tests verts à la clôture. **Reste au lot 5** : palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (`Ctrl+W` reste avalé dans un `TextBox`, §7.3), `.resx` fr. **Sonde humaine de fin de lot à jouer par David** — coupure réseau réelle, redimensionnement, `query session` : voir la section « Lot 4 » de `docs/manual-checklist.md`, non cochée à ce jour. |
 | **L5** | Palette `Ctrl+K`, import `.rdp`, filtrage du hook clavier sur les champs de saisie (§7.3), `.resx` fr | **Fait** (2026-08-31). Palette de commandes (`CommandPaletteWindow`, fenêtre possédée et non `Topmost` — §7.3 airspace) sur `Ctrl+K` : connexions enregistrées, onglets ouverts et six commandes dans une même liste, filtrage flou insensible à la casse et aux accents avec surlignage (`PaletteFilter` dans `Core`, tous les mots exigés, priorité des commandes, plafond après tri) ; `↑`/`↓`, `Entrée`, `Échap`, clic sur une ligne, clic hors de la fenêtre pour fermer. Import (§8) : `RdpFileImporter` et `MstscRegistryImporter` purs dans `Core`, quatorze clés `.rdp` documentées, `password 51:b:` jamais lu, registre `mstsc` ; `ImportWindow` prévisualise, date chaque ligne sur `(Host, Port)` sans casse (*New* / *Already imported* / *Duplicate of « X »*), n'écrit rien avant *Import* et ne crée **aucun** identifiant — le nom d'utilisateur trouvé est signalé, pas stocké. Réserve 1 du §7.3 **levée** : `ShortcutInterceptor.ShouldIntercept` rend `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W` et `Ctrl+B` au champ de saisie qui a le focus ; `Ctrl+K` reste toujours intercepté. Localisation (§9) : 198 clés, anglais neutre + français complet, culture de Windows, `REMOTEDECK_UI_CULTURE` pour vérifier. 155 tests verts à la clôture. **Sonde humaine de fin de lot à jouer par David** — palette, import réel, `Ctrl+W` dans un champ de texte, passe en français : voir la section « Lot 5 » de `docs/manual-checklist.md`, non cochée à ce jour. Les cinq critères du §1 restent donc suspendus à cette sonde et à celles des lots 2 et 4 (§1). |
+| **FD** | **Fenêtres détachées** — `SessionWindow`, détacher / rattacher, plein écran par fenêtre, routage clavier par fenêtre active, géométrie mémorisée | **Fait** (2026-09-01), sur la conception `docs/superpowers/specs/2026-09-01-detached-windows-design.md`. Une session sort de la barre d'onglets pour sa propre fenêtre par glisser (**40 px vers le bas**), `Ctrl+Shift+D` ou la palette ; elle revient par glisser du bandeau sur la barre, le bouton *Reattach*, `Ctrl+Shift+D` ou la palette ; la croix de la fenêtre ferme la session (§6.5). Le déplacement est un simple changement de conteneur du `WindowsFormsHost` — aucune reconnexion — et l'onglet détaché **reste dans `Tabs`**. Plein écran bord à bord par `F11` / `Ctrl+Alt+Pause` / le bouton, sur session **connectée** seulement, sans rien révéler au survol : la fenêtre en sort d'elle-même dès que la session cesse d'être connectée, pour que la raison et *Reconnect* soient visibles. `ShutdownMode.OnMainWindowClose` (fenêtres sans `Owner`) et `ClosePlan` : 5 s par session, **30 s** au total. Géométrie par connexion dans `settings.json` (`detachedWindows`), replacée par `ScreenFit` sur un écran réellement connecté ; exacte en DPI uniforme, approximative en DPI mixte. **171 tests verts** à la clôture. **Sonde humaine à jouer par David** — deux plein écran simultanés, `query session` après fermeture, second écran débranché : voir la section « Fenêtres détachées » de `docs/manual-checklist.md`, non cochée à ce jour. |
 
 La politique de certificat n'est plus un contenu de lot : R5 a fermé le sujet
 (§6.6, négatif confirmé).
