@@ -38,4 +38,19 @@ public sealed class DetachedWindowPlacementTests : IDisposable
         Assert.NotNull(settings.DetachedWindows);
         Assert.Empty(settings.DetachedWindows);
     }
+
+    /// <summary>An absent section keeps the property initialiser; an explicit null overwrites it,
+    /// and settings.json is a file a user can open in an editor. Load() answers with an empty map
+    /// either way, which is what lets the shell index it without a guard.</summary>
+    [Fact]
+    public void A_settings_file_whose_section_is_null_loads_with_an_empty_map()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        File.WriteAllText(_path, """{ "paneWidth": 320, "detachedWindows": null }""");
+
+        var settings = new SettingsStore(_path).Load();
+
+        Assert.NotNull(settings.DetachedWindows);
+        Assert.Empty(settings.DetachedWindows);
+    }
 }

@@ -540,13 +540,6 @@ internal sealed partial class SessionsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The shell's current call site, which still keeps budgets of its own. Both are now
-    /// <see cref="ClosePlan"/>'s — per session and overall — so the arguments are ignored; this
-    /// overload goes when the shell stops passing them.
-    /// </summary>
-    public Task CloseAllAsync(TimeSpan perTab, TimeSpan overall) => CloseAllAsync();
-
-    /// <summary>
     /// Last-resort teardown for the second closing pass: whatever survived <see cref="CloseAllAsync"/>
     /// is disposed without any protocol, and its host leaves the container.
     /// </summary>

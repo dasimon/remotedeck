@@ -937,6 +937,24 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Detach current session.
+        /// </summary>
+        public static string Palette_DetachSession {
+            get {
+                return ResourceManager.GetString("Palette_DetachSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reattach this session to the main window.
+        /// </summary>
+        public static string Palette_ReattachSession {
+            get {
+                return ResourceManager.GetString("Palette_ReattachSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connection.
         /// </summary>
         public static string Editor_Title {
