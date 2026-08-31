@@ -1,0 +1,131 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.FullScreenBar"
+                 x:ClassModifier="internal"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+                 Title="{Binding Title}"
+                 Height="32"
+                 SizeToContent="Width"
+                 Topmost="True"
+                 ShowActivated="False"
+                 ShowInTaskbar="False"
+                 WindowStyle="None"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="Manual"
+                 WindowBackdropType="None"
+                 WindowCornerPreference="Round">
+    <!-- mstsc's connection bar: a window of its own, floating over a full-screen session, that
+         slides in when the pointer reaches the top of the screen.
+
+         A window and not a piece of SessionWindow, for two reasons the codebase has already paid
+         for. Chrome revealed *inside* the window shrinks the host area, and in Dynamic display mode
+         that renegotiates the remote resolution — the remote image would jump because the pointer
+         brushed the top of the screen. And the session is a WindowsFormsHost, which wins every
+         airspace fight: a WPF overlay inside the window cannot paint over the remote desktop at
+         all. A separate top-level window passes over it without ever touching the host's size,
+         which is exactly why mstsc's bar is its own window too.
+
+         WindowBackdropType is None on purpose: this bar sits over a remote desktop, and a Mica or
+         Acrylic backdrop would let that desktop show through the one surface that has to stay
+         readable. The FluentWindow template then paints the opaque theme background.
+
+         No SystemThemeWatcher.Watch: the watcher keeps every watched window in a static list and
+         would need a matching UnWatch. Nothing here needs it — the colours below are all
+         DynamicResource, and ApplicationThemeManager swaps the application dictionaries on a
+         light/dark change, so the bar follows the theme without being watched at all. -->
+    <ui:FluentWindow.Resources>
+        <!-- The same 8 px dot as the tab strip and the detached caption, and for the same reason:
+             the view-model publishes a resource *key*, not a Brush, so the dot follows a light/dark
+             switch. Local rather than shared, exactly as SessionWindow keeps its own — the three
+             differ in nothing but a margin, and a shared dictionary would be a file for one
+             Setter. -->
+        <Style x:Key="StatusDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="12,0,8,0" />
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorSuccessBrush">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCautionBrush">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCriticalBrush">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- BasedOn is not decoration: an explicit Style replaces the implicit one the WPF-UI
+             dictionary supplies, so without it the button falls back to the plain WPF template —
+             Appearance stops meaning anything and the Icon is never rendered, which is a row of
+             blank rectangles on the bar. -->
+        <Style x:Key="BarButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Appearance" Value="Transparent" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <!-- Painted here and not left to the window: whatever the FluentWindow template does with its
+         own Background, this surface has to stay opaque — it is read against a remote desktop, not
+         against a theme. One line underneath and nothing else: the bar is flush against the top of
+         the screen, so its other three edges have no edge to draw. -->
+    <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+            BorderThickness="0,0,0,1"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
+
+            <TextBlock Grid.Column="1"
+                       Text="{Binding Title}"
+                       VerticalAlignment="Center"
+                       MaxWidth="260"
+                       TextTrimming="CharacterEllipsis" />
+
+            <TextBlock Grid.Column="2"
+                       Text="{Binding Subtitle}"
+                       VerticalAlignment="Center"
+                       Margin="8,0,12,0"
+                       MaxWidth="260"
+                       Opacity="0.7"
+                       TextTrimming="CharacterEllipsis" />
+
+            <ui:Button x:Name="ReattachButton" Grid.Column="3"
+                       Style="{StaticResource BarButtonStyle}"
+                       Icon="{ui:SymbolIcon TabDesktop20}"
+                       ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
+                       Click="OnReattachClick" />
+
+            <!-- The bar exists only while full screen lasts, so this button only ever leaves it;
+                 SessionWindow_FullScreen is the same toggle's wording as in the caption strip. -->
+            <ui:Button Grid.Column="4"
+                       Style="{StaticResource BarButtonStyle}"
+                       Icon="{ui:SymbolIcon FullScreenMinimize20}"
+                       ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
+                       Click="OnLeaveFullScreenClick" />
+
+            <ui:Button Grid.Column="5"
+                       Style="{StaticResource BarButtonStyle}"
+                       Margin="2,0,4,0"
+                       Icon="{ui:SymbolIcon Dismiss24}"
+                       ToolTip="{x:Static res:Strings.SessionWindow_Close}"
+                       Click="OnCloseClick" />
+        </Grid>
+    </Border>
+</ui:FluentWindow>
