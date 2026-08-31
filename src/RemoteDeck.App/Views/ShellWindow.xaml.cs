@@ -945,6 +945,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private void Reattach(SessionWindow window)
     {
         ClearReattachHint();
+        if (_closeInProgress)
+        {
+            // Same refusal as DetachTab: the close-all pass is walking the tabs, and a host moved
+            // between two windows behind it is a control it can no longer find where it left it.
+            return;
+        }
+
         // Before the window goes: a session coming back is a window disappearing, and the next
         // detach of this connection should still find where the user had put it.
         RememberPlacement(window);

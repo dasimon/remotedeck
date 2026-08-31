@@ -274,14 +274,18 @@ internal sealed partial class SessionsViewModel : ObservableObject
     /// The reverse: the host goes back into the shell's container, the tab becomes an ordinary tab
     /// again and is activated, and the now-empty window is closed.
     /// </summary>
-    /// <returns>False when the tab is not detached, or when the move failed — and a failed move
-    /// leaves the session in its window, still visible and still usable, rather than alive with
-    /// nothing to show it.</returns>
+    /// <returns>False when the tab is not detached, when a close is already running over it, or when
+    /// the move failed — and a failed move leaves the session in its window, still visible and still
+    /// usable, rather than alive with nothing to show it.</returns>
     public bool Reattach(SessionTabViewModel tab)
     {
         ArgumentNullException.ThrowIfNull(tab);
 
-        if (!_detached.TryGetValue(tab, out var window))
+        // Same guard as Detach, for the same reason: between RequestClose and Disconnect() the §6.5
+        // protocol owns that control, and moving it from one top-level window to another underneath
+        // it is exactly the zombie session §6.5 exists to prevent. Guarded here rather than in the
+        // window because the button, Ctrl+Shift+D and the caption drag all end up on this line.
+        if (!_detached.TryGetValue(tab, out var window) || _closing.ContainsKey(tab))
         {
             return false;
         }
