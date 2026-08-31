@@ -40,6 +40,12 @@ internal sealed class RdpSessionHost : IDisposable
     /// </summary>
     public event Action? LoggedOn;
 
+    /// <summary>Raised when the user asks for full screen (Ctrl+Alt+Break) and the container owns the switch.</summary>
+    public event Action? RequestGoFullScreen;
+
+    /// <summary>Raised when the user asks to leave full screen and the container owns the switch.</summary>
+    public event Action? RequestLeaveFullScreen;
+
     public bool IsConnected => _client.Connected != 0;
 
     public RdpSessionHost(RdpAxHost host)
@@ -75,6 +81,11 @@ internal sealed class RdpSessionHost : IDisposable
         _events.OnLogonError += error => Sink("OnLogonError", () => ProbeLog.Write("session", $"OnLogonError lError={error}"));
         _events.OnFatalError += code => Sink("OnFatalError", () => ProbeLog.Write("session", $"OnFatalError errorCode={code}"));
         _events.OnDisconnected += OnDisconnected;
+
+        // Container-handled full screen: Ctrl+Alt+Break stops toggling the control's own full-screen
+        // window and raises these instead, so RemoteDeck keeps its own chrome (design §5).
+        _events.OnRequestGoFullScreen += () => Sink("OnRequestGoFullScreen", () => RequestGoFullScreen?.Invoke());
+        _events.OnRequestLeaveFullScreen += () => Sink("OnRequestLeaveFullScreen", () => RequestLeaveFullScreen?.Invoke());
 
         // RequestClose contract: if the user is logged on, the control asks before closing.
         // Returning true lets it disconnect; OnDisconnected then completes the close.
@@ -139,6 +150,7 @@ internal sealed class RdpSessionHost : IDisposable
         // only, which is exactly the state Configure runs in.
         // https://learn.microsoft.com/windows/win32/termserv/imsrdpclientadvancedsettings2-enableautoreconnect
         advanced.EnableAutoReconnect = false;
+        EnableContainerHandledFullScreen();
         advanced.RedirectClipboard = settings.RedirectClipboard;   // IMsRdpClientAdvancedSettings5
         advanced.RedirectDrives = settings.RedirectDrives;         // IMsRdpClientAdvancedSettings
         advanced.RedirectPrinters = settings.RedirectPrinters;     // IMsRdpClientAdvancedSettings
@@ -162,6 +174,28 @@ internal sealed class RdpSessionHost : IDisposable
         if (settings.UseWebAccount)
         {
             TryEnableWebAccount();
+        }
+    }
+
+    /// <summary>
+    /// Hands the full-screen switch to the container. The documented "no effect" caveat applies to the
+    /// scripting-safe coclass only; RemoteDeck uses MsRdpClient12NotSafeForScripting.
+    /// https://learn.microsoft.com/windows/win32/termserv/imstscadvancedsettings-containerhandledfullscreen
+    /// </summary>
+    public bool EnableContainerHandledFullScreen()
+    {
+        try
+        {
+            // The interop types this COM BOOL as int (verified by reflection on
+            // Interop.MSTSCLib.dll: IMsRdpClientAdvancedSettings8.ContainerHandledFullScreen is
+            // System.Int32), hence 1 rather than true.
+            _client.AdvancedSettings9.ContainerHandledFullScreen = 1;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("display", $"ContainerHandledFullScreen refused: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            return false;
         }
     }
 
