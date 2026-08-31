@@ -10,8 +10,9 @@ namespace RemoteDeck.App.Views;
 /// on hover or on the active tab, and drag-to-reorder.
 ///
 /// The control owns no session and closes nothing itself. Every gesture ends up on
-/// <see cref="SessionsViewModel"/>: a click activates, a middle-click or the cross closes, a drag
-/// calls <see cref="SessionsViewModel.Move"/>.
+/// <see cref="SessionsViewModel"/>: a click activates, a middle-click or the cross closes, a
+/// sideways drag calls <see cref="SessionsViewModel.Move"/>, and a drag <em>out</em> of the strip
+/// raises <see cref="DetachRequested"/> for the shell to answer.
 /// </summary>
 /// <remarks>
 /// The view-model is internal (it holds <c>RdpSession</c>), so <see cref="ViewModel"/> is too —
@@ -26,6 +27,14 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
     /// <summary>How far the pointer must travel, in device-independent pixels, before a press turns
     /// into a reorder. Below it the gesture is a plain click that only activates the tab.</summary>
     private const double DragThreshold = 4;
+
+    /// <summary>
+    /// How far <em>down</em> the pointer must travel, in device-independent pixels, before the drag
+    /// stops being a reorder and becomes a detach. Well clear of <see cref="DragThreshold"/> and of
+    /// the 34 px tab itself, so the slop of an ordinary sideways drag can never pull a session out
+    /// of the window: 40 px is a deliberate move away from the strip.
+    /// </summary>
+    private const double DetachThreshold = 40;
 
     private SessionsViewModel? _viewModel;
 
@@ -55,6 +64,24 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
             TabItems.ItemsSource = value.Tabs;
         }
     }
+
+    /// <summary>
+    /// A tab has been pulled out of the strip. The point is where the pointer was <em>on screen</em>,
+    /// in device pixels, when the gesture ended; the shell opens the session's own window under it.
+    ///
+    /// The strip has already released the mouse and forgotten the gesture by the time this runs: a
+    /// window shown while a capture is still held on a tab never sees the button come up, and the
+    /// strip would stay convinced a drag is in progress.
+    /// </summary>
+    /// <remarks>Internal, like <see cref="ViewModel"/>, because
+    /// <see cref="SessionTabViewModel"/> is.</remarks>
+    internal event Action<SessionTabViewModel, System.Windows.Point>? DetachRequested;
+
+    /// <summary>Shows — or hides — the band that says a detached window dragged over the strip would
+    /// be taken back here. Driven by the shell, which is the only thing that knows where the
+    /// dragged window is.</summary>
+    public void ShowDropHint(bool on) =>
+        DropHint.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Left press: activates immediately — a tab must switch on press, not on release —
     /// and arms the drag, which only starts once the pointer has actually travelled.</summary>
@@ -98,6 +125,22 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
         }
 
         var position = e.GetPosition(this);
+
+        // Pulled down and out of the strip: the gesture stops being a reorder and becomes a detach.
+        // Tested before the reorder below, so a drag that leaves the strip downwards never also
+        // shuffles it on the way out — and only downwards, since the strip has the session area
+        // under it and the window's own title bar above.
+        if (position.Y - _pressOrigin.Y > DetachThreshold)
+        {
+            var detaching = _pressed;
+            // Read while the strip still has the pointer; the capture goes before anything is
+            // raised, because the handler opens a window.
+            var screenPoint = PointToScreen(position);
+            EndDrag();
+            DetachRequested?.Invoke(detaching, screenPoint);
+            return;
+        }
+
         if (!_dragging)
         {
             if (Math.Abs(position.X - _pressOrigin.X) <= DragThreshold

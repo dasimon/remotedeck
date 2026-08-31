@@ -44,6 +44,14 @@
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                 </Trigger>
+                <!-- A detached session keeps its tab in SessionsViewModel.Tabs — Move indexes that
+                     collection, and the palette and the close-all pass both count it — so the strip
+                     hides the tab instead of removing it, and the numbering never shifts. Collapsed
+                     rather than Hidden: a hidden tab would still take its 34 px of strip. Either way
+                     it stops being hit-testable, so no reorder drag can land on it. -->
+                <DataTrigger Binding="{Binding IsDetached}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
                 <DataTrigger Binding="{Binding IsActive}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
@@ -91,38 +99,54 @@
         </Style>
     </UserControl.Resources>
 
-    <!-- Horizontal scroll only: more tabs than the window is wide must not make the strip taller. -->
-    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Disabled"
-                  PanningMode="HorizontalOnly">
-        <ItemsControl x:Name="TabItems">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Style="{StaticResource TabRootStyle}"
-                            ToolTip="{Binding Subtitle}"
-                            MouseLeftButtonDown="OnTabLeftButtonDown"
-                            MouseMove="OnTabMouseMove"
-                            MouseLeftButtonUp="OnTabLeftButtonUp"
-                            MouseDown="OnTabMouseDown">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse Style="{StaticResource StatusDotStyle}" />
-                            <TextBlock Text="{Binding Title}"
-                                       VerticalAlignment="Center"
-                                       MaxWidth="180"
-                                       TextTrimming="CharacterEllipsis" />
-                            <ui:Button Style="{StaticResource TabCloseStyle}"
-                                       Icon="{ui:SymbolIcon Dismiss16}"
-                                       Command="{Binding CloseCommand}"
-                                       ToolTip="{x:Static res:Strings.Session_CloseToolTip}" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </ScrollViewer>
+    <Grid>
+        <!-- Horizontal scroll only: more tabs than the window is wide must not make the strip taller. -->
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      PanningMode="HorizontalOnly">
+            <ItemsControl x:Name="TabItems">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource TabRootStyle}"
+                                ToolTip="{Binding Subtitle}"
+                                MouseLeftButtonDown="OnTabLeftButtonDown"
+                                MouseMove="OnTabMouseMove"
+                                MouseLeftButtonUp="OnTabLeftButtonUp"
+                                MouseDown="OnTabMouseDown">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Style="{StaticResource StatusDotStyle}" />
+                                <TextBlock Text="{Binding Title}"
+                                           VerticalAlignment="Center"
+                                           MaxWidth="180"
+                                           TextTrimming="CharacterEllipsis" />
+                                <ui:Button Style="{StaticResource TabCloseStyle}"
+                                           Icon="{ui:SymbolIcon Dismiss16}"
+                                           Command="{Binding CloseCommand}"
+                                           ToolTip="{x:Static res:Strings.Session_CloseToolTip}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Where a detached window dropped on the strip would land. Shown by ShowDropHint while
+             one is being dragged over it, and never hit-testable: the window being dragged is the
+             one under the pointer, not this. MinHeight keeps the band visible even when every tab
+             is detached and the strip below it has measured to nothing. -->
+        <Border x:Name="DropHint"
+                Visibility="Collapsed"
+                IsHitTestVisible="False"
+                MinHeight="34"
+                CornerRadius="6"
+                BorderThickness="2"
+                BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                Opacity="0.6" />
+    </Grid>
 </UserControl>
