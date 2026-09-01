@@ -47,10 +47,14 @@
     <CornerRadius x:Key="RdRadius">6</CornerRadius>
     <CornerRadius x:Key="RdRadiusLg">8</CornerRadius>
 
-    <!-- Heights: a list row, a session tab, a button or field inside a bar. -->
+    <!-- Heights: a list row, a session tab, a button or field inside a bar, and the
+         palette's own row — taller than a list row because it stacks a title over a
+         subtitle. Named here rather than written into the palette, so the closed set
+         stays the closed set and a stray height is still a review finding. -->
     <sys:Double x:Key="RdRowHeight">32</sys:Double>
     <sys:Double x:Key="RdTabHeight">34</sys:Double>
     <sys:Double x:Key="RdControlHeight">28</sys:Double>
+    <sys:Double x:Key="RdPaletteRowHeight">42</sys:Double>
 
     <!-- ============================================================================
          The state pill (controls:StatusTag). It lives here, and not in the pane, because
