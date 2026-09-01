@@ -96,7 +96,7 @@
                              carrying an icon tile, a title and a subtitle cannot be a 32 px list row.
                              The plan's task 4 asks for it by name. -->
                         <Style TargetType="ListViewItem">
-                            <Setter Property="Height" Value="42" />
+                            <Setter Property="Height" Value="{StaticResource RdPaletteRowHeight}" />
                             <Setter Property="Margin" Value="2,0" />
                             <Setter Property="Padding" Value="8,0" />
                             <Setter Property="Foreground" Value="{DynamicResource RdText}" />
