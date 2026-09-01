@@ -205,7 +205,14 @@
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource RdSurface3}"
+                                <!-- Not RdSurface3: measured, it lands one level off the pane's own
+                                     ground in the light theme — the very reason the focus state
+                                     above dropped it. The subtle fill reads in both (9 levels light,
+                                     13 dark), and the hairline is what actually draws the chip:
+                                     15 and 16, the same header whichever theme is on. -->
+                                <Border Background="{DynamicResource RdSurface2}"
+                                        BorderBrush="{DynamicResource RdBorder}"
+                                        BorderThickness="1"
                                         CornerRadius="{StaticResource RdRadiusSm}"
                                         Padding="8,3" Margin="6,6,6,2">
                                     <TextBlock Text="{Binding Name}"

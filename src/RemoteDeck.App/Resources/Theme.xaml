@@ -20,6 +20,9 @@
     <SolidColorBrush x:Key="RdSurface0" Color="{DynamicResource ApplicationBackgroundColor}" />
     <SolidColorBrush x:Key="RdSurface1" Color="{DynamicResource CardBackgroundFillColorDefault}" />
     <SolidColorBrush x:Key="RdSurface2" Color="{DynamicResource SubtleFillColorSecondary}" />
+    <!-- RdSurface3 has no consumer left, and one measurement explains why: in the light theme it
+         composites one level off the window's own ground. It is the top of the ladder, not a fill
+         anything can be seen on — a view that needs a visible surface takes RdSurface2 and an edge. -->
     <SolidColorBrush x:Key="RdSurface3" Color="{DynamicResource ControlFillColorSecondary}" />
 
     <!-- Borders. RdBorderStrong is an edge that has to be seen against the surface it encloses —
