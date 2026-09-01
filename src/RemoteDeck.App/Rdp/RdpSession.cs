@@ -182,6 +182,37 @@ internal sealed class RdpSession : IDisposable
     /// <summary>Raised on every state change and on every countdown tick. UI thread.</summary>
     public event Action? Changed;
 
+    /// <summary>Raised when the hosting window should enter (true) or leave (false) full screen.</summary>
+    public event Action<bool>? FullScreenRequested;
+
+    /// <summary>
+    /// Tells the session its host has moved to another window. The size subscription and the DPI both
+    /// belong to the new parent: without this, dynamic resolution keeps measuring the old window —
+    /// exactly the flaw the spike found on the alternative technique (design §2).
+    /// </summary>
+    public void AttachedTo(FrameworkElement newParent)
+    {
+        ArgumentNullException.ThrowIfNull(newParent);
+        if (_disposed)
+        {
+            return;
+        }
+
+        Host.SizeChanged -= OnHostSizeChanged;
+        Host.SizeChanged += OnHostSizeChanged;
+
+        ProbeLog.Write("session", $"'{Connection.Name}': host attached to {newParent.GetType().Name}");
+
+        if (State == SessionState.Connected && Connection.DisplayMode == DisplayMode.Dynamic)
+        {
+            // Debounced: the new window may still be laying out, so let the timer measure it once
+            // it has settled rather than reading a stale ActualWidth/ActualHeight now.
+            _resizeTimer.Stop();
+            _resizeTimer.Interval = ResizeDebounce;
+            _resizeTimer.Start();
+        }
+    }
+
     /// <summary>
     /// Creates the control and runs the first connection attempt. <see cref="Host"/> must already be
     /// in the visual tree, otherwise the OCX has no handle to be created on.
@@ -385,6 +416,8 @@ internal sealed class RdpSession : IDisposable
         host.Connected += OnHostConnected;
         host.LoggedOn += OnHostLoggedOn;
         host.Disconnected += OnHostDisconnected;
+        host.RequestGoFullScreen += () => Post(() => FullScreenRequested?.Invoke(true));
+        host.RequestLeaveFullScreen += () => Post(() => FullScreenRequested?.Invoke(false));
         _sessionHost = host;
         ProbeLog.Write("session", $"'{Connection.Name}': control v{_version.Label} created");
         return host;

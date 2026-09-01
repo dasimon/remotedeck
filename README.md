@@ -1,15 +1,17 @@
 # RemoteDeck
 
 A keyboard-first Remote Desktop (RDP) connection manager for Windows 10/11.
-Tabs, groups, fuzzy search, a `Ctrl+K` command palette, import from `.rdp` files and
-from the machines `mstsc` remembers, and a credential vault backed by Windows DPAPI —
-built on the native Remote Desktop ActiveX control, so the RDP protocol itself is
-Microsoft's, not ours. The interface is available in English and French.
+Tabs, sessions you can pull out into their own window, groups, fuzzy search, a `Ctrl+K`
+command palette, import from `.rdp` files and from the machines `mstsc` remembers, and a
+credential vault backed by Windows DPAPI — built on the native Remote Desktop ActiveX
+control, so the RDP protocol itself is Microsoft's, not ours. The interface is available
+in English and French.
 
 > Status: **pre-alpha**. Lots 0–5 are done: multi-session tabs, automatic
 > reconnection, dynamic resolution, a searchable connection pane, an editor, the
 > credential vault, the command palette, connection import and a fully translated
-> interface. See [`CHANGELOG.md`](CHANGELOG.md) for what 0.1.0 contains.
+> interface. See [`CHANGELOG.md`](CHANGELOG.md) for what 0.1.0 contains — and for
+> detached session windows, which are in the tree but unreleased.
 
 ## Requirements
 
@@ -58,7 +60,9 @@ see below.
 couple of letters and press `Enter`. One list holds three kinds of entry:
 
 - **Commands** — *New connection*, *Import connections…*, *Manage credentials*,
-  *Toggle the pane*, *Close session*, *Reconnect*.
+  *Toggle the pane*, *Close session*, *Reconnect*, and — depending on where you opened
+  the palette from — *Detach current session* or *Reattach this session to the main
+  window*.
 - **Open tabs** — jump straight to a session you already have.
 - **Every saved connection** — including the ones the search box is currently
   filtering out. Choosing one connects it, or brings its tab forward if it is
@@ -102,6 +106,41 @@ Close a tab with `Ctrl+W`, the cross, or a middle-click. Closing the window clos
 every session properly first — the app waits for the servers to acknowledge, so
 sessions are left *disconnected*, never as zombies.
 
+**Detached windows — one session per monitor.** A session can leave the tab strip and
+live in its own window. **Drag a tab more than 40 px downwards**, out of the strip, and
+it becomes a window under your cursor; `Ctrl+Shift+D` and the palette
+(*Detach current session*) do the same thing without the mouse. To bring it back, drag
+the window by its caption strip onto the tab strip — a drop band lights up — or use its
+**Reattach** button, `Ctrl+Shift+D`, or the palette. Nothing reconnects on the way:
+moving a session between the main window and its own window is a re-parenting, not a new
+connection, so the desktop you were looking at is still there.
+
+A detached session is still one of your sessions — it is in the command palette and in
+the session count, it just is not in the visible strip. The window's **cross closes the
+session**, the same way `Ctrl+W` does; and closing the main window closes the
+application, detached windows included, still waiting for each server to acknowledge
+(5 seconds per session, 30 overall).
+
+**Full screen.** `F11`, `Ctrl+Alt+Pause`, or the button in the caption strip puts a
+detached window in full screen on the monitor it sits on: the caption strip and the
+InfoBar go away and the remote desktop is edge to edge. Two windows on two monitors give
+you two full-screen remote desktops at once. While it lasts, the window never changes
+size — so nothing appears when you move the pointer to the top of the screen. That is
+deliberate: showing a bar would resize the remote surface, and in *Dynamic* mode that
+renegotiates the remote resolution, making the picture jump every time you brush the top
+edge. Instead the window **leaves full screen on its own the moment the session stops
+being connected**, so the reason, *Reconnect* and *Copy diagnostics* are on screen when
+they matter. After a reconnection it stays windowed; press `F11` when you want it back.
+Full screen can only be entered on a connected session.
+
+Where a detached window was — position, size and whether it was full screen — is
+remembered per connection in `settings.json`, and reapplied the next time you detach that
+connection. A window that was minimised is not recorded. If the monitor it was on is
+gone, the window is placed on one that is actually connected rather than off-screen.
+On a desktop mixing display scaling factors the placement is approximate: screen
+coordinates are converted with the main window's DPI scale, so what is guaranteed is a
+window you can reach, not pixel accuracy.
+
 **Automatic reconnection.** When a session drops on a network failure — a timeout or
 a lost socket — RemoteDeck reconnects on its own: five attempts, waiting 2 s, 5 s,
 10 s, 30 s then 60 s, with a visible countdown you can cancel at any time. It
@@ -117,10 +156,11 @@ resolution follows, sharp, instead of being stretched. Against a server that ref
 it, the session falls back to scaling the image and says so in the log.
 
 Connections and credentials live in `%APPDATA%\RemoteDeck\connections.db`.
-Window and pane layout — pane width, collapsed state, window size and position —
-lives beside it in **`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside
-the migrated database. Deleting that file only costs you the layout; the app
-falls back to its defaults without complaining.
+Window and pane layout — pane width, collapsed state, window size and position, and
+where each detached session window was — lives beside it in
+**`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside the migrated database.
+Deleting that file only costs you the layout; the app falls back to its defaults
+without complaining.
 
 ### Keyboard
 
@@ -134,7 +174,14 @@ falls back to its defaults without complaining.
 | `Delete` | Delete the selected connection — press twice; the first press only arms it, and the confirmation expires after 5 seconds |
 | `Ctrl+B` | Collapse or restore the connection pane |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous session tab (cycles; the session you leave stays connected) |
-| `Ctrl+W` | Close the active session tab |
+| `Ctrl+W` | Close the active session tab — or, in a detached window, that session |
+| `Ctrl+Shift+D` | Detach the active session into its own window — or reattach it, pressed from the detached window |
+| `F11` / `Ctrl+Alt+Pause` | Full screen on and off, in a detached window |
+
+Shortcuts go to the **active window**. In a detached session window, `Ctrl+W` closes that
+session, `Ctrl+K` opens the palette over it, `Ctrl+Shift+D` reattaches it and `F11`
+toggles its full screen; `Ctrl+Tab`, `Ctrl+Shift+Tab` and `Ctrl+B` have nothing to act on
+there, so they are left to the remote desktop instead of being swallowed.
 
 Search is fuzzy and ignores case and accents; it matches on name, host and group
 name, sorts favorites first, and highlights the characters your query hit.

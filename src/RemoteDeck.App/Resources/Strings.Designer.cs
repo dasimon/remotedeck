@@ -937,6 +937,24 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Detach current session.
+        /// </summary>
+        public static string Palette_DetachSession {
+            get {
+                return ResourceManager.GetString("Palette_DetachSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reattach this session to the main window.
+        /// </summary>
+        public static string Palette_ReattachSession {
+            get {
+                return ResourceManager.GetString("Palette_ReattachSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connection.
         /// </summary>
         public static string Editor_Title {
@@ -1842,6 +1860,51 @@ namespace RemoteDeck.App.Resources {
         public static string Import_ImportedMessage {
             get {
                 return ResourceManager.GetString("Import_ImportedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reattach.
+        /// </summary>
+        public static string SessionWindow_Reattach {
+            get {
+                return ResourceManager.GetString("SessionWindow_Reattach", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Full screen (F11).
+        /// </summary>
+        public static string SessionWindow_FullScreen {
+            get {
+                return ResourceManager.GetString("SessionWindow_FullScreen", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Close session.
+        /// </summary>
+        public static string SessionWindow_Close {
+            get {
+                return ResourceManager.GetString("SessionWindow_Close", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Session not detached.
+        /// </summary>
+        public static string Shell_DetachRefusedTitle {
+            get {
+                return ResourceManager.GetString("Shell_DetachRefusedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; could not be moved to a window of its own and stayed in the main window.
+        /// </summary>
+        public static string Shell_DetachRefusedMessage {
+            get {
+                return ResourceManager.GetString("Shell_DetachRefusedMessage", resourceCulture);
             }
         }
     }
