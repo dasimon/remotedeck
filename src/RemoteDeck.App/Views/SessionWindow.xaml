@@ -28,22 +28,25 @@
         <!-- Same four keys and the same DynamicResource indirection as SessionTabStrip: the
              view-model publishes a resource *key*, not a Brush, so the dot follows a light/dark
              switch. Kept local rather than shared because the two dots differ in nothing but their
-             margin, and a shared dictionary would be a third file for one Setter. -->
+             margin, and a shared dictionary would be a third file for one Setter. The keys are
+             still SessionTabViewModel's; only the brush each one resolves to is now the token
+             sheet's, so this caption tells the three states in the three colours the rest of the
+             application already uses for them. -->
         <Style x:Key="StatusDotStyle" TargetType="Ellipse">
             <Setter Property="Width" Value="8" />
             <Setter Property="Height" Value="8" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="12,0,8,0" />
-            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource RdTextMuted}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorSuccessBrush">
-                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource RdOk}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCautionBrush">
-                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource RdWarn}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCriticalBrush">
-                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource RdBad}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -57,7 +60,7 @@
              blank rectangles on the strip. -->
         <Style x:Key="CaptionButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="24" />
+            <Setter Property="Height" Value="{StaticResource RdControlHeight}" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="2,0,0,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -67,7 +70,7 @@
         <!-- Reconnect and Cancel keep their wording — they are exceptional, and an icon alone would
              not say which of the two is on screen. -->
         <Style x:Key="CaptionTextButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-            <Setter Property="Height" Value="24" />
+            <Setter Property="Height" Value="{StaticResource RdControlHeight}" />
             <Setter Property="Padding" Value="8,0" />
             <Setter Property="Margin" Value="2,0,0,0" />
             <Setter Property="FontSize" Value="12" />
@@ -83,76 +86,91 @@
         </Grid.RowDefinitions>
 
         <StackPanel x:Name="Chrome" Grid.Row="0">
-            <!-- Background is Transparent rather than unset: a null Background is not hit-testable, and
-                 the whole strip has to answer the drag. -->
-            <Grid x:Name="TitleBarRow" Height="32"
-                  Background="Transparent"
-                  MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <!-- Background is Transparent rather than unset: a null Background is not hit-testable,
+                 and the whole strip has to answer the drag. Transparent rather than a surface token
+                 for a second reason: the window is Mica, and an opaque ground here would put a flat
+                 rectangle where the backdrop should be. The hairline underneath is this strip's only
+                 edge, and it is the very one the full-screen bar draws — which is what makes the two
+                 read as one piece of chrome rather than two.
 
-                <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
+                 32 px is RdRowHeight, the closed set's strip height. -->
+            <Border x:Name="TitleBarRow"
+                    Height="{StaticResource RdRowHeight}"
+                    Background="Transparent"
+                    BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource RdBorder}"
+                    MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="1"
-                           Text="{Binding Title}"
-                           VerticalAlignment="Center"
-                           MaxWidth="240"
-                           TextTrimming="CharacterEllipsis" />
+                    <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
 
-                <TextBlock Grid.Column="2"
-                           Text="{Binding Subtitle}"
-                           VerticalAlignment="Center"
-                           Margin="8,0,8,0"
-                           Opacity="0.7"
-                           TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Title}"
+                               VerticalAlignment="Center"
+                               MaxWidth="240"
+                               Foreground="{DynamicResource RdText}"
+                               TextTrimming="CharacterEllipsis" />
 
-                <ui:Button x:Name="ReconnectButton" Grid.Column="3"
-                           Style="{StaticResource CaptionTextButtonStyle}"
-                           Content="{x:Static res:Strings.Shell_Reconnect}"
-                           Icon="{ui:SymbolIcon ArrowClockwise20}"
-                           ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
-                           Click="OnReconnectClick" />
+                    <!-- Muted through the token rather than through Opacity, as everywhere else: the
+                         subtitle must recede by the same amount in both themes, and 0.7 of white does
+                         not recede like 0.7 of black. -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding Subtitle}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,8,0"
+                               Foreground="{DynamicResource RdTextMuted}"
+                               TextTrimming="CharacterEllipsis" />
 
-                <ui:Button x:Name="CancelRetryButton" Grid.Column="4"
-                           Style="{StaticResource CaptionTextButtonStyle}"
-                           Content="{x:Static res:Strings.Common_Cancel}"
-                           ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
-                           Click="OnCancelRetryClick" />
+                    <ui:Button x:Name="ReconnectButton" Grid.Column="3"
+                               Style="{StaticResource CaptionTextButtonStyle}"
+                               Content="{x:Static res:Strings.Shell_Reconnect}"
+                               Icon="{ui:SymbolIcon ArrowClockwise20}"
+                               ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
+                               Click="OnReconnectClick" />
 
-                <ui:Button x:Name="DiagnosticsButton" Grid.Column="5"
-                           Style="{StaticResource CaptionButtonStyle}"
-                           Icon="{ui:SymbolIcon Copy20}"
-                           ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
-                           Click="OnCopyDiagnosticsClick" />
+                    <ui:Button x:Name="CancelRetryButton" Grid.Column="4"
+                               Style="{StaticResource CaptionTextButtonStyle}"
+                               Content="{x:Static res:Strings.Common_Cancel}"
+                               ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
+                               Click="OnCancelRetryClick" />
 
-                <ui:Button x:Name="ReattachButton" Grid.Column="6"
-                           Style="{StaticResource CaptionButtonStyle}"
-                           Icon="{ui:SymbolIcon TabDesktop20}"
-                           ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
-                           Click="OnReattachClick" />
+                    <ui:Button x:Name="DiagnosticsButton" Grid.Column="5"
+                               Style="{StaticResource CaptionButtonStyle}"
+                               Icon="{ui:SymbolIcon Copy20}"
+                               ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
+                               Click="OnCopyDiagnosticsClick" />
 
-                <ui:Button Grid.Column="7"
-                           Style="{StaticResource CaptionButtonStyle}"
-                           Icon="{ui:SymbolIcon FullScreenMaximize20}"
-                           ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
-                           Click="OnFullScreenClick" />
+                    <ui:Button x:Name="ReattachButton" Grid.Column="6"
+                               Style="{StaticResource CaptionButtonStyle}"
+                               Icon="{ui:SymbolIcon TabDesktop20}"
+                               ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
+                               Click="OnReattachClick" />
 
-                <ui:Button Grid.Column="8"
-                           Style="{StaticResource CaptionButtonStyle}"
-                           Margin="2,0,4,0"
-                           Icon="{ui:SymbolIcon Dismiss20}"
-                           ToolTip="{x:Static res:Strings.SessionWindow_Close}"
-                           Click="OnCloseClick" />
-            </Grid>
+                    <ui:Button Grid.Column="7"
+                               Style="{StaticResource CaptionButtonStyle}"
+                               Icon="{ui:SymbolIcon FullScreenMaximize20}"
+                               ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
+                               Click="OnFullScreenClick" />
+
+                    <ui:Button Grid.Column="8"
+                               Style="{StaticResource CaptionButtonStyle}"
+                               Margin="2,0,4,0"
+                               Icon="{ui:SymbolIcon Dismiss20}"
+                               ToolTip="{x:Static res:Strings.SessionWindow_Close}"
+                               Click="OnCloseClick" />
+                </Grid>
+            </Border>
 
             <ui:InfoBar x:Name="StatusBar" Margin="8,0,8,6" IsOpen="False" IsClosable="True" />
         </StackPanel>
@@ -161,6 +179,6 @@
              property; black for the same reason as the shell's session area — no theme text colour
              reads well against a remote desktop. -->
         <Border x:Name="HostAreaBorder" Grid.Row="1" Margin="8,0,8,8"
-                CornerRadius="6" Background="#FF000000" />
+                CornerRadius="{StaticResource RdRadius}" Background="#FF000000" />
     </Grid>
 </ui:FluentWindow>
