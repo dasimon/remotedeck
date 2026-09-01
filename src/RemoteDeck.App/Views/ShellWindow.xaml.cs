@@ -1260,13 +1260,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
-    /// <summary>A tab was opened, closed or activated.</summary>
     /// <summary>What the pane's state pill must say about one saved connection: the state of the
     /// session opened from it, or nothing at all when no session was ever opened. <c>Find</c> already
     /// skips the tabs being closed, so a row goes quiet the moment its session starts leaving.</summary>
     private ConnectionStatus StatusOf(long connectionId)
         => _sessions.Find(connectionId) is { } tab ? StatusTag.For(tab.State) : ConnectionStatus.None;
 
+    /// <summary>A tab was opened, closed or activated.</summary>
     private void OnSessionsChanged()
     {
         _list?.RefreshStatuses();
