@@ -350,6 +350,12 @@
   <data name="Palette_ReconnectTabSubtitle" xml:space="preserve">
     <value>Reconnecter la session active</value>
   </data>
+  <data name="Palette_DetachSession" xml:space="preserve">
+    <value>Détacher la session courante</value>
+  </data>
+  <data name="Palette_ReattachSession" xml:space="preserve">
+    <value>Rattacher cette session à la fenêtre principale</value>
+  </data>
   <data name="Editor_Title" xml:space="preserve">
     <value>Connexion</value>
   </data>
@@ -652,5 +658,20 @@
   </data>
   <data name="Import_ImportedMessage" xml:space="preserve">
     <value>Elles ont été enregistrées sans identifiant ; ajoutez-en un depuis Gérer les identifiants le moment venu.</value>
+  </data>
+  <data name="SessionWindow_Reattach" xml:space="preserve">
+    <value>Rattacher</value>
+  </data>
+  <data name="SessionWindow_FullScreen" xml:space="preserve">
+    <value>Plein écran (F11)</value>
+  </data>
+  <data name="SessionWindow_Close" xml:space="preserve">
+    <value>Fermer la session</value>
+  </data>
+  <data name="Shell_DetachRefusedTitle" xml:space="preserve">
+    <value>Session non détachée</value>
+  </data>
+  <data name="Shell_DetachRefusedMessage" xml:space="preserve">
+    <value>« {0} » n’a pas pu être déplacée dans une fenêtre à elle et reste dans la fenêtre principale.</value>
   </data>
 </root>

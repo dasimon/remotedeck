@@ -39,12 +39,21 @@ internal sealed class ShortcutInterceptor : IDisposable
 
     private const int WmKeyDown = 0x0100;
     private const int WmSysKeyDown = 0x0104;
+    // Virtual-key codes, from the Win32 "Virtual-Key Codes" table. VK_CANCEL is what Ctrl turns the
+    // Pause/Break key into — Windows maps CTRL+PAUSE to the Break scan code, whose virtual key is
+    // "Control-break processing" — so Ctrl+Alt+Pause is watched for on both codes rather than
+    // guessing which one a given keyboard layout produces.
+    private const int VkCancel = 0x03;
     private const int VkTab = 0x09;
     private const int VkShift = 0x10;
     private const int VkControl = 0x11;
+    private const int VkMenu = 0x12;
+    private const int VkPause = 0x13;
     private const int VkB = 0x42;
+    private const int VkD = 0x44;
     private const int VkK = 0x4B;
     private const int VkW = 0x57;
+    private const int VkF11 = 0x7A;
     private const int WhKeyboard = 2;
     private const int WhKeyboardLl = 13;
 
@@ -214,6 +223,15 @@ internal sealed class ShortcutInterceptor : IDisposable
     /// </summary>
     private string? Decide(int virtualKey)
     {
+        // F11 carries no modifier at all, so it is settled before the Ctrl gate below. It is the
+        // full-screen key of every Windows RDP client, and a detached window in full screen shows no
+        // chrome: without this line the only way back would be the pointer. The shell's predicate
+        // narrows it to a detached session window — nowhere else is it ours to take.
+        if (virtualKey == VkF11)
+        {
+            return IsDown(VkControl) || IsDown(VkShift) || IsDown(VkMenu) ? null : "F11";
+        }
+
         if (!IsDown(VkControl))
         {
             return null;
@@ -230,6 +248,12 @@ internal sealed class ShortcutInterceptor : IDisposable
             // shell, for when the focus is on the WPF side; the interceptor is what makes it work
             // from inside a remote session, where WPF sees no keystroke at all.
             VkW => "Ctrl+W",
+            // Ctrl+Shift+D detaches the active tab from the shell and takes a detached session back
+            // from its own window. Plain Ctrl+D is left alone: it is not ours.
+            VkD => IsDown(VkShift) ? "Ctrl+Shift+D" : null,
+            // The second full-screen toggle, the one mstsc itself uses. Both virtual keys are
+            // watched: see the constants above.
+            VkPause or VkCancel => IsDown(VkMenu) ? "Ctrl+Alt+Pause" : null,
             VkTab => IsDown(VkShift) ? "Ctrl+Shift+Tab" : "Ctrl+Tab",
             _ => null,
         };
