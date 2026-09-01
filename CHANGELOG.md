@@ -2,6 +2,23 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.2.1 — 2026-09-01
+
+**The published binaries of 0.1.0 and 0.2.0 do not start. Use this one instead.**
+Nothing in the application changed; only the way it is packaged.
+
+`PublishSingleFile` bundles managed assemblies and leaves native libraries beside the
+executable, and the release attached the executable alone. Downloaded on its own it
+therefore raised a `DllNotFoundException` inside a window procedure — which Windows
+reports as `0xC000041D`, with no message, no window, and nothing in RemoteDeck's own log,
+because the crash happens before the first line is written. Six libraries were missing:
+`PresentationNative_cor3`, `wpfgfx_cor3`, `vcruntime140_cor3`, `D3DCompiler_47_cor3`,
+`PenImc_cor3` and `e_sqlite3`.
+
+The build now bundles them, so the file really is the single file it claims to be, and
+the release workflow refuses to publish if anything is left beside the executable — the
+check that would have caught both earlier releases.
+
 ## 0.2.0 — 2026-09-01
 
 Two things. A session no longer has to live inside the main window — pull it out, put it
