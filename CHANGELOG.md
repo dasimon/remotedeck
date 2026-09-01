@@ -4,8 +4,10 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## 0.2.0 — unreleased
 
-One feature: a session no longer has to live inside the main window. Pull it out, put it
-on a second monitor, make it full screen — and put it back when you are done.
+Two things. A session no longer has to live inside the main window — pull it out, put it
+on a second monitor, make it full screen, and put it back when you are done. And the
+interface has been rebuilt on a single sheet of design tokens, so it finally looks like
+one application rather than a set of screens that grew separately.
 
 ### Detached session windows
 
@@ -47,6 +49,31 @@ on a second monitor, make it full screen — and put it back when you are done.
   monitor it was on is gone, the window opens on one that is actually connected instead of
   off-screen.
 
+### Visual refresh
+
+- **One sheet of design tokens.** Surfaces, borders, text, accent, state colours, three
+  radii and four heights now live in a single file every view reads from. A value outside
+  those sets is a defect you can catch by reading, instead of a judgement call.
+- **The accent stays yours.** Every token derives from the Windows theme, so RemoteDeck
+  follows your system accent colour and your light/dark setting — including a switch made
+  while it is running, and including windows opened after that switch.
+- **Selecting a connection no longer floods the row.** A selected row keeps its own text
+  colour on a lightly tinted ground with a 3 px accent rail at its left edge, instead of a
+  solid block of accent with white text on it.
+- **Keyboard focus is visible at last.** RemoteDeck is driven from the keyboard and never
+  showed where you were; the focused row now carries an accent outline, distinct from the
+  selected row, because the two are not always the same row.
+- **State is readable without colour.** *Connected*, *Reconnecting* and *Offline* appear
+  as a labelled pill beside the status dot, so the state survives a reader who cannot
+  separate red from green.
+- **Tabs belong to the area they command.** The active tab shares the session area's
+  background, interrupts the strip's hairline underneath itself and carries a thin accent
+  fillet on top; inactive tabs simply recede, with no vertical dividers between them.
+- **The command palette reads like one.** Each row pairs an icon with a title and a
+  subtitle that says what the command *does* rather than restating its name, and its
+  shortcut is drawn as a key on the right. The current row uses the same accent rail as
+  the connection list, so one gesture means "you are here" everywhere.
+
 ### Known limitations
 
 - **Mixed-DPI placement is approximate.** Screen coordinates are converted using the main
@@ -60,10 +87,11 @@ on a second monitor, make it full screen — and put it back when you are done.
 
 `RemoteDeck.Core` is covered by **171 automated tests**, up from 155 — the close budget,
 the screen fitting and the saved geometry are all testable and tested. Everything that
-touches windows, drag gestures or the Remote Desktop control is covered by the new
-*Detached session windows* section of
-[`docs/manual-checklist.md`](docs/manual-checklist.md), which is **not yet run** — which
-is why this section says *unreleased*.
+touches windows, drag gestures, the Remote Desktop control or the way a state looks has
+to be checked by hand: the *Detached session windows* section of
+[`docs/manual-checklist.md`](docs/manual-checklist.md) has been run against a live host,
+including two full-screen sessions on two monitors and a `query session` on the server
+after closing the application with detached windows open — no session was left behind.
 
 ## 0.1.0 — 2026-08-31
 

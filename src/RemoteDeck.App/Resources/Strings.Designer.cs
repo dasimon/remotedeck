@@ -190,6 +190,33 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Connected.
+        /// </summary>
+        public static string Pane_StatusConnected {
+            get {
+                return ResourceManager.GetString("Pane_StatusConnected", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reconnecting.
+        /// </summary>
+        public static string Pane_StatusReconnecting {
+            get {
+                return ResourceManager.GetString("Pane_StatusReconnecting", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Offline.
+        /// </summary>
+        public static string Pane_StatusOffline {
+            get {
+                return ResourceManager.GetString("Pane_StatusOffline", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Show or hide the connection pane (Ctrl+B).
         /// </summary>
         public static string Shell_PaneToggleToolTip {
@@ -856,6 +883,15 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Add a machine to the list without connecting to it.
+        /// </summary>
+        public static string Palette_NewConnectionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_NewConnectionSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Import connections….
         /// </summary>
         public static string Palette_ImportConnections {
@@ -883,7 +919,7 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Saved user names and passwords.
+        ///   Looks up a localized string similar to Review or delete the user names and passwords already saved.
         /// </summary>
         public static string Palette_ManageCredentialsSubtitle {
             get {
@@ -901,6 +937,15 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Give the session the whole window, or bring the list back.
+        /// </summary>
+        public static string Palette_TogglePaneSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_TogglePaneSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Close current session.
         /// </summary>
         public static string Palette_CloseSession {
@@ -910,7 +955,7 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Disconnect it and close its tab (Ctrl+W).
+        ///   Looks up a localized string similar to Disconnect it and close its tab.
         /// </summary>
         public static string Palette_CloseSessionSubtitle {
             get {
@@ -928,7 +973,7 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Connect the active session again.
+        ///   Looks up a localized string similar to Dial the same machine again after a dropped connection.
         /// </summary>
         public static string Palette_ReconnectTabSubtitle {
             get {
@@ -946,11 +991,101 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Pull {0} out into a window of its own.
+        /// </summary>
+        public static string Palette_DetachSessionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_DetachSessionSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Reattach this session to the main window.
         /// </summary>
         public static string Palette_ReattachSession {
             get {
                 return ResourceManager.GetString("Palette_ReattachSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Bring {0} back as a tab of the main window.
+        /// </summary>
+        public static string Palette_ReattachSessionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_ReattachSessionSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connections.
+        /// </summary>
+        public static string Palette_GroupConnections {
+            get {
+                return ResourceManager.GetString("Palette_GroupConnections", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open sessions.
+        /// </summary>
+        public static string Palette_GroupSessions {
+            get {
+                return ResourceManager.GetString("Palette_GroupSessions", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Commands.
+        /// </summary>
+        public static string Palette_GroupCommands {
+            get {
+                return ResourceManager.GetString("Palette_GroupCommands", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to ↑ ↓ navigate · Enter open · Esc close.
+        /// </summary>
+        public static string Palette_Footer {
+            get {
+                return ResourceManager.GetString("Palette_Footer", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+N.
+        /// </summary>
+        public static string Palette_ShortcutNewConnection {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutNewConnection", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+B.
+        /// </summary>
+        public static string Palette_ShortcutTogglePane {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutTogglePane", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+W.
+        /// </summary>
+        public static string Palette_ShortcutCloseSession {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutCloseSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+Shift+D.
+        /// </summary>
+        public static string Palette_ShortcutDetach {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutDetach", resourceCulture);
             }
         }
 

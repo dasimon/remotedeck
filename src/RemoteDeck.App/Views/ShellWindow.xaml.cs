@@ -262,6 +262,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.EditRequested += OnEditRequested;
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
+        // The pane holds no reference to the sessions: the shell is the one place that knows both,
+        // so it hands the list a way to ask rather than a way to be told.
+        _list.StatusProvider = StatusOf;
+        _list.RefreshStatuses();
         Pane.ViewModel = _list;
 
         // Re-select what was selected when the app last closed, when that row still exists.
@@ -605,7 +609,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 : connection.GroupName;
             items.Add(new PaletteItem(PaletteItemKind.Connection, $"{ConnectionIdPrefix}{connection.Id}",
                 connection.Name, Text.Of(Strings.Palette_ConnectionSubtitle, group, connection.Host),
-                ConnectionPriority));
+                ConnectionPriority, Group: Strings.Palette_GroupConnections));
         }
 
         // By index, not by connection id: an index is what Activate needs, and the strip cannot be
@@ -613,18 +617,30 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         for (int i = 0; i < _sessions.Tabs.Count; i++)
         {
             var tab = _sessions.Tabs[i];
-            items.Add(new PaletteItem(PaletteItemKind.Command, $"{TabIdPrefix}{i}",
-                Text.Of(Strings.Palette_SwitchToTab, tab.Title), tab.Subtitle, TabPriority));
+            items.Add(new PaletteItem(PaletteItemKind.Session, $"{TabIdPrefix}{i}",
+                Text.Of(Strings.Palette_SwitchToTab, tab.Title), tab.Subtitle, TabPriority,
+                Group: Strings.Palette_GroupSessions));
         }
 
+        // Every subtitle below says what the row does, and none of them restates its title: a second
+        // line that only rephrases the first costs a glance and answers nothing. Keystrokes are no
+        // longer written there either — they are the Shortcut, which the palette draws as a key cap.
+        //
+        // The chords come from the resources like every other drawn string (spec §9): the chord
+        // never changes, but the names of its keys are Windows' own vocabulary and are translated
+        // with it — French says Maj, not Shift, exactly as the footer already says Échap and Entrée.
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
-            Strings.Palette_NewConnection, "Ctrl+N", CommandPriority));
+            Strings.Palette_NewConnection, Strings.Palette_NewConnectionSubtitle, CommandPriority,
+            Shortcut: Strings.Palette_ShortcutNewConnection, Group: Strings.Palette_GroupCommands));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
-            Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority));
+            Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority,
+            Group: Strings.Palette_GroupCommands));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:credentials",
-            Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority));
+            Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority,
+            Group: Strings.Palette_GroupCommands));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
-            Strings.Palette_TogglePane, "Ctrl+B", CommandPriority));
+            Strings.Palette_TogglePane, Strings.Palette_TogglePaneSubtitle, CommandPriority,
+            Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands));
         // The session this palette is about: the one the window it was opened from is showing, or
         // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
         // only thing that can name the session in front of the user here, and offering these two
@@ -637,23 +653,33 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // vocabulary instead, and PaletteFilter searches it, so typing "disconnect" still finds
             // this row.
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
-                Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority));
+                Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority,
+                Shortcut: Strings.Palette_ShortcutCloseSession, Group: Strings.Palette_GroupCommands));
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
-                Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority));
+                Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority,
+                Group: Strings.Palette_GroupCommands));
         }
 
         // Exactly one of the two, and only when it would do something: from a detached window the
         // session can only go back, and from the shell only a docked active tab can leave. Offering
         // the other one would be a row that answers with nothing.
+        //
+        // Both subtitles name the session by its title rather than talking about "the current
+        // session": these two rows move a specific window around, and the user is entitled to read
+        // which one before pressing Enter.
         if (from is not null)
         {
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reattach",
-                Strings.Palette_ReattachSession, "Ctrl+Shift+D", CommandPriority));
+                Strings.Palette_ReattachSession,
+                Text.Of(Strings.Palette_ReattachSessionSubtitle, from.Tab.Title), CommandPriority,
+                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
-        else if (_sessions.Active is { IsDetached: false })
+        else if (_sessions.Active is { IsDetached: false } active)
         {
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:detach",
-                Strings.Palette_DetachSession, "Ctrl+Shift+D", CommandPriority));
+                Strings.Palette_DetachSession,
+                Text.Of(Strings.Palette_DetachSessionSubtitle, active.Title), CommandPriority,
+                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
 
         return items;
@@ -1238,9 +1264,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
+    /// <summary>What the pane's state pill must say about one saved connection: the state of the
+    /// session opened from it, or nothing at all when no session was ever opened. <c>Find</c> already
+    /// skips the tabs being closed, so a row goes quiet the moment its session starts leaving.</summary>
+    private ConnectionStatus StatusOf(long connectionId)
+        => _sessions.Find(connectionId) is { } tab ? StatusTag.For(tab.State) : ConnectionStatus.None;
+
     /// <summary>A tab was opened, closed or activated.</summary>
     private void OnSessionsChanged()
     {
+        _list?.RefreshStatuses();
         UpdateSessionsArea();
         UpdateSessionBar();
         if (_sessions.Active is { } tab)
@@ -1258,6 +1291,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// a background tab says everything it has to say through its status dot.</summary>
     private void OnTabChanged(SessionTabViewModel tab)
     {
+        // Before the early return: a background tab losing its connection still has to change the
+        // pill on its row, even though it changes nothing in the session bar.
+        _list?.RefreshStatuses();
+
         if (!ReferenceEquals(tab, _sessions.Active))
         {
             return;
