@@ -101,6 +101,9 @@
   <data name="Pane_EmptyNoMatch" xml:space="preserve">
     <value>No connection matches “{0}”.</value>
   </data>
+  <data name="Pane_StatusConnected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
   <data name="Pane_StatusReconnecting" xml:space="preserve">
     <value>Reconnecting</value>
   </data>
