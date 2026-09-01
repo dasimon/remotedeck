@@ -190,6 +190,15 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Connected.
+        /// </summary>
+        public static string Pane_StatusConnected {
+            get {
+                return ResourceManager.GetString("Pane_StatusConnected", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Reconnecting.
         /// </summary>
         public static string Pane_StatusReconnecting {

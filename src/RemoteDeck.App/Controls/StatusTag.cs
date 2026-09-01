@@ -71,11 +71,14 @@ public sealed class StatusTag : System.Windows.Controls.Control
     private static void OnStatusChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         => ((StatusTag)d).SetValue(TextPropertyKey, LabelOf((ConnectionStatus)e.NewValue));
 
-    // Session_StateConnected is the session bar's own word, reused rather than duplicated: the two
-    // places must never drift into saying "Connected" and "Online" about the same session.
+    // All three words come from the same Pane_Status family, so the pill cannot drift into three
+    // registers. The session bar keeps its own: its French sentences agree with « la session »
+    // (« Connectée », « Interrompue », « Fermée »), which a standalone label cannot borrow without
+    // reading as a different kind of thing next to « Reconnexion » and « Hors ligne ». The English
+    // is the same word on both sides.
     private static string LabelOf(ConnectionStatus status) => status switch
     {
-        ConnectionStatus.Connected => Strings.Session_StateConnected,
+        ConnectionStatus.Connected => Strings.Pane_StatusConnected,
         ConnectionStatus.Reconnecting => Strings.Pane_StatusReconnecting,
         ConnectionStatus.Offline => Strings.Pane_StatusOffline,
         _ => "",
