@@ -8,6 +8,10 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- After the two WPF-UI dictionaries, and not before: every token in this sheet
+                     is a DynamicResource onto a WPF-UI theme colour, and a lookup that finds
+                     nothing fails silently — the brush simply stays transparent. -->
+                <ResourceDictionary Source="pack://application:,,,/RemoteDeck;component/Resources/Theme.xaml" />
                 <!-- After ControlsDictionary: WPF-UI ships no PasswordBox style, and merging last
                      keeps ours the winning implicit style whatever the theme brings. -->
                 <ResourceDictionary Source="pack://application:,,,/RemoteDeck;component/Resources/PasswordBox.xaml" />

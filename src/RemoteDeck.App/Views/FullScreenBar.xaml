@@ -40,22 +40,24 @@
              the view-model publishes a resource *key*, not a Brush, so the dot follows a light/dark
              switch. Local rather than shared, exactly as SessionWindow keeps its own — the three
              differ in nothing but a margin, and a shared dictionary would be a file for one
-             Setter. -->
+             Setter. The keys are still SessionTabViewModel's; only the brush each one resolves to
+             is now the token sheet's, so the bar tells the three states in the same three colours
+             as the strip it replaces. -->
         <Style x:Key="StatusDotStyle" TargetType="Ellipse">
             <Setter Property="Width" Value="8" />
             <Setter Property="Height" Value="8" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="12,0,8,0" />
-            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource RdTextMuted}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorSuccessBrush">
-                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource RdOk}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCautionBrush">
-                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource RdWarn}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding StatusBrushKey}" Value="SystemFillColorCriticalBrush">
-                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource RdBad}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -66,7 +68,7 @@
              blank rectangles on the bar. -->
         <Style x:Key="BarButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="24" />
+            <Setter Property="Height" Value="{StaticResource RdControlHeight}" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="2,0,0,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -83,10 +85,13 @@
          is not WPF-UI), and a window-level Height would be raised to that floor, turning a 32 px
          strip into a dialog-sized black box over the remote desktop. Zeroing the floor and letting
          SizeToContent measure this Border is what keeps the bar a bar. -->
-    <Border Height="32"
-            Background="{DynamicResource ApplicationBackgroundBrush}"
+    <!-- RdSurface0 is the same ground the detached window's caption sits on, and RdBorder the same
+         hairline it draws underneath: the bar is that caption, moved to the top of the screen, and it
+         has to be recognisable as such. 32 px is RdRowHeight, the closed set's strip height. -->
+    <Border Height="{StaticResource RdRowHeight}"
+            Background="{DynamicResource RdSurface0}"
             BorderThickness="0,0,0,1"
-            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            BorderBrush="{DynamicResource RdBorder}">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -103,14 +108,18 @@
                        Text="{Binding Title}"
                        VerticalAlignment="Center"
                        MaxWidth="260"
+                       Foreground="{DynamicResource RdText}"
                        TextTrimming="CharacterEllipsis" />
 
+            <!-- Muted through the token rather than through Opacity, as everywhere else: the
+                 subtitle must recede by the same amount in both themes, and 0.7 of white does not
+                 recede like 0.7 of black. -->
             <TextBlock Grid.Column="2"
                        Text="{Binding Subtitle}"
                        VerticalAlignment="Center"
                        Margin="8,0,12,0"
                        MaxWidth="260"
-                       Opacity="0.7"
+                       Foreground="{DynamicResource RdTextMuted}"
                        TextTrimming="CharacterEllipsis" />
 
             <ui:Button x:Name="ReattachButton" Grid.Column="3"

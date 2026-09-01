@@ -36,6 +36,7 @@ public partial class App : System.Windows.Application
         // the shell is gone, with windows the user has no way back to. The shell is the application:
         // when it closes, so does RemoteDeck. StartupUri makes it MainWindow.
         ShutdownMode = ShutdownMode.OnMainWindowClose;
+        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += OnApplicationThemeChanged;
         ApplyOverriddenCulture();
         ProbeLog.Write("startup", $"RemoteDeck starting, log at {ProbeLog.Path}");
         try
@@ -67,6 +68,42 @@ public partial class App : System.Windows.Application
         }
         services.AddSingleton<ICredentialVault, DpapiCredentialVault>();
         Services = services.BuildServiceProvider();
+    }
+
+    /// <summary>Where the design tokens live. Also the key this handler matches on.</summary>
+    private const string ThemeSheetUri = "pack://application:,,,/RemoteDeck;component/Resources/Theme.xaml";
+
+    /// <summary>
+    /// Re-reads <c>Resources/Theme.xaml</c> whenever the theme changes, as a brand-new dictionary.
+    ///
+    /// Measured, not assumed (task-1 probe): WPF invalidates a <c>DynamicResource</c> only for the
+    /// keys of the dictionary that actually changed. When WPF-UI swaps its own theme dictionary, the
+    /// <c>Rd*</c> keys are not among them — so a view keeps the token brush it resolved at startup,
+    /// and that brush keeps the colour it resolved then too, expression or not. The tokens would
+    /// freeze the application in the theme it launched in, silently.
+    ///
+    /// Merging a fresh instance fixes both halves at once: its brushes resolve their
+    /// <c>DynamicResource</c> colours against the theme now in place, and replacing a merged
+    /// dictionary is itself a change over the <c>Rd*</c> keys, which is what invalidates the views
+    /// reading them.
+    /// </summary>
+    private static void OnApplicationThemeChanged(Wpf.Ui.Appearance.ApplicationTheme theme, System.Windows.Media.Color accent)
+    {
+        // Current is null while the application is shutting down, and the watcher may still fire.
+        var merged = System.Windows.Application.Current?.Resources.MergedDictionaries;
+        if (merged is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < merged.Count; i++)
+        {
+            if (merged[i].Source?.OriginalString == ThemeSheetUri)
+            {
+                merged[i] = new ResourceDictionary { Source = new Uri(ThemeSheetUri, UriKind.Absolute) };
+                return;
+            }
+        }
     }
 
     /// <summary>

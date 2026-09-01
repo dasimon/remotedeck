@@ -56,10 +56,21 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
     /// The selection deliberately jumps back to the top on every keystroke rather than following the
     /// previously selected entry: after typing a letter the best match <em>is</em> the first row, and
     /// keeping a now-worse entry selected would make Enter run something the query no longer describes.
+    ///
+    /// <para>The filtered entries are re-laid group by group before they land in
+    /// <see cref="Results"/>. The view draws them under headings, and a grouped WPF view gathers each
+    /// group at the position where it was first met — so a score order that alternates between groups
+    /// would be drawn in an order this collection does not have, and
+    /// <see cref="MoveSelection(int)"/>, which walks it by index, would send the selection jumping
+    /// around the list. Regrouping here keeps one order for both. It costs nothing in ranking:
+    /// <c>GroupBy</c> preserves the order groups and entries were seen in, so the best match is still
+    /// the first row, and its group is still the first group.</para>
     /// </remarks>
     public void Refresh()
     {
-        var matches = PaletteFilter.Apply(_items, SearchText);
+        var matches = PaletteFilter.Apply(_items, SearchText)
+            .GroupBy(m => m.Item.Group, StringComparer.Ordinal)
+            .SelectMany(g => g);
 
         Results.Clear();
         foreach (var match in matches) Results.Add(match);

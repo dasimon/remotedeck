@@ -101,6 +101,15 @@
   <data name="Pane_EmptyNoMatch" xml:space="preserve">
     <value>No connection matches “{0}”.</value>
   </data>
+  <data name="Pane_StatusConnected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Pane_StatusReconnecting" xml:space="preserve">
+    <value>Reconnecting</value>
+  </data>
+  <data name="Pane_StatusOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
   <data name="Shell_PaneToggleToolTip" xml:space="preserve">
     <value>Show or hide the connection pane (Ctrl+B)</value>
   </data>
@@ -323,6 +332,9 @@
   <data name="Palette_NewConnection" xml:space="preserve">
     <value>New connection</value>
   </data>
+  <data name="Palette_NewConnectionSubtitle" xml:space="preserve">
+    <value>Add a machine to the list without connecting to it</value>
+  </data>
   <data name="Palette_ImportConnections" xml:space="preserve">
     <value>Import connections…</value>
   </data>
@@ -333,28 +345,61 @@
     <value>Manage credentials…</value>
   </data>
   <data name="Palette_ManageCredentialsSubtitle" xml:space="preserve">
-    <value>Saved user names and passwords</value>
+    <value>Review or delete the user names and passwords already saved</value>
   </data>
   <data name="Palette_TogglePane" xml:space="preserve">
     <value>Toggle connection pane</value>
+  </data>
+  <data name="Palette_TogglePaneSubtitle" xml:space="preserve">
+    <value>Give the session the whole window, or bring the list back</value>
   </data>
   <data name="Palette_CloseSession" xml:space="preserve">
     <value>Close current session</value>
   </data>
   <data name="Palette_CloseSessionSubtitle" xml:space="preserve">
-    <value>Disconnect it and close its tab (Ctrl+W)</value>
+    <value>Disconnect it and close its tab</value>
   </data>
   <data name="Palette_ReconnectTab" xml:space="preserve">
     <value>Reconnect current tab</value>
   </data>
   <data name="Palette_ReconnectTabSubtitle" xml:space="preserve">
-    <value>Connect the active session again</value>
+    <value>Dial the same machine again after a dropped connection</value>
   </data>
   <data name="Palette_DetachSession" xml:space="preserve">
     <value>Detach current session</value>
   </data>
+  <data name="Palette_DetachSessionSubtitle" xml:space="preserve">
+    <value>Pull {0} out into a window of its own</value>
+  </data>
   <data name="Palette_ReattachSession" xml:space="preserve">
     <value>Reattach this session to the main window</value>
+  </data>
+  <data name="Palette_ReattachSessionSubtitle" xml:space="preserve">
+    <value>Bring {0} back as a tab of the main window</value>
+  </data>
+  <data name="Palette_GroupConnections" xml:space="preserve">
+    <value>Connections</value>
+  </data>
+  <data name="Palette_GroupSessions" xml:space="preserve">
+    <value>Open sessions</value>
+  </data>
+  <data name="Palette_GroupCommands" xml:space="preserve">
+    <value>Commands</value>
+  </data>
+  <data name="Palette_Footer" xml:space="preserve">
+    <value>↑ ↓ navigate · Enter open · Esc close</value>
+  </data>
+  <data name="Palette_ShortcutNewConnection" xml:space="preserve">
+    <value>Ctrl+N</value>
+  </data>
+  <data name="Palette_ShortcutTogglePane" xml:space="preserve">
+    <value>Ctrl+B</value>
+  </data>
+  <data name="Palette_ShortcutCloseSession" xml:space="preserve">
+    <value>Ctrl+W</value>
+  </data>
+  <data name="Palette_ShortcutDetach" xml:space="preserve">
+    <value>Ctrl+Shift+D</value>
   </data>
   <data name="Editor_Title" xml:space="preserve">
     <value>Connection</value>
