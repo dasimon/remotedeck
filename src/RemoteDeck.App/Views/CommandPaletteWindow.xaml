@@ -26,22 +26,38 @@
          backdrop, and only there. -->
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- The grouped view of the results, same device as the connection pane: a
+             CollectionViewSource declared in the resources of the element that uses it inherits that
+             element's DataContext, which is what makes Source="{Binding Results}" resolve.
+
+             The view-model already lays its results out group by group, so the group order here is
+             simply the order they appear in — and, more importantly, the order drawn is the order
+             the arrow keys walk. -->
+        <CollectionViewSource x:Key="GroupedResults" Source="{Binding Results}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Item.Group" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
     </ui:FluentWindow.Resources>
 
+    <!-- Padding sits on the parts rather than on this border, so the footer's rule can run the full
+         width of the palette. Its bottom corners repeat the border's radius: an unrounded child
+         would square off the two corners the window rounds. -->
     <Border x:Name="Root"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RdRadiusLg}"
             BorderThickness="1"
-            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-            Padding="10">
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <ui:TextBox x:Name="SearchBox"
                         Grid.Row="0"
-                        Margin="0,0,0,8"
+                        Margin="10,10,10,8"
                         PlaceholderText="{x:Static res:Strings.Palette_SearchPlaceholder}"
                         ClearButtonEnabled="False"
                         Icon="{ui:SymbolIcon Search24}"
@@ -49,69 +65,208 @@
 
             <!-- MaxHeight on the list, not only on the window: SizeToContent=Height measures the
                  content unbounded, so an unconstrained list would ask for the height of all its rows
-                 and the window's own MaxHeight would then clip it without a scrollbar. -->
-            <Grid Grid.Row="1">
-                <ui:ListView x:Name="List"
-                             MaxHeight="320"
-                             ItemsSource="{Binding Results}"
-                             SelectedItem="{Binding Selected, Mode=TwoWay}"
-                             SelectionMode="Single"
-                             BorderThickness="0"
-                             Background="Transparent"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             SelectionChanged="OnSelectionChanged"
-                             PreviewMouseLeftButtonUp="OnListMouseLeftButtonUp">
-                    <ui:ListView.ItemContainerStyle>
-                        <!-- Same reasoning as the connection pane: WPF-UI 4.3.0 ships no implicit
-                             ListViewItem style, only the keyed "ListViewItemStyle" its own
-                             ui:ListView installs. -->
-                        <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource ListViewItemStyle}">
-                            <Setter Property="Padding" Value="8,6" />
+                 and the window's own MaxHeight would then clip it without a scrollbar. 294 px is
+                 seven 42 px rows, so a run of rows ends flush with the viewport; a group heading
+                 above them shifts that by its own height, and the row it pushes out is then cut —
+                 which is exactly the hint that there is more below, and why the scroll bar is left
+                 to show. -->
+            <Grid Grid.Row="1" Margin="6,0,6,8">
+                <!-- A plain WPF ListView, not ui:ListView, for the reason measured in the connection
+                     pane: WPF-UI's row style sets Template from a trigger, a style trigger outranks a
+                     style setter, and inheriting that style through BasedOn therefore means
+                     inheriting a template that cannot be replaced. This row needs its own. WPF-UI
+                     still styles the ScrollViewer and ScrollBar implicitly, so the scrolling stays
+                     Fluent. -->
+                <ListView x:Name="List"
+                          MaxHeight="294"
+                          ItemsSource="{Binding Source={StaticResource GroupedResults}}"
+                          SelectedItem="{Binding Selected, Mode=TwoWay}"
+                          SelectionMode="Single"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Pixel"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          SelectionChanged="OnSelectionChanged"
+                          PreviewMouseLeftButtonUp="OnListMouseLeftButtonUp">
+                    <ListView.ItemContainerStyle>
+                        <!-- 42 px, and it is the one height outside the closed set of three: a row
+                             carrying an icon tile, a title and a subtitle cannot be a 32 px list row.
+                             The plan's task 4 asks for it by name. -->
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Height" Value="42" />
+                            <Setter Property="Margin" Value="2,0" />
+                            <Setter Property="Padding" Value="8,0" />
+                            <Setter Property="Foreground" Value="{DynamicResource RdText}" />
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="VerticalContentAlignment" Value="Center" />
-                        </Style>
-                    </ui:ListView.ItemContainerStyle>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListViewItem">
+                                        <!-- Two state layers, both transparent at rest, and the rail.
+                                             There is no focus ring here, unlike the connection pane:
+                                             the keyboard never leaves the search box while the
+                                             palette is open, so a row's focus state is unreachable
+                                             and drawing one would promise a state that never comes.
+                                             Nothing in this template changes size or position — a
+                                             list walked with the arrow keys must not shift under the
+                                             eye (plan, global constraint 8). -->
+                                        <Grid Background="Transparent">
+                                            <Border x:Name="Hover"
+                                                    CornerRadius="{StaticResource RdRadius}"
+                                                    Background="{DynamicResource RdSurface2}"
+                                                    Opacity="0" />
+                                            <Border x:Name="Selection"
+                                                    CornerRadius="{StaticResource RdRadius}"
+                                                    Background="{DynamicResource RdAccentSoft}"
+                                                    Opacity="0" />
+                                            <!-- The same mark as the selected connection row: 3 px
+                                                 against the left edge, flat there and rounded on the
+                                                 other side, half the row tall. One gesture means
+                                                 "you are here", everywhere in the application. -->
+                                            <Border x:Name="Rail"
+                                                    Width="3" Height="20"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    CornerRadius="0,3,3,0"
+                                                    Background="{DynamicResource RdAccent}"
+                                                    Visibility="Collapsed" />
+                                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Center" />
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <!-- Hover is the only animated state, and only its
+                                                 background moves. The current row is instant: the
+                                                 palette is driven by typing, and a selection that
+                                                 fades in lags behind the keystroke that moved it. -->
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="Hover"
+                                                                             Storyboard.TargetProperty="Opacity"
+                                                                             To="1" Duration="0:0:0.15" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="Hover"
+                                                                             Storyboard.TargetProperty="Opacity"
+                                                                             To="0" Duration="0:0:0.15" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.ExitActions>
+                                            </Trigger>
 
-                    <ui:ListView.ItemTemplate>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Selection" Property="Opacity" Value="1" />
+                                                <Setter TargetName="Rail" Property="Visibility" Value="Visible" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+
+                    <ListView.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <!-- Quiet on purpose: a heading here files the rows, it does not
+                                         compete with them. No ground of its own, muted text, and the
+                                         row's own left inset so the column of titles stays straight. -->
+                                    <TextBlock Text="{Binding Name}"
+                                               Margin="10,8,0,2"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource RdTextMuted}" />
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListView.GroupStyle>
+
+                    <ListView.ItemTemplate>
                         <DataTemplate>
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="26" />
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <ui:SymbolIcon x:Name="KindIcon"
-                                               Grid.Column="0"
-                                               Symbol="Desktop24"
-                                               FontSize="16"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <!-- The icon sits on a tile rather than loose on the row: it gives
+                                     the column an edge, so the titles read as a list and not as a
+                                     ragged paragraph. -->
+                                <Border Grid.Column="0"
+                                        Width="26" Height="26"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="{StaticResource RdRadiusSm}"
+                                        Background="{DynamicResource RdSurface2}">
+                                    <ui:SymbolIcon x:Name="KindIcon"
+                                                   Symbol="Desktop24"
+                                                   FontSize="14"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource RdTextMuted}" />
+                                </Border>
 
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
                                     <controls:HighlightTextBlock Text="{Binding Item.Title}"
                                                                  Ranges="{Binding TitleRanges}"
+                                                                 Foreground="{DynamicResource RdText}"
                                                                  TextTrimming="CharacterEllipsis" />
+                                    <!-- Muted through the token rather than through Opacity: the
+                                         subtitle must recede by the same amount in both themes, and
+                                         0.7 of white does not recede like 0.7 of black. -->
                                     <controls:HighlightTextBlock x:Name="Subtitle"
                                                                  Text="{Binding Item.Subtitle}"
                                                                  Ranges="{Binding SubtitleRanges}"
                                                                  FontSize="11"
-                                                                 Opacity="0.7"
+                                                                 Foreground="{DynamicResource RdTextMuted}"
                                                                  TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
+
+                                <!-- The shortcut is drawn as the key it is: a raised cap, whose
+                                     thicker bottom edge is the whole illusion. Monospaced, so
+                                     "Ctrl+W" and "Ctrl+N" stack to the same width down the list. -->
+                                <Border x:Name="KeyCap"
+                                        Grid.Column="2"
+                                        VerticalAlignment="Center"
+                                        Padding="6,1,6,0"
+                                        CornerRadius="{StaticResource RdRadiusSm}"
+                                        Background="{DynamicResource RdSurface2}"
+                                        BorderBrush="{DynamicResource RdBorderStrong}"
+                                        BorderThickness="1,1,1,2">
+                                    <TextBlock Text="{Binding Item.Shortcut}"
+                                               FontFamily="Cascadia Mono, Consolas, Courier New"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource RdTextMuted}" />
+                                </Border>
                             </Grid>
 
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding Item.Kind}" Value="Command">
                                     <Setter TargetName="KindIcon" Property="Symbol" Value="Options24" />
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding Item.Kind}" Value="Session">
+                                    <Setter TargetName="KindIcon" Property="Symbol" Value="TabDesktop24" />
+                                </DataTrigger>
                                 <!-- An entry without a subtitle would otherwise reserve an empty line. -->
                                 <DataTrigger Binding="{Binding Item.Subtitle}" Value="">
                                     <Setter TargetName="Subtitle" Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
+                                <!-- Most rows have no shortcut, and an empty cap is worse than none. -->
+                                <DataTrigger Binding="{Binding Item.Shortcut}" Value="">
+                                    <Setter TargetName="KeyCap" Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
-                    </ui:ListView.ItemTemplate>
-                </ui:ListView>
+                    </ListView.ItemTemplate>
+                </ListView>
 
                 <TextBlock x:Name="EmptyMessage"
                            Text="{Binding EmptyMessage}"
@@ -119,9 +274,21 @@
                            Margin="8,16"
                            TextWrapping="Wrap" TextAlignment="Center"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Foreground="{DynamicResource RdTextMuted}"
                            IsHitTestVisible="False" />
             </Grid>
+
+            <!-- The three keys that drive the palette, spelled out once. Muted and small: it is a
+                 reminder for the first visit, not a control. -->
+            <Border Grid.Row="2"
+                    CornerRadius="0,0,8,8"
+                    BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource RdBorder}"
+                    Padding="12,6">
+                <TextBlock Text="{x:Static res:Strings.Palette_Footer}"
+                           FontSize="11"
+                           Foreground="{DynamicResource RdTextMuted}" />
+            </Border>
         </Grid>
     </Border>
 </ui:FluentWindow>

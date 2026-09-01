@@ -1,12 +1,16 @@
 namespace RemoteDeck.Core.Search;
 
-/// <summary>What a palette entry stands for: a saved connection, or an action the shell can run.</summary>
+/// <summary>What a palette entry stands for: a saved connection, a session already open, or an
+/// action the shell can run. The palette picks the row's icon from it.</summary>
 public enum PaletteItemKind
 {
     /// <summary>A saved connection; <see cref="PaletteItem.Id"/> is <c>conn:&lt;id&gt;</c>.</summary>
     Connection = 0,
     /// <summary>An application command; <see cref="PaletteItem.Id"/> is <c>cmd:&lt;name&gt;</c>.</summary>
     Command = 1,
+    /// <summary>A session already open, offered so it can be brought forward;
+    /// <see cref="PaletteItem.Id"/> is <c>tab:&lt;index&gt;</c>.</summary>
+    Session = 2,
 }
 
 /// <summary>
@@ -14,7 +18,20 @@ public enum PaletteItemKind
 /// entry is chosen; <paramref name="Priority"/> is a sort bonus, added to the score of a matched entry
 /// and used as the primary key of an unfiltered list (frequent commands rank above plain connections).
 /// </summary>
-public sealed record PaletteItem(PaletteItemKind Kind, string Id, string Title, string Subtitle, int Priority);
+/// <param name="Shortcut">The keystroke that runs the entry without the palette, rendered as a key
+/// cap on the right of the row, or empty when the entry has none. Display only: unlike
+/// <paramref name="Title"/> and <paramref name="Subtitle"/> it is <em>not</em> searched, so that
+/// typing "n" cannot pull "Ctrl+N" ahead of a connection actually named after it.</param>
+/// <param name="Group">The localized heading the row is filed under. The caller composes it, the
+/// same way it composes the two texts; the palette only groups equal values together.</param>
+public sealed record PaletteItem(
+    PaletteItemKind Kind,
+    string Id,
+    string Title,
+    string Subtitle,
+    int Priority,
+    string Shortcut = "",
+    string Group = "");
 
 /// <summary>A palette entry kept by the filter, with its rank and the spans to highlight.</summary>
 public sealed record PaletteMatch(
