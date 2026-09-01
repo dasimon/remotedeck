@@ -2,7 +2,7 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-09-01
 
 Two things. A session no longer has to live inside the main window — pull it out, put it
 on a second monitor, make it full screen, and put it back when you are done. And the
