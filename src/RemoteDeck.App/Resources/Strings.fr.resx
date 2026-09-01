@@ -329,6 +329,9 @@
   <data name="Palette_NewConnection" xml:space="preserve">
     <value>Nouvelle connexion</value>
   </data>
+  <data name="Palette_NewConnectionSubtitle" xml:space="preserve">
+    <value>Ajouter une machine à la liste sans s'y connecter</value>
+  </data>
   <data name="Palette_ImportConnections" xml:space="preserve">
     <value>Importer des connexions…</value>
   </data>
@@ -339,28 +342,49 @@
     <value>Gérer les identifiants…</value>
   </data>
   <data name="Palette_ManageCredentialsSubtitle" xml:space="preserve">
-    <value>Noms d'utilisateur et mots de passe enregistrés</value>
+    <value>Consulter ou supprimer les noms d'utilisateur et mots de passe déjà enregistrés</value>
   </data>
   <data name="Palette_TogglePane" xml:space="preserve">
     <value>Afficher ou masquer le volet des connexions</value>
+  </data>
+  <data name="Palette_TogglePaneSubtitle" xml:space="preserve">
+    <value>Donner toute la fenêtre à la session, ou ramener la liste</value>
   </data>
   <data name="Palette_CloseSession" xml:space="preserve">
     <value>Fermer la session courante</value>
   </data>
   <data name="Palette_CloseSessionSubtitle" xml:space="preserve">
-    <value>La déconnecter et fermer son onglet (Ctrl+W)</value>
+    <value>La déconnecter et fermer son onglet</value>
   </data>
   <data name="Palette_ReconnectTab" xml:space="preserve">
     <value>Reconnecter l'onglet courant</value>
   </data>
   <data name="Palette_ReconnectTabSubtitle" xml:space="preserve">
-    <value>Reconnecter la session active</value>
+    <value>Rappeler la même machine après une coupure</value>
   </data>
   <data name="Palette_DetachSession" xml:space="preserve">
     <value>Détacher la session courante</value>
   </data>
+  <data name="Palette_DetachSessionSubtitle" xml:space="preserve">
+    <value>Sortir {0} dans sa propre fenêtre</value>
+  </data>
   <data name="Palette_ReattachSession" xml:space="preserve">
     <value>Rattacher cette session à la fenêtre principale</value>
+  </data>
+  <data name="Palette_ReattachSessionSubtitle" xml:space="preserve">
+    <value>Ramener {0} comme onglet de la fenêtre principale</value>
+  </data>
+  <data name="Palette_GroupConnections" xml:space="preserve">
+    <value>Connexions</value>
+  </data>
+  <data name="Palette_GroupSessions" xml:space="preserve">
+    <value>Sessions ouvertes</value>
+  </data>
+  <data name="Palette_GroupCommands" xml:space="preserve">
+    <value>Commandes</value>
+  </data>
+  <data name="Palette_Footer" xml:space="preserve">
+    <value>↑ ↓ naviguer · Entrée ouvrir · Échap fermer</value>
   </data>
   <data name="Editor_Title" xml:space="preserve">
     <value>Connexion</value>
