@@ -434,6 +434,23 @@ for most of it; `TEST-VM` is the reference target.
       file), restart and detach: the app starts and detaches on the default placement, with
       no error dialog.
 
+## Application icon
+
+- [ ] **Explorer** shows the deck icon on `RemoteDeck.exe` — in the extra-large view (the
+      256 px frame, the only one stored as a PNG) and in the details view (16 px). Never the
+      default .NET icon.
+- [ ] **Taskbar and Alt-Tab** show it, and the three stacked cards are still told apart at
+      that size rather than reading as one blue blob.
+- [ ] **Main window**: the icon sits at the left of the title bar, before *RemoteDeck*.
+- [ ] **A detached session window** carries the same icon at the left of its 32 px strip,
+      before the status dot — and the strip still drags the window: the icon must not
+      swallow the gesture.
+- [ ] Switch Windows between light and dark: the icon is unchanged. It is a fixed colour and
+      does **not** follow the accent, unlike the rest of the interface — expected, not a bug.
+- [ ] After changing anything in `tools/icon/New-RemoteDeckIcon.ps1`, the regenerated
+      `RemoteDeck.ico` and `RemoteDeck-32.png` are **committed**: CI publishes what is
+      versioned and never generates artwork.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the

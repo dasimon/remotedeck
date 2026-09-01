@@ -2,6 +2,25 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### An icon of its own
+
+- **RemoteDeck has an application icon**: three screens stacked into a deck — the pile of
+  connections the pane holds. Windows shows it in Explorer, on the taskbar and in Alt-Tab,
+  and both title bars carry it too, the main window's and a detached session's. Until now
+  the executable wore the default .NET icon and the title bars wore nothing at all, because
+  `ExtendsContentIntoTitleBar` replaces the system caption and takes the icon Windows would
+  have drawn with it.
+- It ships as nine sizes, 16 to 256 px, each one **drawn at its own size** rather than
+  shrunk from a single large image: reduced to 16 px, a 256 px render turns the steps
+  between the cards into a smear. The geometry lives in
+  [`tools/icon/New-RemoteDeckIcon.ps1`](tools/icon/New-RemoteDeckIcon.ps1), which is the
+  icon's source — run it and commit what it writes; the release workflow publishes what is
+  versioned and does not generate artwork.
+- Its colour is fixed, unlike everything else in the interface. An `.ico` is static, so the
+  icon cannot follow the Windows accent that the design tokens track.
+
 ## 0.2.1 — 2026-09-01
 
 **The published binaries of 0.1.0 and 0.2.0 do not start. Use this one instead.**
