@@ -22,9 +22,14 @@
     <SolidColorBrush x:Key="RdSurface2" Color="{DynamicResource SubtleFillColorSecondary}" />
     <SolidColorBrush x:Key="RdSurface3" Color="{DynamicResource ControlFillColorSecondary}" />
 
-    <!-- Borders. -->
+    <!-- Borders. RdBorderStrong is an edge that has to be seen against the surface it encloses —
+         the palette's key cap is one — and ControlStrokeColorSecondary cannot do that in the dark
+         theme: measured, it composites to #353535 where the cap's own fill lands on #2D2D2D, eight
+         levels apart. The strong stroke is the one stroke WinUI defines symmetrically (45 % of
+         black, 54 % of white); halved, it reads the same in both themes — measured, 47 levels from
+         the fill in each — without naming a colour. -->
     <SolidColorBrush x:Key="RdBorder" Color="{DynamicResource ControlStrokeColorDefault}" />
-    <SolidColorBrush x:Key="RdBorderStrong" Color="{DynamicResource ControlStrokeColorSecondary}" />
+    <SolidColorBrush x:Key="RdBorderStrong" Color="{DynamicResource ControlStrongStrokeColorDefault}" Opacity="0.5" />
 
     <!-- Text. -->
     <SolidColorBrush x:Key="RdText" Color="{DynamicResource TextFillColorPrimary}" />
