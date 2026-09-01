@@ -386,6 +386,18 @@
   <data name="Palette_Footer" xml:space="preserve">
     <value>↑ ↓ naviguer · Entrée ouvrir · Échap fermer</value>
   </data>
+  <data name="Palette_ShortcutNewConnection" xml:space="preserve">
+    <value>Ctrl+N</value>
+  </data>
+  <data name="Palette_ShortcutTogglePane" xml:space="preserve">
+    <value>Ctrl+B</value>
+  </data>
+  <data name="Palette_ShortcutCloseSession" xml:space="preserve">
+    <value>Ctrl+W</value>
+  </data>
+  <data name="Palette_ShortcutDetach" xml:space="preserve">
+    <value>Ctrl+Maj+D</value>
+  </data>
   <data name="Editor_Title" xml:space="preserve">
     <value>Connexion</value>
   </data>

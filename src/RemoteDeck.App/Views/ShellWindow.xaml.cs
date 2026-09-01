@@ -625,9 +625,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // Every subtitle below says what the row does, and none of them restates its title: a second
         // line that only rephrases the first costs a glance and answers nothing. Keystrokes are no
         // longer written there either — they are the Shortcut, which the palette draws as a key cap.
+        //
+        // The chords come from the resources like every other drawn string (spec §9): the chord
+        // never changes, but the names of its keys are Windows' own vocabulary and are translated
+        // with it — French says Maj, not Shift, exactly as the footer already says Échap and Entrée.
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
             Strings.Palette_NewConnection, Strings.Palette_NewConnectionSubtitle, CommandPriority,
-            Shortcut: "Ctrl+N", Group: Strings.Palette_GroupCommands));
+            Shortcut: Strings.Palette_ShortcutNewConnection, Group: Strings.Palette_GroupCommands));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
             Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority,
             Group: Strings.Palette_GroupCommands));
@@ -636,7 +640,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Group: Strings.Palette_GroupCommands));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             Strings.Palette_TogglePane, Strings.Palette_TogglePaneSubtitle, CommandPriority,
-            Shortcut: "Ctrl+B", Group: Strings.Palette_GroupCommands));
+            Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands));
         // The session this palette is about: the one the window it was opened from is showing, or
         // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
         // only thing that can name the session in front of the user here, and offering these two
@@ -650,7 +654,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // this row.
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
                 Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority,
-                Shortcut: "Ctrl+W", Group: Strings.Palette_GroupCommands));
+                Shortcut: Strings.Palette_ShortcutCloseSession, Group: Strings.Palette_GroupCommands));
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
                 Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority,
                 Group: Strings.Palette_GroupCommands));
@@ -668,14 +672,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reattach",
                 Strings.Palette_ReattachSession,
                 Text.Of(Strings.Palette_ReattachSessionSubtitle, from.Tab.Title), CommandPriority,
-                Shortcut: "Ctrl+Shift+D", Group: Strings.Palette_GroupCommands));
+                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
         else if (_sessions.Active is { IsDetached: false } active)
         {
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:detach",
                 Strings.Palette_DetachSession,
                 Text.Of(Strings.Palette_DetachSessionSubtitle, active.Title), CommandPriority,
-                Shortcut: "Ctrl+Shift+D", Group: Strings.Palette_GroupCommands));
+                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
 
         return items;

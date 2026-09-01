@@ -1045,6 +1045,42 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Ctrl+N.
+        /// </summary>
+        public static string Palette_ShortcutNewConnection {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutNewConnection", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+B.
+        /// </summary>
+        public static string Palette_ShortcutTogglePane {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutTogglePane", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+W.
+        /// </summary>
+        public static string Palette_ShortcutCloseSession {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutCloseSession", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+Shift+D.
+        /// </summary>
+        public static string Palette_ShortcutDetach {
+            get {
+                return ResourceManager.GetString("Palette_ShortcutDetach", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connection.
         /// </summary>
         public static string Editor_Title {
