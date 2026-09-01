@@ -104,6 +104,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -113,9 +114,24 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
+                    <!-- The application icon, for the same reason the shell's title bar carries
+                         one: ExtendsContentIntoTitleBar removed the system caption, so a detached
+                         window would otherwise be the only piece of RemoteDeck on screen with
+                         nothing identifying it. It sits before the status dot — the icon says
+                         which application, the dot says how this one session is doing.
 
-                    <TextBlock Grid.Column="1"
+                         IsHitTestVisible="False" so the icon does not eat the drag: the whole
+                         strip has to answer MouseLeftButtonDown for DragMove(). -->
+                    <ui:ImageIcon Grid.Column="0"
+                                  Width="16" Height="16"
+                                  Margin="12,0,0,0"
+                                  VerticalAlignment="Center"
+                                  IsHitTestVisible="False"
+                                  Source="pack://application:,,,/RemoteDeck;component/Resources/RemoteDeck-32.png" />
+
+                    <Ellipse Grid.Column="1" Style="{StaticResource StatusDotStyle}" />
+
+                    <TextBlock Grid.Column="2"
                                Text="{Binding Title}"
                                VerticalAlignment="Center"
                                MaxWidth="240"
@@ -125,45 +141,45 @@
                     <!-- Muted through the token rather than through Opacity, as everywhere else: the
                          subtitle must recede by the same amount in both themes, and 0.7 of white does
                          not recede like 0.7 of black. -->
-                    <TextBlock Grid.Column="2"
+                    <TextBlock Grid.Column="3"
                                Text="{Binding Subtitle}"
                                VerticalAlignment="Center"
                                Margin="8,0,8,0"
                                Foreground="{DynamicResource RdTextMuted}"
                                TextTrimming="CharacterEllipsis" />
 
-                    <ui:Button x:Name="ReconnectButton" Grid.Column="3"
+                    <ui:Button x:Name="ReconnectButton" Grid.Column="4"
                                Style="{StaticResource CaptionTextButtonStyle}"
                                Content="{x:Static res:Strings.Shell_Reconnect}"
                                Icon="{ui:SymbolIcon ArrowClockwise20}"
                                ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
                                Click="OnReconnectClick" />
 
-                    <ui:Button x:Name="CancelRetryButton" Grid.Column="4"
+                    <ui:Button x:Name="CancelRetryButton" Grid.Column="5"
                                Style="{StaticResource CaptionTextButtonStyle}"
                                Content="{x:Static res:Strings.Common_Cancel}"
                                ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
                                Click="OnCancelRetryClick" />
 
-                    <ui:Button x:Name="DiagnosticsButton" Grid.Column="5"
+                    <ui:Button x:Name="DiagnosticsButton" Grid.Column="6"
                                Style="{StaticResource CaptionButtonStyle}"
                                Icon="{ui:SymbolIcon Copy20}"
                                ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                                Click="OnCopyDiagnosticsClick" />
 
-                    <ui:Button x:Name="ReattachButton" Grid.Column="6"
+                    <ui:Button x:Name="ReattachButton" Grid.Column="7"
                                Style="{StaticResource CaptionButtonStyle}"
                                Icon="{ui:SymbolIcon TabDesktop20}"
                                ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
                                Click="OnReattachClick" />
 
-                    <ui:Button Grid.Column="7"
+                    <ui:Button Grid.Column="8"
                                Style="{StaticResource CaptionButtonStyle}"
                                Icon="{ui:SymbolIcon FullScreenMaximize20}"
                                ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
                                Click="OnFullScreenClick" />
 
-                    <ui:Button Grid.Column="8"
+                    <ui:Button Grid.Column="9"
                                Style="{StaticResource CaptionButtonStyle}"
                                Margin="2,0,4,0"
                                Icon="{ui:SymbolIcon Dismiss20}"
