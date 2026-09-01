@@ -13,6 +13,14 @@
          exactly what a source build on an ARM64 machine produces. x64 also matches the published
          single-file target (spec §11). -->
     <PlatformTarget>x64</PlatformTarget>
+    <!-- Without this, PublishSingleFile bundles the managed assemblies and leaves every NATIVE
+         library beside the executable: PresentationNative_cor3, wpfgfx_cor3, vcruntime140_cor3,
+         D3DCompiler_47_cor3, PenImc_cor3 and e_sqlite3. The .exe then looks self-contained and is
+         not — run on its own it dies with a DllNotFoundException inside a window procedure, which
+         Windows reports as 0xC000041D with no message at all. Measured: that is exactly what the
+         published 0.1.0 and 0.2.0 binaries did. The property belongs here rather than in the
+         release workflow so that any publish, from anywhere, produces the one file it promises. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <!-- WFO0003 tells WinForms apps to declare DPI awareness via ApplicationHighDpiMode /
          ApplicationConfiguration.Initialize(). That path only runs through the WinForms
          bootstrap, which this WPF-entry-point app never executes: UseWindowsForms is on

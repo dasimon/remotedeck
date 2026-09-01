@@ -27,7 +27,23 @@ jobs:
       - name: Publish single-file executable (x64, self-contained)
         run: >
           dotnet publish src/RemoteDeck.App -c Release -r win-x64
-          --self-contained true -p:PublishSingleFile=true -o publish
+          --self-contained true -p:PublishSingleFile=true -p:DebugType=none -o publish
+
+      # The release attaches publish/RemoteDeck.exe and nothing else, so a publish that leaves
+      # anything beside it ships a binary that cannot start: native libraries are not bundled
+      # unless IncludeNativeLibrariesForSelfExtract is set, and the .exe alone then dies with a
+      # DllNotFoundException inside a window procedure -- reported by Windows as 0xC000041D, with
+      # no message and no window. That is what 0.1.0 and 0.2.0 shipped. Fail here instead.
+      - name: Refuse to ship a single file that is not one
+        shell: pwsh
+        run: |
+          $extra = Get-ChildItem publish -Recurse -File | Where-Object Name -ne 'RemoteDeck.exe'
+          if ($extra) {
+            Write-Host '::error::publish/ holds more than RemoteDeck.exe -- the attached binary would not start on its own:'
+            $extra | ForEach-Object { Write-Host "::error::  $($_.FullName.Substring($PWD.Path.Length + 1))" }
+            exit 1
+          }
+          Write-Host "publish/ holds RemoteDeck.exe alone ($([math]::Round((Get-Item publish/RemoteDeck.exe).Length / 1MB)) MB)."
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
