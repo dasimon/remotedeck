@@ -66,10 +66,19 @@ internal sealed partial class SessionsViewModel : ObservableObject
 
         _attach = attach;
         _detach = detach;
+        Tabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDockedTabs));
     }
 
     /// <summary>The open tabs, left to right. Reordered in place by <see cref="Move"/>.</summary>
     public ObservableCollection<SessionTabViewModel> Tabs { get; } = [];
+
+    /// <summary>
+    /// True while the strip has at least one tab to draw — which is not <c>Tabs.Count > 0</c>: a
+    /// detached tab stays in <see cref="Tabs"/> and the strip collapses it, so a strip whose every
+    /// tab is detached shows nothing. The strip's baseline follows this, and only this: a line as
+    /// tall as a tab would otherwise floor the control at 34 px with no tab under it.
+    /// </summary>
+    public bool HasDockedTabs => Tabs.Any(t => !t.IsDetached);
 
     /// <summary>The tab on screen, or <c>null</c> when none is open.</summary>
     [ObservableProperty] private SessionTabViewModel? _active;
@@ -254,7 +263,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
         // activation pass below must not hide it on its way to the neighbour.
         session.Host.Visibility = Visibility.Visible;
         _detached[tab] = window;
-        tab.IsDetached = true;
+        SetDetached(tab, true);
         ProbeLog.Write("session", $"'{tab.Title}' detached ({_detached.Count} window(s))");
 
         if (ReferenceEquals(Active, tab))
@@ -305,7 +314,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
         }
 
         _detached.Remove(tab);
-        tab.IsDetached = false;
+        SetDetached(tab, false);
         ProbeLog.Write("session", $"'{tab.Title}' reattached ({_detached.Count} window(s) left)");
 
         // Before the window goes: it now holds nothing, and the tab is the one the user just
@@ -319,6 +328,17 @@ internal sealed partial class SessionsViewModel : ObservableObject
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The only writer of <see cref="SessionTabViewModel.IsDetached"/>. That flag decides whether
+    /// the strip draws the tab at all, so every write to it also republishes
+    /// <see cref="HasDockedTabs"/> — which no collection change would announce.
+    /// </summary>
+    private void SetDetached(SessionTabViewModel tab, bool detached)
+    {
+        tab.IsDetached = detached;
+        OnPropertyChanged(nameof(HasDockedTabs));
     }
 
     /// <summary>Puts a host back in the shell's container after a failed <see cref="Detach"/>.
@@ -469,7 +489,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
         // showing it — which is now empty and goes with the session it was holding.
         if (_detached.Remove(tab, out var window))
         {
-            tab.IsDetached = false;
+            SetDetached(tab, false);
             Close(window, tab);
         }
         else
@@ -567,7 +587,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
             // A window still showing a session that has just been disposed has nothing left to show.
             if (_detached.Remove(tab, out var window))
             {
-                tab.IsDetached = false;
+                SetDetached(tab, false);
                 Close(window, tab);
             }
 

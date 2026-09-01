@@ -4,6 +4,8 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:res="clr-namespace:RemoteDeck.App.Resources">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
         <!-- The 8 px status dot. The view-model publishes a resource *key* (StatusBrushKey) rather
              than a Brush, and the mapping key -> brush happens here through DynamicResource: a
              brush frozen into the view-model would not follow a light/dark switch, and DynamicResource
@@ -92,8 +94,16 @@
              not at the bottom of the strip, which is a different place as soon as the horizontal
              scroll bar appears and makes the strip taller than a tab. Declared first, so every tab
              paints over it: an inactive tab is transparent and lets the line through, the active one
-             covers its own stretch of it. Not hit-testable — the tabs own the gestures. -->
+             covers its own stretch of it. Not hit-testable — the tabs own the gestures.
+
+             Only while a tab is actually drawn under it: being a tab tall, it would otherwise floor
+             the whole control at 34 px and underline tabs that are not there — an empty band on
+             every cold start. HasDockedTabs, not Tabs.Count: a detached tab stays in the collection
+             and this strip collapses it, so a strip whose every tab is detached draws nothing and
+             gets no line either. Collapsed when the strip has no view-model yet, for the same
+             reason: nothing is drawn. -->
         <Border x:Name="StripBaseline"
+                Visibility="{Binding HasDockedTabs, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"
                 Height="{StaticResource RdTabHeight}"
                 VerticalAlignment="Top"
                 IsHitTestVisible="False"
