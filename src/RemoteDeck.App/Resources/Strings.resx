@@ -782,4 +782,10 @@
   <data name="Shell_WorkspaceEmptyMessage" xml:space="preserve">
     <value>“{0}” no longer references any existing connection.</value>
   </data>
+  <data name="Shell_DeleteWorkspaceTitle" xml:space="preserve">
+    <value>Delete “{0}”?</value>
+  </data>
+  <data name="Shell_DeleteWorkspaceMessage" xml:space="preserve">
+    <value>The workspace is removed. The connections it lists are left untouched.</value>
+  </data>
 </root>

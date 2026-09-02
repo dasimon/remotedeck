@@ -2231,5 +2231,23 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Shell_WorkspaceEmptyMessage", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete “{0}”?.
+        /// </summary>
+        public static string Shell_DeleteWorkspaceTitle {
+            get {
+                return ResourceManager.GetString("Shell_DeleteWorkspaceTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The workspace is removed. The connections it lists are left untouched..
+        /// </summary>
+        public static string Shell_DeleteWorkspaceMessage {
+            get {
+                return ResourceManager.GetString("Shell_DeleteWorkspaceMessage", resourceCulture);
+            }
+        }
     }
 }
