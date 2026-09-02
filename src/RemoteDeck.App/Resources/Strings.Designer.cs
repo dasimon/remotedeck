@@ -190,6 +190,24 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to F2.
+        /// </summary>
+        public static string Pane_MenuGestureEdit {
+            get {
+                return ResourceManager.GetString("Pane_MenuGestureEdit", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+N.
+        /// </summary>
+        public static string Pane_MenuGestureNew {
+            get {
+                return ResourceManager.GetString("Pane_MenuGestureNew", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Could not change the favorite.
         /// </summary>
         public static string Shell_FavoriteFailedTitle {

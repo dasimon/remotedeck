@@ -101,6 +101,12 @@
   <data name="Pane_MenuGestureDelete" xml:space="preserve">
     <value>Suppr</value>
   </data>
+  <data name="Pane_MenuGestureEdit" xml:space="preserve">
+    <value>F2</value>
+  </data>
+  <data name="Pane_MenuGestureNew" xml:space="preserve">
+    <value>Ctrl+N</value>
+  </data>
   <data name="Pane_Unavailable" xml:space="preserve">
     <value>Les connexions enregistrées sont indisponibles : la base de données n'a pas pu être ouverte. Voir le journal.</value>
   </data>

@@ -4,6 +4,27 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### The checklist gets shorter
+
+- **Fifteen tests now assert things about the repository itself**, in
+  `tests/RemoteDeck.Core.Tests/Conventions/`. They replace boxes a human used to tick, and
+  they close a class of bug nothing could catch before: `Strings.Designer.cs` is versioned
+  here rather than generated, so a key added to the two `.resx` files and forgotten in the
+  designer failed **silently at runtime**, as a label that simply never appeared.
+- They check that every key exists in all three files with the property name and the
+  `GetString` argument matching it, that neither language holds an orphan, that both use the
+  same `{0}`/`{1}` placeholders, that no value is empty, that no user-visible text was left
+  as a literal in any XAML, that no `{x:Static}` points at a key that no longer exists, and
+  that the icon is committed with all nine of its sizes.
+- Each was proved by breaking the thing it guards and watching it fail — a guard test that
+  has never failed is a guard test nobody has tested.
+- `docs/manual-checklist.md` says at the top what no longer needs a human. Where a box read
+  "no missing string" or "no hard-coded English", that half is now proven and what remains is
+  whether the French reads well and fits its control.
+- The two menu gesture hints became resources like every other visible string, even the ones
+  the two languages spell identically: a rule with an exception for whatever happens to match
+  today is a rule someone has to remember.
+
 ### A right-click menu on the connection list
 
 - **Right-click a connection** and you get *Connect*, *Edit…*, a *Favorite* toggle and *Delete* —

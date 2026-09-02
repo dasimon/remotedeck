@@ -34,8 +34,11 @@
                       FontWeight="SemiBold"
                       Command="{Binding ConnectSelectedCommand}" />
             <Separator />
+            <!-- The gesture hint is a resource like every other visible string, even where the two
+                 languages agree on it: the rule is "no literal text in the markup", and an exception
+                 for the ones that happen to match today is an exception someone has to remember. -->
             <MenuItem Header="{x:Static res:Strings.Pane_MenuEdit}"
-                      InputGestureText="F2"
+                      InputGestureText="{x:Static res:Strings.Pane_MenuGestureEdit}"
                       Command="{Binding EditSelectedCommand}" />
             <!-- OneWay on purpose: the click toggles the check visually, but the value of record is
                  the row's, and the pane reloads right after the write. A TwoWay binding here would
@@ -57,7 +60,7 @@
              labels twice. -->
         <ContextMenu x:Key="EmptyMenu">
             <MenuItem Header="{x:Static res:Strings.Palette_NewConnection}"
-                      InputGestureText="Ctrl+N"
+                      InputGestureText="{x:Static res:Strings.Pane_MenuGestureNew}"
                       Command="{Binding NewCommand}" />
             <MenuItem Header="{x:Static res:Strings.Palette_ImportConnections}"
                       Command="{Binding ImportCommand}" />
