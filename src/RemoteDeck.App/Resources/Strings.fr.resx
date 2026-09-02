@@ -749,4 +749,37 @@
   <data name="WorkspaceName_Replace" xml:space="preserve">
     <value>Remplacer</value>
   </data>
+  <data name="Palette_GroupWorkspaces" xml:space="preserve">
+    <value>Espaces de travail</value>
+  </data>
+  <data name="Palette_SaveLayout" xml:space="preserve">
+    <value>Enregistrer la disposition sous…</value>
+  </data>
+  <data name="Palette_SaveLayoutSubtitle" xml:space="preserve">
+    <value>Mémorise les sessions ouvertes et leur place</value>
+  </data>
+  <data name="Palette_OpenWorkspace" xml:space="preserve">
+    <value>Ouvrir l'espace « {0} »</value>
+  </data>
+  <data name="Palette_OpenWorkspaceSubtitle" xml:space="preserve">
+    <value>{0} connexions</value>
+  </data>
+  <data name="Palette_DeleteWorkspace" xml:space="preserve">
+    <value>Supprimer l'espace « {0} »</value>
+  </data>
+  <data name="Palette_DeleteWorkspaceSubtitle" xml:space="preserve">
+    <value>Retire l'espace, jamais les connexions</value>
+  </data>
+  <data name="Shell_WorkspaceSaved" xml:space="preserve">
+    <value>Espace « {0} » enregistré</value>
+  </data>
+  <data name="Shell_WorkspaceSavedMessage" xml:space="preserve">
+    <value>{0} connexions, et la place de chacune.</value>
+  </data>
+  <data name="Shell_WorkspaceEmptyTitle" xml:space="preserve">
+    <value>Rien à ouvrir</value>
+  </data>
+  <data name="Shell_WorkspaceEmptyMessage" xml:space="preserve">
+    <value>« {0} » ne référence plus aucune connexion existante.</value>
+  </data>
 </root>
