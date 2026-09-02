@@ -2098,15 +2098,6 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to A workspace needs a name..
-        /// </summary>
-        public static string WorkspaceName_NameRequired {
-            get {
-                return ResourceManager.GetString("WorkspaceName_NameRequired", resourceCulture);
-            }
-        }
-
-        /// <summary>
         ///   Looks up a localized string similar to Replace “{0}”?.
         /// </summary>
         public static string WorkspaceName_ReplaceTitle {
@@ -2121,15 +2112,6 @@ namespace RemoteDeck.App.Resources {
         public static string WorkspaceName_ReplaceMessage {
             get {
                 return ResourceManager.GetString("WorkspaceName_ReplaceMessage", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized string similar to Replace.
-        /// </summary>
-        public static string WorkspaceName_Replace {
-            get {
-                return ResourceManager.GetString("WorkspaceName_Replace", resourceCulture);
             }
         }
 
@@ -2247,6 +2229,15 @@ namespace RemoteDeck.App.Resources {
         public static string Shell_WorkspaceSavedMessage {
             get {
                 return ResourceManager.GetString("Shell_WorkspaceSavedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Workspace not saved.
+        /// </summary>
+        public static string Shell_WorkspaceSaveFailedTitle {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSaveFailedTitle", resourceCulture);
             }
         }
 
