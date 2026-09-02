@@ -770,6 +770,18 @@
   <data name="Palette_DeleteWorkspaceSubtitle" xml:space="preserve">
     <value>Removes the workspace, never the connections</value>
   </data>
+  <data name="Palette_ToggleRestore" xml:space="preserve">
+    <value>Reopen last session at startup</value>
+  </data>
+  <data name="Palette_ToggleRestoreSubtitle" xml:space="preserve">
+    <value>Currently: {0}</value>
+  </data>
+  <data name="Palette_On" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="Palette_Off" xml:space="preserve">
+    <value>off</value>
+  </data>
   <data name="Shell_WorkspaceSaved" xml:space="preserve">
     <value>Workspace “{0}” saved</value>
   </data>

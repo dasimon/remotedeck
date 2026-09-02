@@ -243,6 +243,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
                 Text.Of(Strings.Shell_ReadyTitle, _version.Label), Strings.Shell_ReadyMessage);
         }
+
+        // Last, and deliberately so: the resume opens sessions, and OpenConnectionAsync returns on
+        // its `_version is null` guard, so everything above has to have run first.
+        // (discarded: the returned Task is deliberately not awaited — Loaded cannot be awaited, and
+        // MountWorkspaceAsync reports its own failures)
+        _ = RestoreLastSessionIfAsked();
     }
 
     // ---------------------------------------------------------------- pane
@@ -647,6 +653,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             Strings.Palette_TogglePane, Strings.Palette_TogglePaneSubtitle, CommandPriority,
             Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands));
+        // The one place the resume is switched on and off. Its subtitle carries the current state
+        // rather than a rephrasing of the title: a toggle whose value cannot be read before pressing
+        // Enter is a coin flip. Offered unconditionally — it is a setting, not an act on a session.
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:restore-toggle",
+            Strings.Palette_ToggleRestore,
+            Text.Of(Strings.Palette_ToggleRestoreSubtitle,
+                _settings.RestoreLastSession ? Strings.Palette_On : Strings.Palette_Off),
+            CommandPriority, Group: Strings.Palette_GroupCommands));
         // The session this palette is about: the one the window it was opened from is showing, or
         // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
         // only thing that can name the session in front of the user here, and offering these two
@@ -741,7 +755,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 && _workspaces?.Get(openId) is { } toOpen)
             {
                 // Fire and forget: the mount is asynchronous because it connects in series, and the
-                // palette has nothing to wait for. Failures are already reported per session.
+                // palette has nothing to wait for. MountWorkspaceAsync reports its own failures —
+                // its whole body sits inside one try — so the dropped task can carry none.
                 _ = MountWorkspaceAsync(toOpen);
             }
 
@@ -797,6 +812,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:pane":
                 TogglePane();
+                break;
+
+            case "cmd:restore-toggle":
+                _settings.RestoreLastSession = !_settings.RestoreLastSession;
+                // Written now rather than at the next clean close: this is the user's answer to a
+                // question, and a crash must not take it back.
+                SaveSettings();
                 break;
 
             case "cmd:workspace-save":
@@ -1905,6 +1927,76 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
+    /// <summary>
+    /// Photographs the tab strip for the next start-up. Written on every clean close and only
+    /// there — deliberately not from <see cref="SaveSettings"/>, which the splitter also calls: a
+    /// close by crash leaves the previous snapshot on disk, which is the useful behaviour
+    /// (spec espaces §3.2).
+    /// </summary>
+    private void CaptureLastSession()
+    {
+        var entries = new List<LastSessionEntry>();
+        for (int i = 0; i < _sessions.Tabs.Count; i++)
+        {
+            var tab = _sessions.Tabs[i];
+            var window = _sessions.DetachedWindowOf(tab);
+            entries.Add(new LastSessionEntry
+            {
+                ConnectionId = tab.Session.Connection.Id,
+                Ordinal = i,
+                Detached = window is not null,
+                Placement = window is null ? null : PlacementOf(window),
+            });
+        }
+
+        _settings.LastSession = entries;
+    }
+
+    /// <summary>
+    /// Reopens the last session, if the user asked for it. Goes through the same
+    /// <see cref="WorkspacePlan"/> as the named workspaces: it is the same decision on another
+    /// source, and it has no business being written twice.
+    /// </summary>
+    private async Task RestoreLastSessionIfAsked()
+    {
+        if (!_settings.RestoreLastSession || _settings.LastSession.Count == 0 || _connections is null)
+        {
+            return;
+        }
+
+        // An ephemeral workspace, never written to the database: it is the adapter between the
+        // windowing state held in settings.json and the mounting decision.
+        var asWorkspace = new Workspace
+        {
+            Name = string.Empty,
+            AutoConnect = true,
+            Items = [.. _settings.LastSession.Select(e => new WorkspaceItem
+            {
+                ConnectionId = e.ConnectionId,
+                Ordinal = e.Ordinal,
+                Detached = e.Detached,
+                Placement = e.Placement,
+            })],
+        };
+
+        // OpenConnectionAsync writes LastConnectionId for every connection it opens, so the mount
+        // would leave it on the last item of the plan instead of on the row the user had selected.
+        // BuildPane has already re-selected that row from this very value, so it is simply put back:
+        // a resume is not a selection, and the next SaveSettings falls back to it when the pane has
+        // none of its own.
+        long? selected = _settings.LastConnectionId;
+        try
+        {
+            // announceEmpty: false — at start-up a resume that yields nothing (connections deleted
+            // since) is the normal case, not an incident worth an InfoBar.
+            await MountWorkspaceAsync(asWorkspace, announceEmpty: false);
+        }
+        finally
+        {
+            _settings.LastConnectionId = selected;
+        }
+    }
+
     /// <summary>Writes the layout to <c>%APPDATA%\RemoteDeck\settings.json</c>. Losing it only costs
     /// geometry, so a failure is logged and swallowed — never surfaced on the way out of the app.</summary>
     private void SaveSettings()
@@ -1982,6 +2074,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         if (!_settingsSaved)
         {
             _settingsSaved = true;
+            // Before SaveSettings writes the file, and before the close-all pass below takes the
+            // sessions away: the strip has to still be there to be photographed. This is the only
+            // call site, which is what makes the snapshot a clean-close-only affair.
+            CaptureLastSession();
             SaveSettings();
         }
 
