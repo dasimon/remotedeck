@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -64,16 +66,27 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
     private bool _everShown;
     private bool _dismissed;
 
-    public FullScreenBar(SessionWindow owner, SessionTabViewModel tab)
+    public FullScreenBar(SessionWindow owner, SessionTabViewModel tab, SessionsViewModel sessions)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(tab);
+        ArgumentNullException.ThrowIfNull(sessions);
 
         _owner = owner;
         InitializeComponent();
 
         // The dot, the name and the host all read from the tab, exactly as the caption strip does.
         DataContext = tab;
+
+        // Every session but this one, as chips beside the title. A view of its own rather than the
+        // collection itself: the filter has to drop exactly one item — the session this bar already
+        // names — and a ListCollectionView over the ObservableCollection follows opens and closes on
+        // its own. Filtering on identity means nothing can ever invalidate it, so it is never
+        // refreshed; a tab's *state* changing is a property change the chip's bindings already see.
+        OtherSessions.ItemsSource = new ListCollectionView(sessions.Tabs)
+        {
+            Filter = item => !ReferenceEquals(item, tab),
+        };
 
         // Ownership is the safety net: whatever path takes the session window down — its own close,
         // the shell's, application shutdown — WPF closes this one with it.
@@ -96,6 +109,11 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>The cross.</summary>
     public event Action? CloseSessionRequested;
+
+    /// <summary>One of the other sessions was clicked. The bar knows nothing about where that session
+    /// lives — docked in the shell or full screen on another monitor — so it names it and lets the
+    /// shell, which owns that map, decide what bringing it forward means.</summary>
+    public event Action<SessionTabViewModel>? SessionRequested;
 
     /// <summary>
     /// Starts following the pointer, and shows the bar for <see cref="EntryHold"/> so the user can
@@ -304,6 +322,20 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
     private void OnLeaveFullScreenClick(object sender, RoutedEventArgs e) => LeaveFullScreenRequested?.Invoke();
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => CloseSessionRequested?.Invoke();
+
+    /// <summary>A session chip. On button-up rather than button-down, the way a menu entry commits:
+    /// the press is what tells the user the chip is live, and a pointer that slides off before
+    /// releasing has changed nothing.</summary>
+    private void OnSessionChipClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: SessionTabViewModel tab })
+        {
+            return;
+        }
+
+        e.Handled = true;
+        SessionRequested?.Invoke(tab);
+    }
 
     // ---------------------------------------------------------------- interop
 

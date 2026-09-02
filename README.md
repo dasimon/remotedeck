@@ -107,11 +107,12 @@ every session properly first — the app waits for the servers to acknowledge, s
 sessions are left *disconnected*, never as zombies.
 
 **Detached windows — one session per monitor.** A session can leave the tab strip and
-live in its own window. **Drag a tab more than 40 px downwards**, out of the strip, and
-it becomes a window under your cursor; `Ctrl+Shift+D` and the palette
-(*Detach current session*) do the same thing without the mouse. To bring it back, drag
-the window by its caption strip onto the tab strip — a drop band lights up — or use its
-**Reattach** button, `Ctrl+Shift+D`, or the palette. Nothing reconnects on the way:
+live in its own window. **Double-click a tab**, or **drag it more than 40 px downwards**
+out of the strip, and it becomes a window under your cursor; `Ctrl+Shift+D` and the palette
+(*Detach current session*) do the same thing without the mouse. To bring it back,
+**double-click the window's caption strip**, drag that strip onto the tab strip — a drop
+band lights up — or use its **Reattach** button, `Ctrl+Shift+D`, or the palette. Nothing
+reconnects on the way:
 moving a session between the main window and its own window is a re-parenting, not a new
 connection, so the desktop you were looking at is still there.
 
@@ -124,14 +125,27 @@ application, detached windows included, still waiting for each server to acknowl
 **Full screen.** `F11`, `Ctrl+Alt+Pause`, or the button in the caption strip puts a
 detached window in full screen on the monitor it sits on: the caption strip and the
 InfoBar go away and the remote desktop is edge to edge. Two windows on two monitors give
-you two full-screen remote desktops at once. While it lasts, the window never changes
-size — so nothing appears when you move the pointer to the top of the screen. That is
-deliberate: showing a bar would resize the remote surface, and in *Dynamic* mode that
-renegotiates the remote resolution, making the picture jump every time you brush the top
-edge. Instead the window **leaves full screen on its own the moment the session stops
-being connected**, so the reason, *Reconnect* and *Copy diagnostics* are on screen when
-they matter. After a reconnection it stays windowed; press `F11` when you want it back.
-Full screen can only be entered on a connected session.
+you two full-screen remote desktops at once.
+
+Move the pointer to the top of the screen and a **connection bar** slides in, the way
+`mstsc`'s does: the session's name and host, *Reattach*, *Leave full screen*, and a cross.
+It also stays up for three seconds when full screen is entered, so two sessions on two
+monitors say which is which. The bar is a window of its own, floating over the remote
+desktop — it never takes a pixel from the session, which matters in *Dynamic* mode, where
+shrinking the surface would renegotiate the remote resolution and make the picture jump
+every time you brushed the top edge.
+
+**The other sessions are on that bar too**, one chip each, with their status dot. Click one
+and you go straight to it — a detached session is brought forward in its own window,
+keeping the full screen it was in; a docked one is activated and the main window raised.
+The session you came from stays exactly as it was, full screen and connected: this is
+navigation, not a move, so nothing is re-parented and nothing reconnects. With a single
+session open, no chips appear.
+
+The window **leaves full screen on its own the moment the session stops being connected**,
+so the reason, *Reconnect* and *Copy diagnostics* are on screen when they matter. After a
+reconnection it stays windowed; press `F11` when you want it back. Full screen can only be
+entered on a connected session.
 
 Where a detached window was — position, size and whether it was full screen — is
 remembered per connection in `settings.json`, and reapplied the next time you detach that

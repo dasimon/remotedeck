@@ -4,6 +4,31 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### Full screen is no longer a dead end
+
+- **The full-screen connection bar now lists the other sessions**, one chip each with its
+  status dot. Click one and you go there: a detached session is brought forward in its own
+  window, keeping whatever full screen it was in; a docked one is activated and the main
+  window raised. Until now, reaching another session from a full-screen one meant leaving
+  full screen or hunting for the right window in Alt-Tab.
+- Nothing moves and nothing reconnects — the session you came from stays full screen and
+  connected exactly where it was. The chips are navigation, not a re-parenting.
+- With a single session open the list is empty and the bar keeps the shape it had.
+- Documentation fix: the README still claimed that nothing appears at the top of a
+  full-screen session. The connection bar has been there since 0.2.0; the passage
+  describing its absence — and the reasoning for it — was never updated when it landed.
+
+### Detaching, in one gesture
+
+- **Double-click a tab to detach it**, and **double-click a detached window's caption strip
+  to bring it back**. Both were already possible by dragging — 40 px down out of the strip,
+  or the window back onto it — but a drag is a gesture you have to know about, and the
+  double-click is the one every other tabbed application has taught. Nothing else changes:
+  the window opens where that connection was last seen, or under the pointer, and the
+  session is re-parented rather than reconnected, exactly as the drag does it.
+- The caption strip's double-click did nothing at all before, so no existing gesture was
+  taken away.
+
 ### An icon of its own
 
 - **RemoteDeck has an application icon**: three screens stacked into a deck — the pile of

@@ -838,7 +838,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        var window = new SessionWindow(tab);
+        var window = new SessionWindow(tab, _sessions);
         var placement = RememberedPlacement(tab, window)
             ?? (screenPoint is { } point ? PlaceUnder(point, window) : null);
         if (placement is not null)
@@ -860,6 +860,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         window.CloseRequested += OnSessionWindowCloseRequested;
         window.CaptionDragMoved += OnSessionWindowCaptionDragMoved;
         window.CaptionDragEnded += OnSessionWindowCaptionDragEnded;
+        window.SessionRequested += GoToSession;
         window.Show();
 
         if (_sessions.Detach(tab, window))
@@ -976,6 +977,42 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         _settings.DetachedWindows[PlacementKey(window.Tab)] = placement;
+    }
+
+    /// <summary>
+    /// A session was picked from a full-screen bar. The shell is the only thing that knows where each
+    /// session is, so it is the only thing that can say what "go there" means: a detached session is
+    /// its own window and is simply brought forward, keeping whatever full screen it was in; a docked
+    /// one is a tab, so it is activated and the main window raised over it.
+    ///
+    /// The window the pick came from is deliberately left alone — still full screen, still showing
+    /// its own session. Nothing is re-parented and nothing reconnects; this is navigation, not a
+    /// move.
+    /// </summary>
+    private void GoToSession(SessionTabViewModel tab)
+    {
+        if (_sessions.DetachedWindowOf(tab) is { } window)
+        {
+            // A minimised window has to be restored first: Activate() on one only flashes its
+            // taskbar button. WindowState is the window's own, not the full-screen bookkeeping —
+            // SessionWindow restores that itself when it needs to.
+            if (window.WindowState == WindowState.Minimized)
+            {
+                window.WindowState = WindowState.Normal;
+            }
+
+            _ = window.Activate();
+            return;
+        }
+
+        _sessions.Activate(tab);
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        _ = Activate();
     }
 
     /// <summary>The <em>Reattach</em> button of a detached window.</summary>

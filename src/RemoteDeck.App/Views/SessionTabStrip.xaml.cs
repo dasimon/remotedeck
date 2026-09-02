@@ -11,8 +11,9 @@ namespace RemoteDeck.App.Views;
 ///
 /// The control owns no session and closes nothing itself. Every gesture ends up on
 /// <see cref="SessionsViewModel"/>: a click activates, a middle-click or the cross closes, a
-/// sideways drag calls <see cref="SessionsViewModel.Move"/>, and a drag <em>out</em> of the strip
-/// raises <see cref="DetachRequested"/> for the shell to answer.
+/// sideways drag calls <see cref="SessionsViewModel.Move"/>, and a drag <em>out</em> of the strip —
+/// or a double-click, which is the same thing without the travel — raises
+/// <see cref="DetachRequested"/> for the shell to answer.
 /// </summary>
 /// <remarks>
 /// The view-model is internal (it holds <c>RdpSession</c>), so <see cref="ViewModel"/> is too —
@@ -84,11 +85,29 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
         DropHint.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Left press: activates immediately — a tab must switch on press, not on release —
-    /// and arms the drag, which only starts once the pointer has actually travelled.</summary>
+    /// and arms the drag, which only starts once the pointer has actually travelled. A second press
+    /// inside the double-click time detaches instead, the keyboard-free shorthand for the 40 px
+    /// drag.</summary>
     private void OnTabLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (_viewModel is null || TabOf(sender) is not { } tab)
         {
+            return;
+        }
+
+        // Tested before any state is armed, and answered without capturing the mouse: the handler
+        // opens a window, and a window shown while a capture is held on a tab never sees the button
+        // come up — the same reason the drag releases before raising DetachRequested. The first
+        // click of the pair has already activated the tab and released its own capture, so there is
+        // nothing left to undo here.
+        //
+        // The tab is a Border, not a Control, so there is no MouseDoubleClick to handle; ClickCount
+        // is what Windows' own double-click timing reaches us as.
+        if (e.ClickCount == 2)
+        {
+            var screenPoint = PointToScreen(e.GetPosition(this));
+            e.Handled = true;
+            DetachRequested?.Invoke(tab, screenPoint);
             return;
         }
 
