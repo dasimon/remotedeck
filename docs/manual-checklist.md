@@ -451,6 +451,48 @@ for most of it; `TEST-VM` is the reference target.
       `RemoteDeck.ico` and `RemoteDeck-32.png` are **committed**: CI publishes what is
       versioned and never generates artwork.
 
+## Session navigation — double-click and the full-screen selector
+
+None of this is covered by automated tests: it all lives in `RemoteDeck.App`, which has no
+test project. These boxes are the only verification.
+
+### Double-click to detach and to reattach
+
+- [ ] **Double-click a docked tab**: it leaves for a window of its own, placed where that
+      connection was last seen or under the pointer. The remote desktop is the same one —
+      it must **not** flash, blank or reconnect.
+- [ ] The **single** click still only activates. Click tabs back and forth quickly but
+      deliberately on *different* tabs: nothing detaches. Only two clicks on the *same* tab
+      inside the double-click time do.
+- [ ] **A sideways drag still reorders** and a 40 px downward drag still detaches. Neither
+      gesture was replaced.
+- [ ] **Double-click the caption strip** of a detached window: it goes back into the tab
+      strip. Again, no reconnection.
+- [ ] **Dragging the caption strip still moves the window** — the double-click must not have
+      cost the drag.
+- [ ] Press the **cross** on a detached window, then double-click its caption strip while the
+      close protocol is still running: nothing happens. The session must not be moved back
+      into the shell mid-close.
+
+### The full-screen session selector
+
+- [ ] With **two or more sessions**, put one full screen (`F11`) and bring the pointer to the
+      top edge: the bar slides in and shows **a chip per other session**, each with its
+      status dot and the connection's name; the host is in its tooltip.
+- [ ] With **one session only**, no chips appear and the bar looks exactly as it did.
+- [ ] **Click the chip of a docked session**: the main window comes forward with that tab
+      active. The full-screen window stays full screen and connected behind it.
+- [ ] **Click the chip of a session detached and full screen on another monitor**: that
+      window comes forward, still full screen. Nothing is re-parented on either side.
+- [ ] After a click, the bar **retracts on its own** — no `Topmost` strip left floating over
+      the main window.
+- [ ] Open and close a session while a bar is up: the chips follow, without a flicker of the
+      full-screen surface.
+- [ ] A chip whose session is reconnecting shows the **amber** dot, and turns green again on
+      its own — the chips read state live, they are not a snapshot.
+- [ ] Press a chip and slide the pointer off it before releasing: nothing happens.
+- [ ] Light and dark: the chips' border, hover and text follow the theme like the rest.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
