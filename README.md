@@ -176,14 +176,23 @@ nobody's fault. A failure stays with its own session: it shows its own reason, w
 *Reconnect* and *Copy diagnostics*, exactly as a connection opened by hand would, and
 the rest keep opening. A refused password inside a workspace is still never retried.
 
-One limitation worth knowing: a session the workspace wants full screen, that is
-already full screen somewhere else, is **not** moved to the monitor the workspace
-recorded — only a windowed or detached session gets re-placed. Doing it properly would
-mean leaving full screen, moving the window, and re-entering full screen: two
-full-screen transitions and two remote-resolution renegotiations just to move a
-picture that is already on screen. So opening "INCIDENT" puts its full-screen session
-on the recorded monitor only the first time; if that session is already full screen
-elsewhere, it stays there.
+*One after another* means the next connection is not even issued until the previous
+session has answered — connected, dropped or failed. A machine that answers nothing at
+all holds the workspace for five seconds, the same budget a session gets to answer the
+close protocol, and then the next one starts anyway. So a six-machine workspace takes
+longer to be complete than firing six connections at once would: that wait is what is
+being bought.
+
+One limitation worth knowing, and it only concerns a session that is **already** full
+screen: a workspace that wants it full screen leaves it where it is rather than moving
+it to the monitor it recorded. Doing it properly would mean leaving full screen, moving
+the window, and re-entering full screen: two full-screen transitions and two
+remote-resolution renegotiations just to relocate a picture that is already on screen.
+Mounting the same workspace on a machine that is not running yet is unaffected — the
+session is opened, detached to the recorded rectangle, and put full screen there as soon
+as it is connected. So opening "INCIDENT" puts its full-screen session on the recorded
+monitor whenever it opens that session itself; when that session is already full screen
+on another monitor, it stays there, still connected and untouched.
 
 Deleting a connection removes it from every workspace that lists it; deleting a
 workspace removes only the workspace, never the connections it names — both ask for

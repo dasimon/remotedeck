@@ -175,6 +175,21 @@ qui vient de s'associer — est précisément le cas où « tout connecter » se
 l'utilisateur : six échecs d'un coup, dont aucun n'est la faute d'une machine. En série, la
 première qui répond confirme que le chemin réseau est là.
 
+**En série veut dire attendre.** `Connect()` sur le contrôle ActiveX ne bloque pas : il rend
+la main dès que la demande est émise, la session est alors `Connecting`, et une boucle qui se
+contente d'enchaîner les appels lance bien six négociations en même temps — elle sérialise les
+émissions, pas les négociations. L'action suivante n'est donc pas démarrée tant que la session
+précédente n'a pas répondu : connectée, tombée, ou en échec. Sous plafond, cinq secondes, le
+même budget qu'une session reçoit déjà pour répondre au protocole de fermeture : une machine
+muette coûte cinq secondes au montage, pas le montage. Le prix assumé est qu'un espace de six
+connexions met plus longtemps à être complet qu'un `Connect` massif ; c'est exactement ce qu'on
+achète.
+
+Cette attente est aussi ce qui rend le plein écran possible au montage à froid : une fenêtre
+détachée n'entre en plein écran que depuis l'état `Connected` (spec fenêtres détachées), et
+avant l'attente la session ne l'était jamais encore. Une session qui ne se connecte pas est
+détachée quand même, dans sa fenêtre, simplement pas en plein écran.
+
 Chaque action réutilise le code existant sans le modifier : le `Connect` de la palette, et
 `DetachTab(tab, placement)` pour les items détachés. Aucun nouveau chemin de connexion,
 aucune duplication du protocole.
@@ -194,7 +209,10 @@ Directory compte six fois plus quand six sessions partent ensemble.
 
 Le drapeau est porté **par espace**, pas globalement. À `1` (défaut), monter l'espace connecte
 tout. À `0`, le plan est exécuté jusqu'à la création des onglets et des fenêtres, mais aucune
-session n'est démarrée : chacune se connecte quand l'utilisateur la sélectionne.
+session n'est démarrée : chacune reste au repos jusqu'à ce que l'utilisateur demande sa
+connexion par *Reconnect*. Sélectionner l'onglet ne démarre rien — c'est le même onglet
+« pas connecté » qu'après une déconnexion normale, et le produit n'a qu'un seul geste pour
+connecter une session, pas deux.
 
 Ce mode existe pour les espaces qu'on ouvre pour *regarder* la disposition, ou depuis un
 poste dont on n'est pas sûr du réseau. Il se règle au moment de la capture (§5) et nulle part
