@@ -48,6 +48,28 @@ public static class SchemaMigrator
         CREATE INDEX IX_Connection_GroupName ON Connection(GroupName);
         CREATE INDEX IX_Connection_Favorite  ON Connection(IsFavorite) WHERE IsFavorite = 1;
         """,
+        // V2 — espaces de travail (spec espaces §3.1)
+        """
+        CREATE TABLE Workspace (
+          Id          INTEGER PRIMARY KEY,
+          Name        TEXT    NOT NULL UNIQUE,
+          AutoConnect INTEGER NOT NULL DEFAULT 1,
+          CreatedUtc  TEXT    NOT NULL);
+
+        CREATE TABLE WorkspaceItem (
+          WorkspaceId  INTEGER NOT NULL REFERENCES Workspace(Id)  ON DELETE CASCADE,
+          ConnectionId INTEGER NOT NULL REFERENCES Connection(Id) ON DELETE CASCADE,
+          Ordinal      INTEGER NOT NULL,
+          Detached     INTEGER NOT NULL DEFAULT 0,
+          Left         REAL    NULL,
+          Top          REAL    NULL,
+          Width        REAL    NULL,
+          Height       REAL    NULL,
+          FullScreen   INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (WorkspaceId, ConnectionId));
+
+        CREATE INDEX IX_WorkspaceItem_Connection ON WorkspaceItem(ConnectionId);
+        """,
     ];
 
     public static int GetVersion(SqliteConnection connection)
