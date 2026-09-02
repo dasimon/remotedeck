@@ -493,6 +493,38 @@ test project. These boxes are the only verification.
 - [ ] Press a chip and slide the pointer off it before releasing: nothing happens.
 - [ ] Light and dark: the chips' border, hover and text follow the theme like the rest.
 
+## Workspaces
+
+- [ ] Capture a workspace of three sessions, two of them detached on two monitors, then
+      close everything and reopen it: all three come back, each in its place.
+- [ ] Open a workspace while two of its sessions are already running: **nothing is closed
+      or reconnected**, and the two live sessions are only moved.
+- [ ] A docked session that the workspace wants detached: it is detached. The reverse
+      reattaches it.
+- [ ] Save under a name that already exists: the confirmation appears, and declining
+      leaves the workspace unchanged.
+- [ ] Delete a connection that belongs to a workspace: it disappears from the workspace,
+      the workspace stays, and the other connections are untouched.
+- [ ] A workspace whose connections have all been deleted: it stays listed, and opening
+      it shows "Nothing to open" instead of opening anything.
+- [ ] Unplug the monitor a workspace window was on, then open the workspace: the window
+      lands on a monitor that is actually connected and reachable — approximate on mixed
+      scaling factors, which is expected.
+- [ ] `AutoConnect` unticked: the tabs appear without any session starting; each connects
+      once selected.
+- [ ] Connections open **in series**: on a workspace of four, the dots turn green one
+      after another, not all at once.
+- [ ] A workspace connection whose password is refused: only that one fails, with its own
+      reason, and it is **not** retried. The others are mounted.
+- [ ] Last-session restore is **off by default** on a fresh install.
+- [ ] Turn it on: close with two sessions open, restart, and both come back. Kill the
+      process instead of closing cleanly: the previous snapshot is kept.
+- [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
+      an empty or whitespace-only name, and its appearance follows both the light and
+      dark theme.
+- [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): no workspace string
+      is left hard-coded.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the

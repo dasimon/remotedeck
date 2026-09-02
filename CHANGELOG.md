@@ -4,6 +4,32 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### Workspaces
+
+- **A workspace names the sessions you already have open — arranged, detached, full
+  screen — so the whole thing comes back with one command.** `Ctrl+K` → *Save layout
+  as…* captures what is on screen right now; `Ctrl+K` → *Open workspace "PROD"*
+  brings it back. There is no editor: saving over an existing name replaces it, after
+  confirmation, and that is the only way a workspace changes.
+- **Opening a workspace never closes anything.** A connection already running stays
+  connected and is only moved to where the workspace remembers it — nothing
+  reconnects. Open two workspaces in a row and the screen can end up with more
+  sessions than either one describes on its own: a deliberate trade, made so that
+  opening a workspace can never end a live production session behind your back.
+- Its connections open **one after another, not all at once** — six RDP negotiations
+  fired together on a network that has only just come up produce six failures that
+  are nobody's fault. A failure stays with its own session, with its own reason,
+  *Reconnect* and *Copy diagnostics*; the rest keep opening, and a refused password is
+  still never retried.
+- **Restoring the last session is off by default.** A separate setting, toggled from
+  the palette, snapshots what was open at a clean shutdown and reopens it at the next
+  launch; killing the process instead leaves the previous snapshot alone. Launching
+  RemoteDeck must never connect to anything nobody asked for, so the switch starts
+  off.
+- Deleting a connection removes it from every workspace that lists it; deleting a
+  workspace removes only the workspace, never the connections. Workspaces live in
+  `connections.db`; the last-session snapshot lives in `settings.json`.
+
 ### Full screen is no longer a dead end
 
 - **The full-screen connection bar now lists the other sessions**, one chip each with its

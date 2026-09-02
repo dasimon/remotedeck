@@ -155,6 +155,50 @@ On a desktop mixing display scaling factors the placement is approximate: screen
 coordinates are converted with the main window's DPI scale, so what is guaranteed is a
 window you can reach, not pixel accuracy.
 
+**Workspaces.** A workspace is a named set of the sessions you already have open —
+arranged, detached, full screen — so the whole thing comes back with one command
+instead of by hand every morning. Open the palette (`Ctrl+K`) → *Save layout as…*,
+give it a name, and leave *Connect automatically* ticked unless you only want the
+windows placed, not connected. There is no separate editor for a workspace: saving
+over an existing name replaces it, after a confirmation, and that replacement is how
+a workspace changes.
+
+Open one from the palette, *Open workspace "PROD"*. **Opening a workspace never
+closes anything.** A connection that is not running yet is opened; one that already
+is stays connected and is only moved to where the workspace remembers it — nothing
+reconnects. Open two workspaces in a row and the screen can end up holding more
+sessions than either one describes on its own: that is the trade RemoteDeck makes so
+that opening a workspace can never end a live session behind your back.
+
+Its connections open **one after another, not all at once** — six RDP negotiations
+fired together on a network that has only just come up produce six failures that are
+nobody's fault. A failure stays with its own session: it shows its own reason, with
+*Reconnect* and *Copy diagnostics*, exactly as a connection opened by hand would, and
+the rest keep opening. A refused password inside a workspace is still never retried.
+
+One limitation worth knowing: a session the workspace wants full screen, that is
+already full screen somewhere else, is **not** moved to the monitor the workspace
+recorded — only a windowed or detached session gets re-placed. Doing it properly would
+mean leaving full screen, moving the window, and re-entering full screen: two
+full-screen transitions and two remote-resolution renegotiations just to move a
+picture that is already on screen. So opening "INCIDENT" puts its full-screen session
+on the recorded monitor only the first time; if that session is already full screen
+elsewhere, it stays there.
+
+Deleting a connection removes it from every workspace that lists it; deleting a
+workspace removes only the workspace, never the connections it names — both ask for
+confirmation first. A workspace whose connections have all been deleted this way
+stays listed, since it is still the name you chose, but opening it shows "Nothing to
+open" instead of doing anything.
+
+Workspaces live in `connections.db`, alongside your connections. Separately, a
+setting — **off by default**, toggled from the palette — snapshots the sessions you
+had open at a clean shutdown and reopens them the next time RemoteDeck starts;
+launching the app must never connect to anything you did not ask for, which is why it
+starts off. Killing the process instead of closing normally leaves the previous
+snapshot alone rather than replacing it with nothing. That snapshot lives in
+`settings.json`, not in a workspace.
+
 **Automatic reconnection.** When a session drops on a network failure — a timeout or
 a lost socket — RemoteDeck reconnects on its own: five attempts, waiting 2 s, 5 s,
 10 s, 30 s then 60 s, with a visible countdown you can cancel at any time. It
@@ -169,12 +213,13 @@ desktop to match the window: resize or maximise, and after a short pause the rem
 resolution follows, sharp, instead of being stretched. Against a server that refuses
 it, the session falls back to scaling the image and says so in the log.
 
-Connections and credentials live in `%APPDATA%\RemoteDeck\connections.db`.
-Window and pane layout — pane width, collapsed state, window size and position, and
-where each detached session window was — lives beside it in
-**`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside the migrated database.
-Deleting that file only costs you the layout; the app falls back to its defaults
-without complaining.
+Connections, credentials and workspaces live in `%APPDATA%\RemoteDeck\connections.db`.
+Window and pane layout — pane width, collapsed state, window size and position, where
+each detached session window was, and the last-session-restore switch and its snapshot
+— lives beside it in **`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside the
+migrated database. Deleting that file only costs you the layout, plus the restore
+switch reverting to off and its snapshot disappearing with it: nothing in it is content
+you composed or a secret, and the app falls back to its defaults without complaining.
 
 ### Keyboard
 
