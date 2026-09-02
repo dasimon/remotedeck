@@ -2132,5 +2132,104 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("WorkspaceName_Replace", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Workspaces.
+        /// </summary>
+        public static string Palette_GroupWorkspaces {
+            get {
+                return ResourceManager.GetString("Palette_GroupWorkspaces", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Save layout as….
+        /// </summary>
+        public static string Palette_SaveLayout {
+            get {
+                return ResourceManager.GetString("Palette_SaveLayout", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Remember the open sessions and where they sit.
+        /// </summary>
+        public static string Palette_SaveLayoutSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_SaveLayoutSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open workspace “{0}”.
+        /// </summary>
+        public static string Palette_OpenWorkspace {
+            get {
+                return ResourceManager.GetString("Palette_OpenWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connections.
+        /// </summary>
+        public static string Palette_OpenWorkspaceSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_OpenWorkspaceSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete workspace “{0}”.
+        /// </summary>
+        public static string Palette_DeleteWorkspace {
+            get {
+                return ResourceManager.GetString("Palette_DeleteWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Removes the workspace, never the connections.
+        /// </summary>
+        public static string Palette_DeleteWorkspaceSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_DeleteWorkspaceSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Workspace “{0}” saved.
+        /// </summary>
+        public static string Shell_WorkspaceSaved {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSaved", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connections and where each one sits..
+        /// </summary>
+        public static string Shell_WorkspaceSavedMessage {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSavedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing to open.
+        /// </summary>
+        public static string Shell_WorkspaceEmptyTitle {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceEmptyTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to “{0}” no longer references any existing connection..
+        /// </summary>
+        public static string Shell_WorkspaceEmptyMessage {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceEmptyMessage", resourceCulture);
+            }
+        }
     }
 }

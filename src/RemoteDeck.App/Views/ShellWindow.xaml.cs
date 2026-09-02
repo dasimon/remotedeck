@@ -88,6 +88,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private readonly SessionsViewModel _sessions;
 
     private ConnectionRepository? _connections;
+
+    /// <summary>The workspaces, or <c>null</c> in degraded mode — the same rule as
+    /// <see cref="_connections"/>, whose database it shares.</summary>
+    private WorkspaceRepository? _workspaces;
+
     private CredentialRepository? _credentials;
     private ICredentialVault? _vault;
     private ConnectionListViewModel? _list;
@@ -168,6 +173,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // there. GetService, not GetRequiredService — the repositories are absent when the database
         // failed to open (spec §6.6), which is a degraded mode, not a crash.
         _connections = App.Current.Services.GetService<ConnectionRepository>();
+        _workspaces = App.Current.Services.GetService<WorkspaceRepository>();
         _credentials = App.Current.Services.GetService<CredentialRepository>();
         _vault = App.Current.Services.GetService<ICredentialVault>();
         BuildPane();
@@ -682,6 +688,29 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
 
+        // Saving only means something with something to save, and only from the shell: the capture
+        // reads the whole strip, not the window the palette happens to have been opened from.
+        if (from is null && _sessions.Tabs.Count > 0)
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:workspace-save",
+                Strings.Palette_SaveLayout, Strings.Palette_SaveLayoutSubtitle, CommandPriority,
+                Group: Strings.Palette_GroupWorkspaces));
+        }
+
+        foreach (var workspace in _workspaces?.GetAll() ?? [])
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command,
+                string.Create(CultureInfo.InvariantCulture, $"ws:{workspace.Id}"),
+                Text.Of(Strings.Palette_OpenWorkspace, workspace.Name),
+                Text.Of(Strings.Palette_OpenWorkspaceSubtitle, workspace.Items.Count), CommandPriority,
+                Group: Strings.Palette_GroupWorkspaces));
+            items.Add(new PaletteItem(PaletteItemKind.Command,
+                string.Create(CultureInfo.InvariantCulture, $"wsdel:{workspace.Id}"),
+                Text.Of(Strings.Palette_DeleteWorkspace, workspace.Name),
+                Strings.Palette_DeleteWorkspaceSubtitle, CommandPriority,
+                Group: Strings.Palette_GroupWorkspaces));
+        }
+
         return items;
     }
 
@@ -701,6 +730,29 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             {
                 // The same path Enter takes in the pane: one tab per connection, existing tab reused.
                 OnConnectRequested(connection);
+            }
+
+            return;
+        }
+
+        if (id.StartsWith("ws:", StringComparison.Ordinal))
+        {
+            if (long.TryParse(id.AsSpan(3), CultureInfo.InvariantCulture, out long openId)
+                && _workspaces?.Get(openId) is { } toOpen)
+            {
+                // Fire and forget: the mount is asynchronous because it connects in series, and the
+                // palette has nothing to wait for. Failures are already reported per session.
+                _ = MountWorkspaceAsync(toOpen);
+            }
+
+            return;
+        }
+
+        if (id.StartsWith("wsdel:", StringComparison.Ordinal))
+        {
+            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long deleteId))
+            {
+                _workspaces?.Delete(deleteId);
             }
 
             return;
@@ -733,6 +785,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:pane":
                 TogglePane();
+                break;
+
+            case "cmd:workspace-save":
+                SaveCurrentLayout();
                 break;
 
             // BuildPaletteItems no longer produces "cmd:disconnect": RemoteDeck has no disconnect
@@ -818,7 +874,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_sessions.Active is { IsDetached: false } tab)
         {
-            DetachTab(tab, null);
+            // Cast: the workspace overload takes a nullable too, and a bare null no longer says
+            // which. This is still the pointer-less detach it has always been.
+            DetachTab(tab, (System.Windows.Point?)null);
         }
     }
 
@@ -953,30 +1011,34 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Screens(VisualTreeHelper.GetDpi(this)), window.MinWidth, window.MinHeight);
 
     /// <summary>
+    /// Where a detached window is right now, or <c>null</c> when that describes nothing usable.
+    /// A minimized window has no placement: it shows nothing the user could recognise, and what is
+    /// already on file — where it was before it was minimized — is the better answer.
+    /// <see cref="SessionWindow.CurrentPlacement"/> handles the maximized and full-screen cases
+    /// itself, reporting the restore bounds rather than the screen-sized frame.
+    /// </summary>
+    private static DetachedWindowPlacement? PlacementOf(SessionWindow window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+        {
+            return null;
+        }
+
+        var placement = window.CurrentPlacement();
+        return placement is { Width: > 0, Height: > 0 } ? placement : null;
+    }
+
+    /// <summary>
     /// Records where a detached window is, for the next time this connection is torn off. Called on
     /// both paths out of a detached window — its own close, and the shell saving on the way down —
     /// and on a reattach, which is a window disappearing just the same.
     /// </summary>
-    /// <remarks>
-    /// A minimized window is skipped: it describes nothing the user could recognise, and the entry
-    /// already on file — where the window was before it was minimized — is the better answer.
-    /// <see cref="SessionWindow.CurrentPlacement"/> handles the maximized and full-screen cases
-    /// itself, reporting the restore bounds rather than the screen-sized frame.
-    /// </remarks>
     private void RememberPlacement(SessionWindow window)
     {
-        if (window.WindowState == WindowState.Minimized)
+        if (PlacementOf(window) is { } placement)
         {
-            return;
+            _settings.DetachedWindows[PlacementKey(window.Tab)] = placement;
         }
-
-        var placement = window.CurrentPlacement();
-        if (placement is not { Width: > 0, Height: > 0 })
-        {
-            return;
-        }
-
-        _settings.DetachedWindows[PlacementKey(window.Tab)] = placement;
     }
 
     /// <summary>
@@ -1114,6 +1176,220 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         TabStrip.ShowDropHint(false);
     }
 
+    // ---------------------------------------------------------------- workspaces
+
+    /// <summary>
+    /// Captures the open sessions as a named workspace. Where each detached window sits is read off
+    /// the real window rather than off what was remembered: what a workspace records is what the
+    /// user sees on screen at the moment they record it.
+    /// </summary>
+    private void SaveCurrentLayout()
+    {
+        if (_workspaces is null || _sessions.Tabs.Count == 0)
+        {
+            return;
+        }
+
+        var dialog = new WorkspaceNameWindow(proposedName: null, autoConnect: true) { Owner = this };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        // A duplicate name is not a mistake: replacing is the only way a workspace can evolve, since
+        // there is no editor for one. But it overwrites, so it is confirmed.
+        if (_workspaces.FindByName(dialog.WorkspaceName) is not null)
+        {
+            var confirm = System.Windows.MessageBox.Show(this,
+                Text.Of(Strings.WorkspaceName_ReplaceMessage, dialog.WorkspaceName),
+                Text.Of(Strings.WorkspaceName_ReplaceTitle, dialog.WorkspaceName),
+                MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.OK)
+            {
+                return;
+            }
+        }
+
+        var workspace = new Workspace { Name = dialog.WorkspaceName, AutoConnect = dialog.AutoConnect };
+        for (int i = 0; i < _sessions.Tabs.Count; i++)
+        {
+            var tab = _sessions.Tabs[i];
+            var window = _sessions.DetachedWindowOf(tab);
+            workspace.Items.Add(new WorkspaceItem
+            {
+                ConnectionId = tab.Session.Connection.Id,
+                Ordinal = i,
+                Detached = window is not null,
+                Placement = window is null ? null : PlacementOf(window),
+            });
+        }
+
+        _ = _workspaces.Save(workspace);
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
+            Text.Of(Strings.Shell_WorkspaceSaved, workspace.Name),
+            Text.Of(Strings.Shell_WorkspaceSavedMessage, workspace.Items.Count));
+    }
+
+    /// <summary>
+    /// Detaches <paramref name="tab"/> at an imposed placement. A workspace's own placement wins
+    /// over the per-connection memory, which is only the fallback when the workspace has none —
+    /// otherwise opening "INCIDENT" would leave "PROD" unusable.
+    /// </summary>
+    private void DetachTab(SessionTabViewModel tab, DetachedWindowPlacement? placement)
+    {
+        if (_closeInProgress || tab.IsDetached)
+        {
+            return;
+        }
+
+        var window = new SessionWindow(tab, _sessions);
+        var chosen = placement ?? RememberedPlacement(tab, window);
+        if (chosen is not null)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = chosen.Left;
+            window.Top = chosen.Top;
+            window.Width = chosen.Width;
+            window.Height = chosen.Height;
+        }
+        else
+        {
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        window.ReattachRequested += OnSessionWindowReattachRequested;
+        window.CloseRequested += OnSessionWindowCloseRequested;
+        window.CaptionDragMoved += OnSessionWindowCaptionDragMoved;
+        window.CaptionDragEnded += OnSessionWindowCaptionDragEnded;
+        window.SessionRequested += GoToSession;
+        window.Show();
+
+        if (_sessions.Detach(tab, window))
+        {
+            if (chosen?.FullScreen == true)
+            {
+                window.ToggleFullScreen();
+            }
+
+            return;
+        }
+
+        window.AllowClose();
+        window.Close();
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DetachRefusedTitle,
+            Text.Of(Strings.Shell_DetachRefusedMessage, tab.Title));
+    }
+
+    /// <summary>
+    /// Mounts a workspace: each connection is brought into the state the workspace describes.
+    /// Nothing is closed — a workspace adds, it does not replace — and nothing reconnects: a session
+    /// that is already open is moved, which is re-parenting.
+    /// </summary>
+    /// <param name="announceEmpty">False for the resume at startup: an empty resume is the normal
+    /// case there, not an incident worth warning about.</param>
+    /// <remarks>
+    /// In series and not in parallel: six simultaneous RDP negotiations over a network that has just
+    /// come up are six failures, none of which is any machine's fault.
+    /// </remarks>
+    private async Task MountWorkspaceAsync(Workspace workspace, bool announceEmpty = true)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+
+        if (_connections is null || _closeInProgress)
+        {
+            return;
+        }
+
+        var existing = _connections.GetAll().Select(c => c.Id).ToHashSet();
+        var open = _sessions.Tabs.ToDictionary(t => t.Session.Connection.Id, t => t.IsDetached);
+        var plan = WorkspacePlan.Build(workspace, existing, open, Screens(VisualTreeHelper.GetDpi(this)));
+
+        if (plan.Count == 0)
+        {
+            if (announceEmpty)
+            {
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    Strings.Shell_WorkspaceEmptyTitle,
+                    Text.Of(Strings.Shell_WorkspaceEmptyMessage, workspace.Name));
+            }
+
+            return;
+        }
+
+        foreach (var action in plan)
+        {
+            await ApplyWorkspaceActionAsync(action, workspace.AutoConnect);
+        }
+    }
+
+    /// <summary>One action of the plan.</summary>
+    private async Task ApplyWorkspaceActionAsync(WorkspaceAction action, bool autoConnect)
+    {
+        var tab = _sessions.Find(action.ConnectionId);
+
+        switch (action.Kind)
+        {
+            case WorkspaceActionKind.Activate when tab is not null:
+                GoToSession(tab);
+                break;
+
+            case WorkspaceActionKind.MoveDetached when tab is not null:
+                if (_sessions.DetachedWindowOf(tab) is { } window && action.Placement is { } target)
+                {
+                    // Leave full screen first: moving a full-screen window means nothing, and
+                    // SetFullScreen restores its own bounds on the way out.
+                    if (window.IsFullScreen && !target.FullScreen)
+                    {
+                        window.ToggleFullScreen();
+                    }
+
+                    if (!window.IsFullScreen)
+                    {
+                        window.Left = target.Left;
+                        window.Top = target.Top;
+                        window.Width = target.Width;
+                        window.Height = target.Height;
+                    }
+
+                    if (target.FullScreen && !window.IsFullScreen)
+                    {
+                        window.ToggleFullScreen();
+                    }
+                }
+
+                GoToSession(tab);
+                break;
+
+            case WorkspaceActionKind.Detach when tab is not null:
+                DetachTab(tab, action.Placement);
+                break;
+
+            case WorkspaceActionKind.Reattach when tab is not null:
+                if (_sessions.DetachedWindowOf(tab) is { } toReattach)
+                {
+                    Reattach(toReattach);
+                }
+
+                break;
+
+            case WorkspaceActionKind.OpenDocked:
+            case WorkspaceActionKind.OpenDetached:
+                if (_connections?.Get(action.ConnectionId) is { } connection)
+                {
+                    await OpenConnectionAsync(connection, start: autoConnect);
+
+                    // Find again: the tab did not exist before the open.
+                    if (action.Kind == WorkspaceActionKind.OpenDetached
+                        && _sessions.Find(action.ConnectionId) is { } opened)
+                    {
+                        DetachTab(opened, action.Placement);
+                    }
+                }
+
+                break;
+        }
+    }
+
     /// <summary>
     /// Opens one connection, or brings its tab forward when it already has one — a connection has
     /// at most one session. <c>async void</c> is the only shape an event handler that awaits can
@@ -1132,6 +1408,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        await OpenConnectionAsync(connection, start: true);
+    }
+
+    /// <summary>
+    /// Opens a tab for <paramref name="connection"/> and, when <paramref name="start"/>, starts the
+    /// session. Awaitable, which <see cref="OnConnectRequested"/> cannot be: mounting a workspace
+    /// connects in series, and a series needs somewhere to wait.
+    /// </summary>
+    /// <param name="start">False for a workspace whose <c>AutoConnect</c> is off: the tab exists,
+    /// the session waits to be selected.</param>
+    private async Task OpenConnectionAsync(Connection connection, bool start)
+    {
         if (_version is null)
         {
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_SessionUnavailableTitle,
@@ -1152,7 +1440,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             SessionsArea.UpdateLayout();
 
             _settings.LastConnectionId = connection.Id;
-            await session.StartAsync();
+            if (start)
+            {
+                await session.StartAsync();
+            }
         }
         catch (Exception ex)
         {
