@@ -2197,6 +2197,42 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Reopen last session at startup.
+        /// </summary>
+        public static string Palette_ToggleRestore {
+            get {
+                return ResourceManager.GetString("Palette_ToggleRestore", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Currently: {0}.
+        /// </summary>
+        public static string Palette_ToggleRestoreSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_ToggleRestoreSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to on.
+        /// </summary>
+        public static string Palette_On {
+            get {
+                return ResourceManager.GetString("Palette_On", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to off.
+        /// </summary>
+        public static string Palette_Off {
+            get {
+                return ResourceManager.GetString("Palette_Off", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Workspace “{0}” saved.
         /// </summary>
         public static string Shell_WorkspaceSaved {
