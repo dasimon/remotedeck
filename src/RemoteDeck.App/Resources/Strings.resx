@@ -719,4 +719,34 @@
   <data name="Shell_DetachRefusedMessage" xml:space="preserve">
     <value>'{0}' could not be moved to a window of its own and stayed in the main window.</value>
   </data>
+  <data name="WorkspaceName_Title" xml:space="preserve">
+    <value>Save layout as…</value>
+  </data>
+  <data name="WorkspaceName_NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="WorkspaceName_NamePlaceholder" xml:space="preserve">
+    <value>PROD</value>
+  </data>
+  <data name="WorkspaceName_AutoConnect" xml:space="preserve">
+    <value>Connect the sessions when the workspace opens</value>
+  </data>
+  <data name="WorkspaceName_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="WorkspaceName_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="WorkspaceName_NameRequired" xml:space="preserve">
+    <value>A workspace needs a name.</value>
+  </data>
+  <data name="WorkspaceName_ReplaceTitle" xml:space="preserve">
+    <value>Replace “{0}”?</value>
+  </data>
+  <data name="WorkspaceName_ReplaceMessage" xml:space="preserve">
+    <value>A workspace called “{0}” already exists. Saving replaces what it holds — there is no undo.</value>
+  </data>
+  <data name="WorkspaceName_Replace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
 </root>

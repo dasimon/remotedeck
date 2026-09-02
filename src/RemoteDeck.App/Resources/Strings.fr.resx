@@ -719,4 +719,34 @@
   <data name="Shell_DetachRefusedMessage" xml:space="preserve">
     <value>« {0} » n’a pas pu être déplacée dans une fenêtre à elle et reste dans la fenêtre principale.</value>
   </data>
+  <data name="WorkspaceName_Title" xml:space="preserve">
+    <value>Enregistrer la disposition sous…</value>
+  </data>
+  <data name="WorkspaceName_NameLabel" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="WorkspaceName_NamePlaceholder" xml:space="preserve">
+    <value>PROD</value>
+  </data>
+  <data name="WorkspaceName_AutoConnect" xml:space="preserve">
+    <value>Connecter les sessions à l'ouverture de l'espace</value>
+  </data>
+  <data name="WorkspaceName_Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="WorkspaceName_Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="WorkspaceName_NameRequired" xml:space="preserve">
+    <value>Un espace doit avoir un nom.</value>
+  </data>
+  <data name="WorkspaceName_ReplaceTitle" xml:space="preserve">
+    <value>Remplacer « {0} » ?</value>
+  </data>
+  <data name="WorkspaceName_ReplaceMessage" xml:space="preserve">
+    <value>Un espace nommé « {0} » existe déjà. L'enregistrer remplace son contenu — c'est sans retour.</value>
+  </data>
+  <data name="WorkspaceName_Replace" xml:space="preserve">
+    <value>Remplacer</value>
+  </data>
 </root>

@@ -2042,5 +2042,95 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Shell_DetachRefusedMessage", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Save layout as….
+        /// </summary>
+        public static string WorkspaceName_Title {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string WorkspaceName_NameLabel {
+            get {
+                return ResourceManager.GetString("WorkspaceName_NameLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to PROD.
+        /// </summary>
+        public static string WorkspaceName_NamePlaceholder {
+            get {
+                return ResourceManager.GetString("WorkspaceName_NamePlaceholder", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connect the sessions when the workspace opens.
+        /// </summary>
+        public static string WorkspaceName_AutoConnect {
+            get {
+                return ResourceManager.GetString("WorkspaceName_AutoConnect", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Save.
+        /// </summary>
+        public static string WorkspaceName_Save {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Save", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        public static string WorkspaceName_Cancel {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Cancel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to A workspace needs a name..
+        /// </summary>
+        public static string WorkspaceName_NameRequired {
+            get {
+                return ResourceManager.GetString("WorkspaceName_NameRequired", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Replace “{0}”?.
+        /// </summary>
+        public static string WorkspaceName_ReplaceTitle {
+            get {
+                return ResourceManager.GetString("WorkspaceName_ReplaceTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to A workspace called “{0}” already exists. Saving replaces what it holds — there is no undo..
+        /// </summary>
+        public static string WorkspaceName_ReplaceMessage {
+            get {
+                return ResourceManager.GetString("WorkspaceName_ReplaceMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Replace.
+        /// </summary>
+        public static string WorkspaceName_Replace {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Replace", resourceCulture);
+            }
+        }
     }
 }
