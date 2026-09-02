@@ -1546,20 +1546,19 @@ Découper ainsi, **sans changer une ligne de la logique existante** — les gard
         }
         catch (Exception ex)
         {
-            // Reprendre ici le corps exact du catch existant de OnConnectRequested, sans le modifier.
             ProbeLog.Write("session", $"Opening '{connection.Name}' failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_ConnectFailedTitle,
-                /* … le reste du catch existant, inchangé … */);
+                Text.Of(Strings.Shell_ConnectFailedMessage, ex.GetType().Name,
+                    ex.HResult.ToString("X8", CultureInfo.InvariantCulture), ex.Message));
         }
         finally
         {
-            // Reprendre le finally existant tel quel (remise à zéro de _connecting).
             _connecting = false;
         }
     }
 ```
 
-> Ouvrir `OnConnectRequested` avant d'écrire ceci et **recopier** le `catch` et le `finally` réels : les deux extraits ci-dessus sont tronqués à dessein, et un `catch` réécrit de mémoire est une régression silencieuse.
+> Le `catch` et le `finally` ci-dessus sont **le corps existant, recopié à l'identique** depuis `OnConnectRequested` (`:1157-1167`). Les déplacer, ne pas les réécrire : `start: false` doit échouer exactement comme `start: true`.
 
 - [ ] **Step 6b: Surcharger `DetachTab` avec une place explicite**
 
