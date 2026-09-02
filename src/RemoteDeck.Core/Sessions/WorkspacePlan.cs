@@ -23,8 +23,14 @@ public enum WorkspaceActionKind
 /// <summary>
 /// Une action du montage. <paramref name="Placement"/> est le rectangle déjà ajusté aux écrans
 /// présents, ou <c>null</c> quand l'espace n'en a pas ou que celui qu'il avait appartient à un
-/// écran disparu — l'appelant retombe alors sur la mémorisation par connexion, puis sur le centrage,
-/// exactement comme un détachement ordinaire.
+/// écran disparu.
+///
+/// Ce que l'appelant en fait dépend de l'action. Pour <see cref="WorkspaceActionKind.OpenDetached"/>
+/// et <see cref="WorkspaceActionKind.Detach"/>, un <c>null</c> le fait retomber sur la mémorisation
+/// par connexion, puis sur le centrage, exactement comme un détachement ordinaire. Pour
+/// <see cref="WorkspaceActionKind.MoveDetached"/>, il n'y a pas de repli : la fenêtre est déjà à
+/// l'écran quelque part, et sans rectangle à lui imposer l'espace la laisse où elle est plutôt que
+/// de la déplacer vers une place qu'il n'a pas demandée.
 /// </summary>
 public sealed record WorkspaceAction(WorkspaceActionKind Kind, long ConnectionId, DetachedWindowPlacement? Placement);
 

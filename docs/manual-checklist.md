@@ -497,6 +497,9 @@ test project. These boxes are the only verification.
 
 - [ ] Capture a workspace of three sessions, two of them detached on two monitors, then
       close everything and reopen it: all three come back, each in its place.
+- [ ] A workspace holding a full-screen session, mounted cold (that connection not
+      running): the window comes up full screen on the recorded monitor once the session
+      is connected, not merely detached and windowed.
 - [ ] Open a workspace while two of its sessions are already running: **nothing is closed
       or reconnected**, and the two live sessions are only moved.
 - [ ] A docked session that the workspace wants detached: it is detached. The reverse
@@ -510,10 +513,13 @@ test project. These boxes are the only verification.
 - [ ] Unplug the monitor a workspace window was on, then open the workspace: the window
       lands on a monitor that is actually connected and reachable — approximate on mixed
       scaling factors, which is expected.
-- [ ] `AutoConnect` unticked: the tabs appear without any session starting; each connects
-      once selected.
-- [ ] Connections open **in series**: on a workspace of four, the dots turn green one
-      after another, not all at once.
+- [ ] `AutoConnect` unticked: the tabs appear without any session starting, and stay that
+      way. Selecting a tab shows a session that is *Not connected* and starts nothing;
+      *Reconnect* is what connects it.
+- [ ] Connections open **in series**: on a workspace of four, each dot turns green — or
+      red — before the next connection is even issued, never all four negotiating at once.
+      A machine that answers nothing holds the mount for five seconds at most, then the
+      next one starts anyway.
 - [ ] A workspace connection whose password is refused: only that one fails, with its own
       reason, and it is **not** retried. The others are mounted.
 - [ ] Last-session restore is **off by default** on a fresh install.
