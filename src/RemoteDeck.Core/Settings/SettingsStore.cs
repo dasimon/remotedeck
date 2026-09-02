@@ -30,6 +30,7 @@ public sealed class SettingsStore(string path)
             // AppSettings' "never null after a Load()" true here is what lets every caller index it
             // without a guard of its own.
             settings.DetachedWindows ??= [];
+            settings.LastSession ??= [];
             return settings;
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
