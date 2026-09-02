@@ -750,9 +750,21 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (id.StartsWith("wsdel:", StringComparison.Ordinal))
         {
-            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long deleteId))
+            // Confirmed, and deliberately not the two-press arm/confirm the connection list uses:
+            // the palette closes on selection and cannot hold an armed state. Open and Delete sit
+            // next to each other in the same group with near-identical text, and a deletion has no
+            // undo — while saving over a name, which destroys nothing, already asks.
+            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long deleteId)
+                && _workspaces?.Get(deleteId) is { } toDelete)
             {
-                _workspaces?.Delete(deleteId);
+                var confirm = System.Windows.MessageBox.Show(this,
+                    Strings.Shell_DeleteWorkspaceMessage,
+                    Text.Of(Strings.Shell_DeleteWorkspaceTitle, toDelete.Name),
+                    MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                if (confirm == MessageBoxResult.OK)
+                {
+                    _workspaces?.Delete(deleteId);
+                }
             }
 
             return;
@@ -1293,32 +1305,67 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </remarks>
     private async Task MountWorkspaceAsync(Workspace workspace, bool announceEmpty = true)
     {
-        ArgumentNullException.ThrowIfNull(workspace);
-
-        if (_connections is null || _closeInProgress)
+        // Everything is inside the try, the null check included: the only call sites drop the task
+        // on the floor, and an unobserved faulted task in .NET neither crashes nor logs a line. A
+        // mount that failed on anything other than a connection would otherwise be a palette that
+        // closes and does nothing at all, with nothing written anywhere to say why.
+        try
         {
-            return;
-        }
+            ArgumentNullException.ThrowIfNull(workspace);
 
-        var existing = _connections.GetAll().Select(c => c.Id).ToHashSet();
-        var open = _sessions.Tabs.ToDictionary(t => t.Session.Connection.Id, t => t.IsDetached);
-        var plan = WorkspacePlan.Build(workspace, existing, open, Screens(VisualTreeHelper.GetDpi(this)));
-
-        if (plan.Count == 0)
-        {
-            if (announceEmpty)
+            // _connecting too: a mount opens sessions without going through OnConnectRequested, so
+            // its re-entrancy guard is not on this path. Two mounts overlapping — the second started
+            // from the palette while the first is inside StartAsync — would each open a tab for the
+            // same connection, and the duplicate would then break every later mount.
+            if (_connections is null || _closeInProgress || _connecting)
             {
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                    Strings.Shell_WorkspaceEmptyTitle,
-                    Text.Of(Strings.Shell_WorkspaceEmptyMessage, workspace.Name));
+                return;
             }
 
-            return;
-        }
+            var existing = _connections.GetAll().Select(c => c.Id).ToHashSet();
 
-        foreach (var action in plan)
+            // Through Find rather than straight off Tabs: Find drops the tabs whose close is already
+            // in flight, and the plan is applied through Find as well. Built on the wider set, a
+            // session that is going away would be planned as Activate and then silently dropped,
+            // instead of being reopened. Indexed assignment, not ToDictionary: a duplicate key is a
+            // throw there, and this is the one place that must survive one.
+            var open = new Dictionary<long, bool>();
+            foreach (var tab in _sessions.Tabs)
+            {
+                if (_sessions.Find(tab.Session.Connection.Id) is { } live)
+                {
+                    open[live.Session.Connection.Id] = live.IsDetached;
+                }
+            }
+
+            var plan = WorkspacePlan.Build(workspace, existing, open, Screens(VisualTreeHelper.GetDpi(this)));
+
+            if (plan.Count == 0)
+            {
+                if (announceEmpty)
+                {
+                    StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                        Strings.Shell_WorkspaceEmptyTitle,
+                        Text.Of(Strings.Shell_WorkspaceEmptyMessage, workspace.Name));
+                }
+
+                return;
+            }
+
+            foreach (var action in plan)
+            {
+                await ApplyWorkspaceActionAsync(action, workspace.AutoConnect);
+            }
+        }
+        catch (Exception ex)
         {
-            await ApplyWorkspaceActionAsync(action, workspace.AutoConnect);
+            // The same pair OpenConnectionAsync uses on its own failure path. The workspace is not
+            // named: the throw can be the null check itself, and there would then be nothing to name.
+            ProbeLog.Write("session",
+                $"Mounting a workspace failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_ConnectFailedTitle,
+                Text.Of(Strings.Shell_ConnectFailedMessage, ex.GetType().Name,
+                    ex.HResult.ToString("X8", CultureInfo.InvariantCulture), ex.Message));
         }
     }
 
@@ -1341,6 +1388,15 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                     if (window.IsFullScreen && !target.FullScreen)
                     {
                         window.ToggleFullScreen();
+                    }
+
+                    // And out of maximized as well — the same normalisation SetFullScreen does on
+                    // the way in. Left/Top/Width/Height on a window that is not Normal change
+                    // nothing the user can see, and CurrentPlacement saved the restore rectangle of
+                    // a maximized window precisely so that it could be applied here.
+                    if (!window.IsFullScreen && window.WindowState != WindowState.Normal)
+                    {
+                        window.WindowState = WindowState.Normal;
                     }
 
                     if (!window.IsFullScreen)
@@ -1372,8 +1428,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
                 break;
 
-            case WorkspaceActionKind.OpenDocked:
-            case WorkspaceActionKind.OpenDetached:
+            // Only when nothing is open for this connection. The plan was built before the first
+            // await and can be stale by the time it is applied; OpenConnectionAsync has no
+            // already-open guard of its own — that one lives in OnConnectRequested, which this path
+            // does not go through — and SessionsViewModel.Open does not enforce one session per
+            // connection either. Without this guard a stale Open would build a second tab and a
+            // second RDP session for a connection that already has one.
+            case WorkspaceActionKind.OpenDocked when tab is null:
+            case WorkspaceActionKind.OpenDetached when tab is null:
                 if (_connections?.Get(action.ConnectionId) is { } connection)
                 {
                     await OpenConnectionAsync(connection, start: autoConnect);
