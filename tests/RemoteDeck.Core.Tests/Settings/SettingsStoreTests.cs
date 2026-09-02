@@ -73,4 +73,56 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.True(File.Exists(nested));
     }
+
+    [Fact]
+    public void RestoreLastSession_defaults_to_false()
+    {
+        // Ouvrir RemoteDeck ne doit se connecter à rien tant que l'utilisateur ne l'a pas demandé
+        // (spec espaces §7).
+        Assert.False(new AppSettings().RestoreLastSession);
+    }
+
+    [Fact]
+    public void LastSession_round_trips()
+    {
+        var store = new SettingsStore(File_);
+        store.Save(new AppSettings
+        {
+            RestoreLastSession = true,
+            LastSession =
+            [
+                new LastSessionEntry { ConnectionId = 7, Ordinal = 0, Detached = false },
+                new LastSessionEntry
+                {
+                    ConnectionId = 9,
+                    Ordinal = 1,
+                    Detached = true,
+                    Placement = new DetachedWindowPlacement(10, 20, 1280, 800, true),
+                },
+            ],
+        });
+
+        var read = store.Load();
+
+        Assert.True(read.RestoreLastSession);
+        Assert.Equal(2, read.LastSession.Count);
+        Assert.Equal(7, read.LastSession[0].ConnectionId);
+        Assert.Null(read.LastSession[0].Placement);
+        Assert.True(read.LastSession[1].Detached);
+        Assert.Equal(new DetachedWindowPlacement(10, 20, 1280, 800, true), read.LastSession[1].Placement);
+    }
+
+    [Fact]
+    public void LastSession_is_never_null_even_when_the_file_says_null()
+    {
+        // Le fichier est éditable à la main : "lastSession": null écrase l'initialiseur de propriété.
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(File_, """{ "lastSession": null, "detachedWindows": null }""");
+
+        var read = new SettingsStore(File_).Load();
+
+        Assert.NotNull(read.LastSession);
+        Assert.Empty(read.LastSession);
+        Assert.NotNull(read.DetachedWindows);
+    }
 }
