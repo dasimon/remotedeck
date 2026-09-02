@@ -737,17 +737,11 @@
   <data name="WorkspaceName_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="WorkspaceName_NameRequired" xml:space="preserve">
-    <value>A workspace needs a name.</value>
-  </data>
   <data name="WorkspaceName_ReplaceTitle" xml:space="preserve">
     <value>Replace “{0}”?</value>
   </data>
   <data name="WorkspaceName_ReplaceMessage" xml:space="preserve">
     <value>A workspace called “{0}” already exists. Saving replaces what it holds — there is no undo.</value>
-  </data>
-  <data name="WorkspaceName_Replace" xml:space="preserve">
-    <value>Replace</value>
   </data>
   <data name="Palette_GroupWorkspaces" xml:space="preserve">
     <value>Workspaces</value>
@@ -787,6 +781,9 @@
   </data>
   <data name="Shell_WorkspaceSavedMessage" xml:space="preserve">
     <value>{0} connections and where each one sits.</value>
+  </data>
+  <data name="Shell_WorkspaceSaveFailedTitle" xml:space="preserve">
+    <value>Workspace not saved</value>
   </data>
   <data name="Shell_WorkspaceEmptyTitle" xml:space="preserve">
     <value>Nothing to open</value>
