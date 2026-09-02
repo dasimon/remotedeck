@@ -91,6 +91,10 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// <summary>Raised when the user asks for the import window. The shell owns it, like every other window.</summary>
     public event Action? ImportRequested;
 
+    /// <summary>The favorite flag was toggled on a connection. Carries the value it should now have,
+    /// read from the row the user acted on — the shell writes it and reloads.</summary>
+    public event Action<Connection, bool>? FavoriteToggleRequested;
+
     /// <summary>
     /// How a row learns whether its connection currently has a session, given the connection's id.
     /// The shell sets it: the pane knows nothing about sessions, and must not start to.
@@ -199,6 +203,14 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     private void DeleteSelected()
     {
         if (Selected is { } item) DeleteRequested?.Invoke(item.Connection);
+    }
+
+    /// <summary>Flips the favorite flag of the selected row. The new value is computed here rather
+    /// than by the shell, so the menu's checkmark and the write always agree on what was on screen.</summary>
+    [RelayCommand]
+    private void ToggleFavoriteSelected()
+    {
+        if (Selected is { } item) FavoriteToggleRequested?.Invoke(item.Connection, !item.IsFavorite);
     }
 
     /// <summary>Typing restarts the debounce; the filter runs once the user pauses.</summary>

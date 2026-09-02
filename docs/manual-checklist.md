@@ -24,8 +24,8 @@ Probe evidence for the lot 0 items lives in
 
 ### Session
 
-- [ ] Connect with valid credentials: remote desktop renders inside the window.
-- [ ] Connect to a nonexistent host: InfoBar shows an error with reason code and
+- [x] Connect with valid credentials: remote desktop renders inside the window.
+- [x] Connect to a nonexistent host: InfoBar shows an error with reason code and
       Windows description; no MessageBox.
 - [ ] Wrong password: no crash; `OnLogonError` or CredSSP prompt.
 - [ ] Close the window while connected: on the server, `query session` shows the
@@ -530,6 +530,35 @@ test project. These boxes are the only verification.
       dark theme.
 - [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): no workspace string
       is left hard-coded.
+
+## Connection list — context menu
+
+Only `ConnectionRepository.SetFavorite` is covered by automated tests (4 of them). The menu
+itself is WPF and cannot be; these boxes are its only verification.
+
+- [ ] **Right-click a connection**: the menu opens with *Connect* in bold, then *Edit…* (F2),
+      *Favorite*, then *Delete* (Del) under its own separator.
+- [ ] **Right-click a row that is not selected**: it becomes selected *before* the menu opens, and
+      every entry then acts on **that** row — not on the one selected a moment earlier. Verify
+      with *Edit…* and again with *Delete*; this is the failure this feature is most prone to.
+- [ ] **Double-click still connects.** It must not open the editor.
+- [ ] *Connect* from the menu opens the session, exactly as `Enter` does.
+- [ ] *Edit…* opens the connection editor on the right connection, and saving refreshes the row.
+- [ ] *Favorite* ticks and unticks, and the row **jumps to or leaves the ★ Favorites group**
+      immediately. Reopen the menu: the checkmark reflects the new state.
+- [ ] Toggling *Favorite* on a connection with a full configuration (fixed resolution, notes,
+      redirections, credential) leaves **every other field untouched** — reopen the editor and
+      confirm. The write must be one column, never a whole-row save.
+- [ ] *Delete* from the menu **arms** the two-step confirmation in the InfoBar; it does not delete
+      on the first invocation. A second `Delete` (key or menu) then removes the connection.
+- [ ] **Right-click the empty space** below the last row: the menu shows only *New connection* and
+      *Import connections…*. Nothing acts on the previously selected row.
+- [ ] Right-click a **group header**: no destructive entry is offered.
+- [ ] With the database unavailable (degraded mode), *Favorite* reports the failure in the InfoBar
+      and does not take the application down.
+- [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): every menu entry is
+      translated, including the *Del* / *Suppr* gesture hint. No hard-coded English.
+- [ ] Light and dark theme: the menu follows the theme like the rest of the chrome.
 
 ## Build prerequisites (any lot)
 

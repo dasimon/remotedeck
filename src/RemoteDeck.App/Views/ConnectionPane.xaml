@@ -19,6 +19,49 @@
                 <PropertyGroupDescription PropertyName="Group" />
             </CollectionViewSource.GroupDescriptions>
         </CollectionViewSource>
+
+        <!-- Two menus, swapped by the right-button handler before WPF opens one: a row and the empty
+             space below the last row are different targets and deserve different answers. Both are
+             attached to the ListView rather than to the ListViewItem, which is what makes the
+             bindings work at all — a ContextMenu is not in the visual tree, so an item-level menu
+             could not reach the view-model's commands without a binding proxy. Attached to the list,
+             the menu inherits this control's DataContext through its placement target, and every
+             command below is the same one the keyboard already runs on the selection. -->
+        <ContextMenu x:Key="RowMenu">
+            <!-- Bold, and first: the primary action of a row is to connect, the same thing a
+                 double-click and Enter do. Windows draws the default verb this way everywhere. -->
+            <MenuItem Header="{x:Static res:Strings.Pane_MenuConnect}"
+                      FontWeight="SemiBold"
+                      Command="{Binding ConnectSelectedCommand}" />
+            <Separator />
+            <MenuItem Header="{x:Static res:Strings.Pane_MenuEdit}"
+                      InputGestureText="F2"
+                      Command="{Binding EditSelectedCommand}" />
+            <!-- OneWay on purpose: the click toggles the check visually, but the value of record is
+                 the row's, and the pane reloads right after the write. A TwoWay binding here would
+                 fight that reload. -->
+            <MenuItem Header="{x:Static res:Strings.Pane_MenuFavorite}"
+                      IsCheckable="True"
+                      IsChecked="{Binding Selected.IsFavorite, Mode=OneWay}"
+                      Command="{Binding ToggleFavoriteSelectedCommand}" />
+            <Separator />
+            <!-- Destructive, so last and alone under its separator. It arms the same two-step delete
+                 the Delete key does — the menu is not a shortcut past the confirmation. -->
+            <MenuItem Header="{x:Static res:Strings.Pane_MenuDelete}"
+                      InputGestureText="{x:Static res:Strings.Pane_MenuGestureDelete}"
+                      Command="{Binding DeleteSelectedCommand}" />
+        </ContextMenu>
+
+        <!-- Empty space under the last row: nothing is aimed at, so only the two actions that need no
+             target are offered. Reuses the palette's strings rather than translating the same two
+             labels twice. -->
+        <ContextMenu x:Key="EmptyMenu">
+            <MenuItem Header="{x:Static res:Strings.Palette_NewConnection}"
+                      InputGestureText="Ctrl+N"
+                      Command="{Binding NewCommand}" />
+            <MenuItem Header="{x:Static res:Strings.Palette_ImportConnections}"
+                      Command="{Binding ImportCommand}" />
+        </ContextMenu>
     </UserControl.Resources>
 
     <Grid Margin="8,0,4,8">
@@ -76,7 +119,8 @@
                          VirtualizingPanel.ScrollUnit="Pixel"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          KeyDown="OnListKeyDown"
-                         MouseDoubleClick="OnListMouseDoubleClick">
+                         MouseDoubleClick="OnListMouseDoubleClick"
+                         PreviewMouseRightButtonDown="OnListPreviewMouseRightButtonDown">
                 <ListView.ItemContainerStyle>
                     <!-- A plain WPF ListView, and no longer ui:ListView, because this row needs a
                          template of its own: the three states it must tell apart — hover, selection,
