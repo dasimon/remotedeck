@@ -101,6 +101,12 @@
   <data name="Pane_MenuGestureDelete" xml:space="preserve">
     <value>Del</value>
   </data>
+  <data name="Pane_MenuGestureEdit" xml:space="preserve">
+    <value>F2</value>
+  </data>
+  <data name="Pane_MenuGestureNew" xml:space="preserve">
+    <value>Ctrl+N</value>
+  </data>
   <data name="Pane_Unavailable" xml:space="preserve">
     <value>Saved connections are unavailable: the database could not be opened. See the log.</value>
   </data>

@@ -1,8 +1,25 @@
 # Manual verification checklist
 
 Run before tagging a release. Items are grouped by the lot that introduced them.
-Automated tests cover `RemoteDeck.Core`; everything below touches COM or WPF and
-cannot be automated reliably.
+Automated tests cover `RemoteDeck.Core`; everything below touches COM, WPF, real
+hardware or a real server, and cannot be automated reliably.
+
+**What no longer needs a human.** `tests/RemoteDeck.Core.Tests/Conventions/` now asserts
+things about the repository itself, and the boxes they replaced have been removed:
+
+- **Resources** — every key exists in `Strings.resx`, `Strings.fr.resx` *and*
+  `Strings.Designer.cs`, with the property name and the `GetString` argument matching the
+  key; no orphan on either side; the same `{0}`/`{1}` placeholders in both languages; no
+  empty value. That file is versioned rather than generated, so a key added to the two
+  resx files and forgotten in the designer used to fail **silently at runtime**, and only a
+  careful reader stood in the way.
+- **Markup** — no user-visible text left as a literal in any XAML, and no `{x:Static
+  res:Strings.…}` pointing at a key that no longer exists.
+- **Artwork** — `RemoteDeck.ico` and `RemoteDeck-32.png` are committed, and the icon really
+  carries its nine sizes.
+
+So where a box below says "no missing string" or "no hard-coded English", that half is now
+proven; what remains yours is whether the French **reads** well and fits its control.
 
 Probe evidence for the lot 0 items lives in
 `docs/superpowers/probes/l0-probe-results.md`.
@@ -47,7 +64,7 @@ Probe evidence for the lot 0 items lives in
 
 ### Keyboard
 
-- [ ] `Ctrl+K` and `Ctrl+Tab` are intercepted while the remote desktop has focus, and
+- [x] `Ctrl+K` and `Ctrl+Tab` are intercepted while the remote desktop has focus, and
       the keystrokes do **not** reach the remote session. The working mechanism is the
       low-level hook (`WH_KEYBOARD_LL`, `ShortcutInterceptor.Mechanism.LowLevelKeyboardHook`);
       the three thread-scoped mechanisms (`WpfThreadFilter`, `WinFormsMessageFilter`,
@@ -75,7 +92,7 @@ Probe evidence for the lot 0 items lives in
 
 ### Editor
 
-- [ ] `Ctrl+N` opens the connection editor. Saving with an empty name, an empty host, a
+- [x] `Ctrl+N` opens the connection editor. Saving with an empty name, an empty host, a
       host containing a space, or a port outside 1–65535 is **refused**, and every reason
       is listed at once in the editor's InfoBar — no `MessageBox`, no partial save.
 - [ ] With the display mode set to *Dynamic*, the fixed width/height fields are disabled
@@ -86,9 +103,9 @@ Probe evidence for the lot 0 items lives in
 
 ### Connecting from the list
 
-- [ ] Select a connection **with** a credential attached and press `Enter`: the session
+- [x] Select a connection **with** a credential attached and press `Enter`: the session
       opens without any prompt, and the log shows `Password supplied from credential …`.
-- [ ] Select a connection **with no credential** (or one whose credential was deleted):
+- [x] Select a connection **with no credential** (or one whose credential was deleted):
       RemoteDeck puts **no** password and the control raises its own **CredSSP prompt**.
       Typing the password there must connect. RemoteDeck itself has no manual password
       entry any more.
@@ -318,7 +335,9 @@ success criteria of §1.
       the log — it must never prevent startup.
 - [ ] French pass over the **four modal windows** — *Connection editor*, *Credentials*,
       *Credential editor*, *Import*: every label, button, title, placeholder, tooltip and
-      status message is in French, with no leftover English and no missing string.
+      status message **reads** like French someone would write. *"No missing string" and "no
+      leftover English" are now proven by the convention tests — what is left here is whether
+      the wording is any good.*
 - [ ] **Watch for truncation**: the label columns of the connection editor and the
       credential editor are fixed at **120 px** and **110 px**. French labels are longer
       than English ones — check that none is cut off or ellipsised at those widths, at
@@ -447,9 +466,10 @@ for most of it; `TEST-VM` is the reference target.
       swallow the gesture.
 - [ ] Switch Windows between light and dark: the icon is unchanged. It is a fixed colour and
       does **not** follow the accent, unlike the rest of the interface — expected, not a bug.
-- [ ] After changing anything in `tools/icon/New-RemoteDeckIcon.ps1`, the regenerated
-      `RemoteDeck.ico` and `RemoteDeck-32.png` are **committed**: CI publishes what is
-      versioned and never generates artwork.
+*(The box that used to sit here — regenerated icon files committed after editing
+`tools/icon/New-RemoteDeckIcon.ps1` — is now `ShippedAssetTests`, which fails the build if
+either file is missing or the icon has lost a size. The convention it guarded still stands:
+CI publishes what is versioned and never generates artwork.)*
 
 ## Session navigation — double-click and the full-screen selector
 
@@ -536,15 +556,16 @@ test project. These boxes are the only verification.
 Only `ConnectionRepository.SetFavorite` is covered by automated tests (4 of them). The menu
 itself is WPF and cannot be; these boxes are its only verification.
 
-- [ ] **Right-click a connection**: the menu opens with *Connect* in bold, then *Edit…* (F2),
+- [x] **Right-click a connection**: the menu opens with *Connect* in bold, then *Edit…* (F2),
       *Favorite*, then *Delete* (Del) under its own separator.
-- [ ] **Right-click a row that is not selected**: it becomes selected *before* the menu opens, and
+- [x] **Right-click a row that is not selected**: it becomes selected *before* the menu opens, and
       every entry then acts on **that** row — not on the one selected a moment earlier. Verify
       with *Edit…* and again with *Delete*; this is the failure this feature is most prone to.
+      *(Checked through* Edit… *; the* Delete *half is covered by the two-step item below.)*
 - [ ] **Double-click still connects.** It must not open the editor.
 - [ ] *Connect* from the menu opens the session, exactly as `Enter` does.
-- [ ] *Edit…* opens the connection editor on the right connection, and saving refreshes the row.
-- [ ] *Favorite* ticks and unticks, and the row **jumps to or leaves the ★ Favorites group**
+- [x] *Edit…* opens the connection editor on the right connection, and saving refreshes the row.
+- [x] *Favorite* ticks and unticks, and the row **jumps to or leaves the ★ Favorites group**
       immediately. Reopen the menu: the checkmark reflects the new state.
 - [ ] Toggling *Favorite* on a connection with a full configuration (fixed resolution, notes,
       redirections, credential) leaves **every other field untouched** — reopen the editor and
@@ -556,8 +577,9 @@ itself is WPF and cannot be; these boxes are its only verification.
 - [ ] Right-click a **group header**: no destructive entry is offered.
 - [ ] With the database unavailable (degraded mode), *Favorite* reports the failure in the InfoBar
       and does not take the application down.
-- [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): every menu entry is
-      translated, including the *Del* / *Suppr* gesture hint. No hard-coded English.
+- [ ] In French (`REMOTEDECK_UI_CULTURE=fr-FR`): the entries read naturally and none is
+      truncated in the menu's width. *That they exist and are translated is now covered by the
+      convention tests; the gesture hint reading* Suppr *rather than* Del *is part of that.*
 - [ ] Light and dark theme: the menu follows the theme like the rest of the chrome.
 
 ## Build prerequisites (any lot)
