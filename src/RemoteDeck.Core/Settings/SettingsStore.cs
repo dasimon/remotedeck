@@ -3,8 +3,10 @@ using System.Text.Json;
 namespace RemoteDeck.Core.Settings;
 
 /// <summary>
-/// Reads and writes <see cref="AppSettings"/> as JSON. Losing this file only costs window geometry,
-/// so <see cref="Load"/> never throws: anything unreadable falls back to defaults.
+/// Reads and writes <see cref="AppSettings"/> as JSON. Losing this file costs window geometry
+/// and, if last-session restore was on, that switch reverts to off and its pending snapshot goes
+/// with it — nothing here is content the user composed or a secret, so <see cref="Load"/> never
+/// throws: anything unreadable falls back to defaults.
 /// </summary>
 public sealed class SettingsStore(string path)
 {
