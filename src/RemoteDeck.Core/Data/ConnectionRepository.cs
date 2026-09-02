@@ -75,6 +75,23 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         return list;
     }
 
+    /// <summary>
+    /// Sets or clears the favorite flag, and nothing else. A one-column update rather than an
+    /// <see cref="Update"/>, for the same reason as <see cref="TouchLastConnected"/>: the caller is a
+    /// context menu with no form behind it, so it holds no fresh copy of the other columns and must
+    /// not be able to write a stale one back.
+    /// </summary>
+    /// <remarks>Idempotent, like <see cref="Delete"/>: an id that is already gone is a race between
+    /// the click and the write, not a mistake the user made.</remarks>
+    public void SetFavorite(long id, bool isFavorite)
+    {
+        using var c = db.Open();
+        var cmd = c.Cmd("UPDATE Connection SET IsFavorite = $fav WHERE Id = $id");
+        cmd.Add("$fav", isFavorite ? 1 : 0);
+        cmd.Add("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
     public void TouchLastConnected(long id)
     {
         using var c = db.Open();

@@ -4,6 +4,25 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### A right-click menu on the connection list
+
+- **Right-click a connection** and you get *Connect*, *Edit…*, a *Favorite* toggle and *Delete* —
+  the place Windows has put a thing's properties for thirty years, and until now the only way to
+  reach the editor with a mouse was to know that `F2` existed.
+- **Double-click still connects**, and deliberately so. It is the primary action, the one `Enter`
+  runs and the one every other connection manager binds it to; moving it to *Edit* would have
+  cost the fastest path to the point of the application.
+- Right-clicking a row **selects it first**, so the menu acts on the row you aimed at rather than
+  on whatever was selected before — the classic way this feature deletes the wrong thing.
+- *Delete* in the menu arms the same two-step confirmation as the `Delete` key. A menu entry is
+  not a shortcut past a confirmation.
+- Right-click the empty space below the last row and the menu shrinks to *New connection* and
+  *Import connections…* — the only two actions that need nothing selected.
+- **Favorite is now a one-click toggle.** It used to mean opening the editor, ticking a box and
+  saving; the pane sorts favorites to the top, so the setting was three clicks further away than
+  the thing it controls. It writes that one column and nothing else, so it cannot save a stale
+  copy of the rest of the connection over what is on disk.
+
 ### Workspaces
 
 - **A workspace names the sessions you already have open — arranged, detached, full

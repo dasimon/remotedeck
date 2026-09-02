@@ -292,6 +292,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.EditRequested += OnEditRequested;
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
+        _list.FavoriteToggleRequested += OnFavoriteToggleRequested;
         // The pane holds no reference to the sessions: the shell is the one place that knows both,
         // so it hands the list a way to ask rather than a way to be told.
         _list.StatusProvider = StatusOf;
@@ -1930,6 +1931,42 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- editor and delete
 
     /// <summary><c>null</c> means "new connection"; both cases go through the same modal editor.</summary>
+    /// <summary>
+    /// <em>Favorite</em> from the row's context menu. A one-column write, so it goes straight to the
+    /// repository rather than through the editor — there is no form to reopen, and the pane re-sorts
+    /// itself on the reload because favorites lead its ordering.
+    /// </summary>
+    /// <remarks>
+    /// Guarded like every other repository write in this window: an unhandled <c>SqliteException</c>
+    /// on the UI thread takes the application down, and with it every live session, without the §6.5
+    /// close protocol.
+    /// </remarks>
+    private void OnFavoriteToggleRequested(Connection connection, bool isFavorite)
+    {
+        if (connection is null)
+        {
+            return;
+        }
+
+        if (_connections is null)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoEditMessage);
+            return;
+        }
+
+        try
+        {
+            _connections.SetFavorite(connection.Id, isFavorite);
+            _list?.Reload();
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("connections", $"Favorite toggle failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_FavoriteFailedTitle, ex.Message);
+        }
+    }
+
     private void OnEditRequested(Connection? existing)
     {
         if (_connections is null)

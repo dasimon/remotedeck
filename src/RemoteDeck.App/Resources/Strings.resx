@@ -86,6 +86,21 @@
   <data name="Pane_ImportToolTip" xml:space="preserve">
     <value>Import connections from .rdp files or the Remote Desktop history</value>
   </data>
+  <data name="Pane_MenuConnect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="Pane_MenuEdit" xml:space="preserve">
+    <value>Edit…</value>
+  </data>
+  <data name="Pane_MenuFavorite" xml:space="preserve">
+    <value>Favorite</value>
+  </data>
+  <data name="Pane_MenuDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Pane_MenuGestureDelete" xml:space="preserve">
+    <value>Del</value>
+  </data>
   <data name="Pane_Unavailable" xml:space="preserve">
     <value>Saved connections are unavailable: the database could not be opened. See the log.</value>
   </data>
@@ -211,6 +226,9 @@
   </data>
   <data name="Shell_DiagnosticsNotCopiedMessage" xml:space="preserve">
     <value>The clipboard refused the text ({0}).</value>
+  </data>
+  <data name="Shell_FavoriteFailedTitle" xml:space="preserve">
+    <value>Could not change the favorite</value>
   </data>
   <data name="Shell_ConnectionDeletedTitle" xml:space="preserve">
     <value>Connection deleted</value>

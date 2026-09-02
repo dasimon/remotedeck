@@ -251,6 +251,17 @@ session, `Ctrl+K` opens the palette over it, `Ctrl+Shift+D` reattaches it and `F
 toggles its full screen; `Ctrl+Tab`, `Ctrl+Shift+Tab` and `Ctrl+B` have nothing to act on
 there, so they are left to the remote desktop instead of being swallowed.
 
+**Mouse.** A **double-click** on a connection connects it — the primary action, the same one
+`Enter` runs, and the same convention every other connection manager follows. Configuring a
+connection is the *secondary* action, so it lives where Windows has always put it: **right-click
+→ Edit…**. The row menu also carries *Connect*, a *Favorite* toggle, and *Delete* — which arms
+the same two-step confirmation the `Delete` key does, rather than deleting outright. Right-click
+in the empty space below the last row instead and you get *New connection* and *Import
+connections…*, the two actions that need nothing selected.
+
+Right-clicking a row **selects it first**. The menu always acts on what you aimed at, never on
+whatever was selected before.
+
 Search is fuzzy and ignores case and accents; it matches on name, host and group
 name, sorts favorites first, and highlights the characters your query hit.
 

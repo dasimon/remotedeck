@@ -145,6 +145,60 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Connect.
+        /// </summary>
+        public static string Pane_MenuConnect {
+            get {
+                return ResourceManager.GetString("Pane_MenuConnect", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Edit….
+        /// </summary>
+        public static string Pane_MenuEdit {
+            get {
+                return ResourceManager.GetString("Pane_MenuEdit", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Favorite.
+        /// </summary>
+        public static string Pane_MenuFavorite {
+            get {
+                return ResourceManager.GetString("Pane_MenuFavorite", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete.
+        /// </summary>
+        public static string Pane_MenuDelete {
+            get {
+                return ResourceManager.GetString("Pane_MenuDelete", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Del.
+        /// </summary>
+        public static string Pane_MenuGestureDelete {
+            get {
+                return ResourceManager.GetString("Pane_MenuGestureDelete", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Could not change the favorite.
+        /// </summary>
+        public static string Shell_FavoriteFailedTitle {
+            get {
+                return ResourceManager.GetString("Shell_FavoriteFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Saved connections are unavailable: the database could not be opened. See the log..
         /// </summary>
         public static string Pane_Unavailable {

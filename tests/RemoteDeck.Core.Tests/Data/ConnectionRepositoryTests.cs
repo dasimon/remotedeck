@@ -181,6 +181,71 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void SetFavorite_flips_the_flag_both_ways()
+    {
+        var x = Make("Star");
+        _repo.Insert(x);
+
+        _repo.SetFavorite(x.Id, true);
+        Assert.True(_repo.Get(x.Id)!.IsFavorite);
+
+        _repo.SetFavorite(x.Id, false);
+        Assert.False(_repo.Get(x.Id)!.IsFavorite);
+    }
+
+    [Fact]
+    public void SetFavorite_touches_nothing_else()
+    {
+        // The whole point of a one-column update: the context menu has no form behind it, so it must
+        // not be able to write back a stale copy of the rest of the row.
+        var x = new Connection
+        {
+            Name = "Prod DC", Host = "dc01", Port = 3390, GroupName = "Prod",
+            DisplayMode = DisplayMode.Fixed, FixedWidth = 1920, FixedHeight = 1080,
+            RedirectClipboard = false, Notes = "keep me",
+        };
+        _repo.Insert(x);
+        var before = _repo.Get(x.Id)!;
+
+        _repo.SetFavorite(x.Id, true);
+
+        var after = _repo.Get(x.Id)!;
+        Assert.Equal(before.Name, after.Name);
+        Assert.Equal(before.Host, after.Host);
+        Assert.Equal(before.Port, after.Port);
+        Assert.Equal(before.GroupName, after.GroupName);
+        Assert.Equal(before.DisplayMode, after.DisplayMode);
+        Assert.Equal(before.FixedWidth, after.FixedWidth);
+        Assert.Equal(before.FixedHeight, after.FixedHeight);
+        Assert.Equal(before.RedirectClipboard, after.RedirectClipboard);
+        Assert.Equal(before.Notes, after.Notes);
+        Assert.Equal(before.CreatedUtc, after.CreatedUtc);
+    }
+
+    [Fact]
+    public void SetFavorite_of_an_unknown_id_is_a_no_op()
+    {
+        // Idempotent like Delete, and for the same reason: the row can be gone between the click and
+        // the write, and that is a race, not a mistake the user made.
+        _repo.SetFavorite(4242, true);
+
+        Assert.Empty(_repo.GetAll());
+    }
+
+    [Fact]
+    public void GetAll_puts_a_freshly_favorited_connection_first()
+    {
+        // The ordering the pane relies on, exercised through the new write rather than through Insert.
+        _repo.Insert(Make("Alpha"));
+        var zulu = Make("Zulu");
+        _repo.Insert(zulu);
+
+        _repo.SetFavorite(zulu.Id, true);
+
+        Assert.Equal("Zulu", _repo.GetAll()[0].Name);
+    }
+
+    [Fact]
     public void Update_does_not_rewrite_CreatedUtc()
     {
         var x = Make("Immutable");
