@@ -82,6 +82,20 @@ public partial class ConnectionPane : System.Windows.Controls.UserControl
         e.Handled = true;
     }
 
+    /// <summary>A click on a workspace row opens it. On button-up, like the connection menu's entries:
+    /// the press says the row is live, and sliding off before releasing changes nothing.</summary>
+    private void OnWorkspaceClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel is null
+            || sender is not System.Windows.FrameworkElement { DataContext: WorkspaceListItem item })
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _viewModel.OpenWorkspaceCommand.Execute(item);
+    }
+
     /// <summary>
     /// Right-click, before the context menu opens: selects the row under the pointer and picks the
     /// menu that fits what was aimed at.

@@ -4,6 +4,22 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### Workspaces you can see
+
+- **Saved workspaces now sit at the top of the connection pane**, above the connections, each
+  with its name and how many connections it holds. Clicking one opens it; right-clicking gives
+  *Open* and *Delete*.
+- Until now the only way to reach a workspace was `Ctrl+K` and typing its name — which requires
+  knowing the feature exists before you can find it. Saving a layout and then having to ask where
+  it went is the symptom of a feature that hides.
+- The section **disappears entirely** when no workspace is saved, so anyone who never captures a
+  layout never sees a heading over nothing.
+- Workspaces are their own list rather than rows mixed into the connections: a workspace is not a
+  connection, and the row a connection needs — status pill, accent rail, search highlighting —
+  has nothing to say about one.
+- Deleting from the pane asks the same confirmation as deleting from the palette. Both now go
+  through one method, so the confirmation cannot exist on one path and be forgotten on the other.
+
 ### The checklist gets shorter
 
 - **Fifteen tests now assert things about the repository itself**, in

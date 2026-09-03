@@ -86,6 +86,12 @@
   <data name="Pane_ImportToolTip" xml:space="preserve">
     <value>Import connections from .rdp files or the Remote Desktop history</value>
   </data>
+  <data name="Pane_GroupWorkspaces" xml:space="preserve">
+    <value>Workspaces</value>
+  </data>
+  <data name="Pane_MenuOpenWorkspace" xml:space="preserve">
+    <value>Open</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>

@@ -293,6 +293,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
         _list.FavoriteToggleRequested += OnFavoriteToggleRequested;
+        _list.WorkspaceOpenRequested += OnPaneWorkspaceOpenRequested;
+        _list.WorkspaceDeleteRequested += OnPaneWorkspaceDeleteRequested;
+
+        // Pull, like StatusProvider: the pane owns no repository and must not start to. Set before
+        // the reload below, so the first paint already has the workspaces.
+        _list.WorkspacesProvider = () => _workspaces?.GetAll() ?? [];
+        _list.ReloadWorkspaces();
         // The pane holds no reference to the sessions: the shell is the one place that knows both,
         // so it hands the list a way to ask rather than a way to be told.
         _list.StatusProvider = StatusOf;
@@ -800,32 +807,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // the palette closes on selection and cannot hold an armed state. Open and Delete sit
             // next to each other in the same group with near-identical text, and a deletion has no
             // undo — while saving over a name, which destroys nothing, already asks.
-            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long deleteId)
-                && _workspaces?.Get(deleteId) is { } toDelete)
+            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long deleteId))
             {
-                var confirm = System.Windows.MessageBox.Show(this,
-                    Strings.Shell_DeleteWorkspaceMessage,
-                    Text.Of(Strings.Shell_DeleteWorkspaceTitle, toDelete.Name),
-                    MessageBoxButton.OKCancel, MessageBoxImage.Warning);
-                if (confirm == MessageBoxResult.OK)
-                {
-                    // Guarded like every other repository write in this file: a locked database, a
-                    // full disk or a read-only %APPDATA% throws here, and an unhandled exception on
-                    // the UI thread takes the process down with every live RDP session — without
-                    // the §6.5 close protocol, which is exactly the server-side zombie this project
-                    // spends its shutdown avoiding.
-                    try
-                    {
-                        _workspaces?.Delete(deleteId);
-                    }
-                    catch (Exception ex)
-                    {
-                        ProbeLog.Write("workspaces",
-                            $"Deleting '{toDelete.Name}' failed: {ex.GetType().Name}: {ex.Message}");
-                        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
-                            Strings.Common_DeleteFailedTitle, ex.Message);
-                    }
-                }
+                DeleteWorkspace(deleteId, from);
             }
 
             return;
@@ -1332,10 +1316,73 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        // The pane shows the workspaces, so a capture changes it even though no connection moved.
+        _list?.ReloadWorkspaces();
+
         StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
             Text.Of(Strings.Shell_WorkspaceSaved, workspace.Name),
             Text.Of(Strings.Shell_WorkspaceSavedMessage, workspace.Items.Count));
     }
+
+    /// <summary>
+    /// Deletes a workspace after confirming it. One method for the two entry points — the palette's
+    /// <c>wsdel:</c> row and the pane's context menu — so the confirmation cannot exist on one path
+    /// and be forgotten on the other.
+    /// </summary>
+    /// <param name="from">The detached window the gesture came from, or <c>null</c> for the shell.
+    /// It owns the message box, which would otherwise open behind a full-screen session.</param>
+    /// <remarks>
+    /// A single press, deliberately not the two-step arming the connection list uses: the palette
+    /// closes on selection and cannot hold an armed state. Deleting has no undo, while saving over a
+    /// name — which destroys nothing — already asks, so the risk ordering would otherwise be
+    /// inverted.
+    /// </remarks>
+    private void DeleteWorkspace(long id, SessionWindow? from)
+    {
+        if (_workspaces?.Get(id) is not { } toDelete)
+        {
+            // Already gone: a race between the click and the write, not a mistake the user made.
+            return;
+        }
+
+        var confirm = System.Windows.MessageBox.Show(from ?? (Window)this,
+            Strings.Shell_DeleteWorkspaceMessage,
+            Text.Of(Strings.Shell_DeleteWorkspaceTitle, toDelete.Name),
+            MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        // Guarded like every other repository write in this file: a locked database, a full disk or
+        // a read-only %APPDATA% throws here, and an unhandled exception on the UI thread takes the
+        // process down with every live RDP session — without the §6.5 close protocol, which is
+        // exactly the server-side zombie this project spends its shutdown avoiding.
+        try
+        {
+            _workspaces.Delete(id);
+            _list?.ReloadWorkspaces();
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("workspaces",
+                $"Deleting '{toDelete.Name}' failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
+                Strings.Common_DeleteFailedTitle, ex.Message);
+        }
+    }
+
+    /// <summary>A workspace row was clicked in the pane.</summary>
+    private void OnPaneWorkspaceOpenRequested(long id)
+    {
+        if (_workspaces?.Get(id) is { } workspace)
+        {
+            _ = MountWorkspaceAsync(workspace);
+        }
+    }
+
+    /// <summary><em>Delete</em> from a workspace row's context menu. Same confirmation as the palette.</summary>
+    private void OnPaneWorkspaceDeleteRequested(long id) => DeleteWorkspace(id, from: null);
 
     /// <summary>
     /// Detaches <paramref name="tab"/> at an imposed placement. A workspace's own placement wins

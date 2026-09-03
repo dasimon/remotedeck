@@ -548,6 +548,16 @@ test project. These boxes are the only verification.
 - [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
       an empty or whitespace-only name, and its appearance follows both the light and
       dark theme.
+- [ ] A saved workspace appears in a **Workspaces** section at the top of the connection pane,
+      above the connections, with its name and how many connections it holds.
+- [ ] With **no** workspace saved, that section is **absent entirely** — no empty heading.
+- [ ] **Clicking a workspace row opens it**, exactly as the palette entry does.
+- [ ] **Right-click a workspace row** → *Open* and *Delete*. Delete asks for confirmation, and
+      removes only the workspace.
+- [ ] The section updates **immediately** after a capture and after a deletion, without
+      restarting the application.
+- [ ] Deleting a connection that a workspace listed: the workspace's count in the pane drops by
+      one on the next refresh.
 - [ ] *Save layout as…* is offered in the palette opened **from a detached, full-screen
       session**, not only from the main window — and the naming dialog appears **in front of**
       that full-screen window rather than behind it.
