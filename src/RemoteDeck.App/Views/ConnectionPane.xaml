@@ -71,6 +71,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -104,7 +105,86 @@
                        ToolTip="{x:Static res:Strings.Pane_ImportToolTip}" />
         </Grid>
 
-        <Grid Grid.Row="2">
+        <!-- The workspaces, above the connections and below the two buttons.
+             Here rather than only in the palette because a workspace nobody can see is a workspace
+             nobody remembers saving: the palette requires knowing the feature exists before you can
+             reach it, and this is where the eye already goes. The whole section collapses when there
+             is none, so a user who never saves a layout never sees a heading over nothing. -->
+        <StackPanel Grid.Row="2"
+                    Margin="0,0,0,10"
+                    Visibility="{Binding HasWorkspaces, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{x:Static res:Strings.Pane_GroupWorkspaces}"
+                       Margin="4,0,0,4"
+                       FontSize="11"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource RdTextMuted}" />
+
+            <!-- An ItemsControl, not a ListView: these rows are buttons, not a selection. Selecting a
+                 workspace would mean nothing — there is no state to carry between clicking one and
+                 doing something with it. -->
+            <ItemsControl ItemsSource="{Binding Workspaces}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+        <!-- Tag carries the pane's view-model down to the row, which is the only way the context
+                             menu below can reach a command: its own DataContext is the workspace. -->
+                        <Border x:Name="Root"
+                                Height="{StaticResource RdRowHeight}"
+                                Margin="0,0,0,2"
+                                Padding="8,0"
+                                Background="Transparent"
+                                CornerRadius="{StaticResource RdRadiusSm}"
+                                Cursor="Hand"
+                                ToolTip="{Binding Subtitle}"
+                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                MouseLeftButtonUp="OnWorkspaceClick">
+                            <Border.ContextMenu>
+                                <!-- The menu's DataContext is the row, so the commands have to be
+                                     reached through the pane behind it — a ContextMenu sits outside
+                                     the visual tree and inherits from its placement target, which is
+                                     this Border and not the list. -->
+                                <ContextMenu>
+                                    <MenuItem Header="{x:Static res:Strings.Pane_MenuOpenWorkspace}"
+                                              FontWeight="SemiBold"
+                                              Command="{Binding PlacementTarget.Tag.OpenWorkspaceCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                    <Separator />
+                                    <MenuItem Header="{x:Static res:Strings.Pane_MenuDelete}"
+                                              Command="{Binding PlacementTarget.Tag.DeleteWorkspaceCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
+
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:SymbolIcon Symbol="Desktop24"
+                                               FontSize="14"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource RdTextMuted}" />
+                                <TextBlock Text="{Binding Name}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource RdText}" />
+                                <TextBlock Text="{Binding Subtitle}"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource RdTextMuted}" />
+                            </StackPanel>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <Trigger SourceName="Root" Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background"
+                                        Value="{DynamicResource RdSurface2}" />
+                            </Trigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <Grid Grid.Row="3">
             <!-- Virtualization stays on: IsVirtualizingWhenGrouping is mandatory, since grouping
                  otherwise realizes every container. ScrollUnit=Pixel gives smooth scrolling while
                  keeping virtualization, unlike ScrollViewer.CanContentScroll="False" — which is the

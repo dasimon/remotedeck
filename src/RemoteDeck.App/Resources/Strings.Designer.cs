@@ -145,6 +145,24 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Workspaces.
+        /// </summary>
+        public static string Pane_GroupWorkspaces {
+            get {
+                return ResourceManager.GetString("Pane_GroupWorkspaces", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        public static string Pane_MenuOpenWorkspace {
+            get {
+                return ResourceManager.GetString("Pane_MenuOpenWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Pane_MenuConnect {
