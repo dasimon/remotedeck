@@ -26,7 +26,18 @@ in English and French.
 ## Build
 
     dotnet build RemoteDeck.sln
-    dotnet test  RemoteDeck.sln
+    dotnet run --project tests/RemoteDeck.Core.Tests
+
+**Not `dotnet test`.** The test project runs on xUnit v3, which builds it as a
+*Microsoft.Testing.Platform* application — an executable that runs its own tests, with no
+external runner. Running it is the documented way, and there is only one test project, so
+the line above replaces the solution-wide invocation exactly.
+
+`dotnet test` additionally does not work here: on .NET SDK 10.0.400 with
+Microsoft.Testing.Platform 2.3.3 it passes `--server` with no value, the test application
+rejects it, and the run ends with exit code 5 and zero tests. `global.json` already declares
+the MTP runner, so if a later SDK fixes that integration, `dotnet test` starts working with
+no change to this repository.
 
 RemoteDeck talks to the Remote Desktop ActiveX control through a COM interop
 assembly that is **generated at build time** and never committed: the build runs
