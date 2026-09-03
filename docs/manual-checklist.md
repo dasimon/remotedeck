@@ -566,7 +566,7 @@ test project. These boxes are the only verification.
       restarting the application.
 - [x] Deleting a connection that a workspace listed: the workspace's count in the pane drops by
       one on the next refresh.
-- [ ] *Save layout as…* is offered in the palette opened **from a detached, full-screen
+- [x] *Save layout as…* is offered in the palette opened **from a detached, full-screen
       session**, not only from the main window — and the naming dialog appears **in front of**
       that full-screen window rather than behind it.
 - [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): no workspace string
