@@ -528,19 +528,19 @@ test project. These boxes are the only verification.
       leaves the workspace unchanged.
 - [ ] Delete a connection that belongs to a workspace: it disappears from the workspace,
       the workspace stays, and the other connections are untouched.
-- [ ] A workspace whose connections have all been deleted: it stays listed, and opening
+- [x] A workspace whose connections have all been deleted: it stays listed, and opening
       it shows "Nothing to open" instead of opening anything.
 - [ ] Unplug the monitor a workspace window was on, then open the workspace: the window
       lands on a monitor that is actually connected and reachable — approximate on mixed
       scaling factors, which is expected.
-- [ ] `AutoConnect` unticked: the tabs appear without any session starting, and stay that
+- [x] `AutoConnect` unticked: the tabs appear without any session starting, and stay that
       way. Selecting a tab shows a session that is *Not connected* and starts nothing;
       *Reconnect* is what connects it.
 - [ ] Connections open **in series**: on a workspace of four, each dot turns green — or
       red — before the next connection is even issued, never all four negotiating at once.
       A machine that answers nothing holds the mount for five seconds at most, then the
       next one starts anyway.
-- [ ] A workspace connection whose password is refused: only that one fails, with its own
+- [x] A workspace connection whose password is refused: only that one fails, with its own
       reason, and it is **not** retried. The others are mounted.
 - [x] Last-session restore is **off by default** on a fresh install.
 - [x] With it **on**, every launch says so in the InfoBar — and says how many sessions came
