@@ -199,6 +199,42 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Session restore is on.
+        /// </summary>
+        public static string Shell_RestoreOnTitle {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOnTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The sessions open when you close RemoteDeck will reopen at the next launch..
+        /// </summary>
+        public static string Shell_RestoreOnMessage {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOnMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Session restore is off.
+        /// </summary>
+        public static string Shell_RestoreOffTitle {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOffTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The next launch will open no session..
+        /// </summary>
+        public static string Shell_RestoreOffMessage {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOffMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Pane_MenuConnect {
