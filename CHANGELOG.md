@@ -2,6 +2,29 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### xUnit v3
+
+- **The test project moved from xUnit 2.9.3 to xUnit v3**, which NuGet marks the older package
+  deprecated in favour of. Not one assertion changed: the 214 tests compiled and passed as they
+  were, because this project only ever used `[Fact]`, one `[Theory]` and the assertion library —
+  no `ITestOutputHelper`, no class fixtures, and nothing from `xunit.abstractions`, which v3
+  removed and which is where most of the migration pain lives.
+- Three packages went away with it. `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio` and
+  `coverlet.collector` are all VSTest, and an xUnit v3 project is a *Microsoft.Testing.Platform*
+  application: an executable that runs its own tests. `xunit.v3` is now the only test dependency.
+- **The command to run the tests is `dotnet run --project tests/RemoteDeck.Core.Tests`**, in CI
+  and locally. Running the executable is the documented way for such a project, and there is one
+  test project, so it replaces `dotnet test RemoteDeck.sln` exactly.
+- `dotnet test` additionally does not work on this toolchain: with .NET SDK 10.0.400 and
+  Microsoft.Testing.Platform 2.3.3 it passes `--server` with no value, the test application
+  rejects it, and the run ends with exit code 5 and zero tests — reproduced with `xunit.v3` as
+  the sole reference, after deleting `bin` and `obj`, at project and at solution level. That is
+  plumbing between the SDK and the platform, not something this repository configures wrongly.
+  `global.json` declares the MTP runner anyway, so a later SDK that fixes the integration makes
+  `dotnet test` work again with no change here.
+
 ## 0.3.0 — 2026-09-03
 
 Workspaces: name the sessions you have open, arranged the way you arranged them, and get the
