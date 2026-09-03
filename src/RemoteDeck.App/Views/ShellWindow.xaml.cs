@@ -726,9 +726,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
 
-        // Saving only means something with something to save, and only from the shell: the capture
-        // reads the whole strip, not the window the palette happens to have been opened from.
-        if (from is null && _sessions.Tabs.Count > 0)
+        // Saving only means something with something to save. Offered from a detached window too,
+        // and deliberately: the capture reads every session, so where the palette was opened from
+        // changes nothing about what it records — and arranging sessions across monitors, then
+        // saving that arrangement, is the whole point of the feature. Hiding it from a full-screen
+        // window would mean leaving full screen to save the layout that full screen is part of.
+        if (_sessions.Tabs.Count > 0)
         {
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:workspace-save",
                 Strings.Palette_SaveLayout, Strings.Palette_SaveLayoutSubtitle, CommandPriority,
@@ -869,7 +872,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 break;
 
             case "cmd:workspace-save":
-                SaveCurrentLayout();
+                SaveCurrentLayout(from);
                 break;
 
             // BuildPaletteItems no longer produces "cmd:disconnect": RemoteDeck has no disconnect
@@ -1264,14 +1267,21 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// the real window rather than off what was remembered: what a workspace records is what the
     /// user sees on screen at the moment they record it.
     /// </summary>
-    private void SaveCurrentLayout()
+    /// <param name="from">The detached window the palette was opened from, or <c>null</c> for the
+    /// shell. It owns the dialogs below, the same way it owns the palette itself: a window owned by
+    /// the shell would open <em>behind</em> a full-screen session, which is topmost — an invisible
+    /// modal, and an application that looks frozen.</param>
+    private void SaveCurrentLayout(SessionWindow? from)
     {
         if (_workspaces is null || _sessions.Tabs.Count == 0)
         {
             return;
         }
 
-        var dialog = new WorkspaceNameWindow(proposedName: null, autoConnect: true) { Owner = this };
+        // The cast is what the palette's own owner line already does: the two window types share no
+        // base but Window, so the conditional needs to be told which one it is producing.
+        Window owner = from ?? (Window)this;
+        var dialog = new WorkspaceNameWindow(proposedName: null, autoConnect: true) { Owner = owner };
         if (dialog.ShowDialog() != true)
         {
             return;
@@ -1281,7 +1291,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // there is no editor for one. But it overwrites, so it is confirmed.
         if (_workspaces.FindByName(dialog.WorkspaceName) is not null)
         {
-            var confirm = System.Windows.MessageBox.Show(this,
+            var confirm = System.Windows.MessageBox.Show(owner,
                 Text.Of(Strings.WorkspaceName_ReplaceMessage, dialog.WorkspaceName),
                 Text.Of(Strings.WorkspaceName_ReplaceTitle, dialog.WorkspaceName),
                 MessageBoxButton.OKCancel, MessageBoxImage.Warning);
