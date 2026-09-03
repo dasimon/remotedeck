@@ -7,11 +7,16 @@ credential vault backed by Windows DPAPI — built on the native Remote Desktop 
 control, so the RDP protocol itself is Microsoft's, not ours. The interface is available
 in English and French.
 
-> Status: **pre-alpha**. Lots 0–5 are done: multi-session tabs, automatic
-> reconnection, dynamic resolution, a searchable connection pane, an editor, the
-> credential vault, the command palette, connection import and a fully translated
-> interface. See [`CHANGELOG.md`](CHANGELOG.md) for what 0.1.0 contains — and for
-> detached session windows, which are in the tree but unreleased.
+> Status: **pre-alpha**. What works: multi-session tabs, automatic reconnection,
+> dynamic resolution, a searchable connection pane with a right-click menu, an editor,
+> the credential vault, the command palette, connection import, detached session
+> windows with full screen per monitor, saved workspaces, and a fully translated
+> interface. See [`CHANGELOG.md`](CHANGELOG.md) for what each release contains.
+>
+> Automated tests cover `RemoteDeck.Core` and the repository's own conventions. The
+> WPF layer has no test project, so what you see on screen is verified by hand against
+> [`docs/manual-checklist.md`](docs/manual-checklist.md) — read that list before
+> trusting a feature in production.
 
 ## Requirements
 
