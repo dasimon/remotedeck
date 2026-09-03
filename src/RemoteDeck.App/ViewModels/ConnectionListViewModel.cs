@@ -50,8 +50,11 @@ public sealed partial class ConnectionItem : ObservableObject
 /// </summary>
 public sealed record WorkspaceListItem(long Id, string Name, int ConnectionCount)
 {
-    /// <summary>Reuses the palette's wording so the same workspace reads the same in both places.</summary>
-    public string Subtitle => Text.Of(Strings.Palette_OpenWorkspaceSubtitle, ConnectionCount);
+    /// <summary>Reuses the palette's wording so the same workspace reads the same in both places,
+    /// and pluralises: a workspace of one connection reading "1 connections" is the kind of detail
+    /// that makes an interface look unfinished.</summary>
+    public string Subtitle =>
+        Text.Plural(ConnectionCount, Strings.Workspace_CountOne, Strings.Workspace_CountMany, ConnectionCount);
 }
 
 /// <summary>

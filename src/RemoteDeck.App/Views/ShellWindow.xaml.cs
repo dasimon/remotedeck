@@ -750,7 +750,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             items.Add(new PaletteItem(PaletteItemKind.Command,
                 string.Create(CultureInfo.InvariantCulture, $"ws:{workspace.Id}"),
                 Text.Of(Strings.Palette_OpenWorkspace, workspace.Name),
-                Text.Of(Strings.Palette_OpenWorkspaceSubtitle, workspace.Items.Count), CommandPriority,
+                Text.Plural(workspace.Items.Count, Strings.Workspace_CountOne, Strings.Workspace_CountMany,
+                    workspace.Items.Count), CommandPriority,
                 Group: Strings.Palette_GroupWorkspaces));
             items.Add(new PaletteItem(PaletteItemKind.Command,
                 string.Create(CultureInfo.InvariantCulture, $"wsdel:{workspace.Id}"),
@@ -1321,7 +1322,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
             Text.Of(Strings.Shell_WorkspaceSaved, workspace.Name),
-            Text.Of(Strings.Shell_WorkspaceSavedMessage, workspace.Items.Count));
+            Text.Plural(workspace.Items.Count, Strings.Shell_WorkspaceSavedOne,
+                Strings.Shell_WorkspaceSavedMany, workspace.Items.Count));
     }
 
     /// <summary>
