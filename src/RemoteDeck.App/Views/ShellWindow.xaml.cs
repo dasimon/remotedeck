@@ -854,6 +854,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 // mounted would otherwise stamp that workspace's imposed rectangles onto the
                 // fallback the next one relies on.
                 SaveSettings(rememberDetached: false);
+
+                // Say so. The palette closes on Enter and this setting has no visible surface of its
+                // own, so without this the toggle looks like it did nothing — the only way to learn
+                // the new state was to reopen the palette and read the subtitle again. A setting the
+                // user cannot confirm they changed is a setting they will change twice.
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    _settings.RestoreLastSession ? Strings.Shell_RestoreOnTitle : Strings.Shell_RestoreOffTitle,
+                    _settings.RestoreLastSession ? Strings.Shell_RestoreOnMessage : Strings.Shell_RestoreOffMessage);
                 break;
 
             case "cmd:workspace-save":

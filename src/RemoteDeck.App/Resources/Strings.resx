@@ -104,6 +104,18 @@
   <data name="Shell_WorkspaceSavedMany" xml:space="preserve">
     <value>{0} connections, and where each one sits.</value>
   </data>
+  <data name="Shell_RestoreOnTitle" xml:space="preserve">
+    <value>Session restore is on</value>
+  </data>
+  <data name="Shell_RestoreOnMessage" xml:space="preserve">
+    <value>The sessions open when you close RemoteDeck will reopen at the next launch.</value>
+  </data>
+  <data name="Shell_RestoreOffTitle" xml:space="preserve">
+    <value>Session restore is off</value>
+  </data>
+  <data name="Shell_RestoreOffMessage" xml:space="preserve">
+    <value>The next launch will open no session.</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>
