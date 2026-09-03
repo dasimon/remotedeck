@@ -543,28 +543,28 @@ test project. These boxes are the only verification.
 - [ ] A workspace connection whose password is refused: only that one fails, with its own
       reason, and it is **not** retried. The others are mounted.
 - [x] Last-session restore is **off by default** on a fresh install.
-- [ ] With it **on**, every launch says so in the InfoBar — and says how many sessions came
+- [x] With it **on**, every launch says so in the InfoBar — and says how many sessions came
       back, or that nothing was open at the last close. It is the only place this setting's
       state is visible.
-- [ ] With it **off**, launching says nothing about it.
+- [x] With it **off**, launching says nothing about it.
 - [x] Turn it on: close with two sessions open, restart, and both come back. Kill the
       process instead of closing cleanly: the previous snapshot is kept.
 - [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
       an empty or whitespace-only name, and its appearance follows both the light and
       dark theme.
-- [ ] A saved workspace appears in a **Workspaces** section at the top of the connection pane,
+- [x] A saved workspace appears in a **Workspaces** section at the top of the connection pane,
       above the connections, with its name and how many connections it holds.
-- [ ] With **no** workspace saved, that section is **absent entirely** — no empty heading.
-- [ ] **Clicking a workspace row opens it**, exactly as the palette entry does.
-- [ ] **Right-click a workspace row** → *Open*, *Update from the open sessions*, *Delete*.
+- [x] With **no** workspace saved, that section is **absent entirely** — no empty heading.
+- [x] **Clicking a workspace row opens it**, exactly as the palette entry does.
+- [x] **Right-click a workspace row** → *Open*, *Update from the open sessions*, *Delete*.
       *Delete* asks for confirmation and removes only the workspace, never its connections.
-- [ ] *Update from the open sessions* opens the naming window **with the name already filled**
+- [x] *Update from the open sessions* opens the naming window **with the name already filled**
       and the auto-connect box in the workspace's own state, then asks to replace. Confirm, and
       the row's connection count reflects what is open now.
-- [ ] Cancelling that dialog, or refusing the replace, leaves the workspace untouched.
-- [ ] The section updates **immediately** after a capture and after a deletion, without
+- [x] Cancelling that dialog, or refusing the replace, leaves the workspace untouched.
+- [x] The section updates **immediately** after a capture and after a deletion, without
       restarting the application.
-- [ ] Deleting a connection that a workspace listed: the workspace's count in the pane drops by
+- [x] Deleting a connection that a workspace listed: the workspace's count in the pane drops by
       one on the next refresh.
 - [ ] *Save layout as…* is offered in the palette opened **from a detached, full-screen
       session**, not only from the main window — and the naming dialog appears **in front of**
