@@ -235,6 +235,15 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Update from the open sessions.
+        /// </summary>
+        public static string Pane_MenuUpdateWorkspace {
+            get {
+                return ResourceManager.GetString("Pane_MenuUpdateWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Pane_MenuConnect {

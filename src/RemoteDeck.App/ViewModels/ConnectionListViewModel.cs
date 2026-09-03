@@ -121,6 +121,10 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// does for a connection.</summary>
     public event Action<long>? WorkspaceDeleteRequested;
 
+    /// <summary>The user asked to re-capture a workspace under its own name. The only way one
+    /// changes: there is no workspace editor.</summary>
+    public event Action<long>? WorkspaceUpdateRequested;
+
     /// <summary>Raised when the user asks to open a session (Enter, or a double-click).</summary>
     public event Action<Connection>? ConnectRequested;
 
@@ -192,6 +196,13 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     private void OpenWorkspace(WorkspaceListItem? item)
     {
         if (item is not null) WorkspaceOpenRequested?.Invoke(item.Id);
+    }
+
+    /// <summary>Re-captures the current layout under this workspace's name.</summary>
+    [RelayCommand]
+    private void UpdateWorkspace(WorkspaceListItem? item)
+    {
+        if (item is not null) WorkspaceUpdateRequested?.Invoke(item.Id);
     }
 
     /// <summary>Its context menu's only destructive entry.</summary>

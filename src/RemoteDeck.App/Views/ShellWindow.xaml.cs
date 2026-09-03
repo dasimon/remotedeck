@@ -295,6 +295,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.FavoriteToggleRequested += OnFavoriteToggleRequested;
         _list.WorkspaceOpenRequested += OnPaneWorkspaceOpenRequested;
         _list.WorkspaceDeleteRequested += OnPaneWorkspaceDeleteRequested;
+        _list.WorkspaceUpdateRequested += OnPaneWorkspaceUpdateRequested;
 
         // Pull, like StatusProvider: the pane owns no repository and must not start to. Set before
         // the reload below, so the first paint already has the workspaces.
@@ -1264,7 +1265,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// shell. It owns the dialogs below, the same way it owns the palette itself: a window owned by
     /// the shell would open <em>behind</em> a full-screen session, which is topmost — an invisible
     /// modal, and an application that looks frozen.</param>
-    private void SaveCurrentLayout(SessionWindow? from)
+    /// <param name="existing">The workspace being updated, or <c>null</c> to capture a new one. It
+    /// only pre-fills the dialog: an update is the same capture under a name already taken, which is
+    /// exactly what replacing means here. There is no editor for a workspace, so re-capturing is how
+    /// one changes — this parameter is what makes that reachable from the row itself instead of
+    /// requiring the user to know it and retype the name.</param>
+    private void SaveCurrentLayout(SessionWindow? from, Workspace? existing = null)
     {
         if (_workspaces is null || _sessions.Tabs.Count == 0)
         {
@@ -1274,7 +1280,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // The cast is what the palette's own owner line already does: the two window types share no
         // base but Window, so the conditional needs to be told which one it is producing.
         Window owner = from ?? (Window)this;
-        var dialog = new WorkspaceNameWindow(proposedName: null, autoConnect: true) { Owner = owner };
+        var dialog = new WorkspaceNameWindow(existing?.Name, existing?.AutoConnect ?? true) { Owner = owner };
         if (dialog.ShowDialog() != true)
         {
             return;
@@ -1379,6 +1385,24 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 $"Deleting '{toDelete.Name}' failed: {ex.GetType().Name}: {ex.Message}");
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
                 Strings.Common_DeleteFailedTitle, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// <em>Update</em> from a workspace row's context menu: re-captures the sessions as they are now,
+    /// under that workspace's name.
+    /// </summary>
+    /// <remarks>
+    /// The same capture the palette runs, with the name and the auto-connect box already filled, so
+    /// it lands on the replace confirmation rather than on an empty form. Re-capturing is the only
+    /// way a workspace changes — there is deliberately no editor — and until this entry existed the
+    /// user had to know that and retype the name exactly.
+    /// </remarks>
+    private void OnPaneWorkspaceUpdateRequested(long id)
+    {
+        if (_workspaces?.Get(id) is { } workspace)
+        {
+            SaveCurrentLayout(from: null, existing: workspace);
         }
     }
 

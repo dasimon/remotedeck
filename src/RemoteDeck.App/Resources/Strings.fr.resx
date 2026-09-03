@@ -116,6 +116,9 @@
   <data name="Shell_RestoreOffMessage" xml:space="preserve">
     <value>Le prochain démarrage n'ouvrira aucune session.</value>
   </data>
+  <data name="Pane_MenuUpdateWorkspace" xml:space="preserve">
+    <value>Mettre à jour depuis les sessions ouvertes</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connecter</value>
   </data>
