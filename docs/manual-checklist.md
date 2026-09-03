@@ -548,6 +548,9 @@ test project. These boxes are the only verification.
 - [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
       an empty or whitespace-only name, and its appearance follows both the light and
       dark theme.
+- [ ] *Save layout as…* is offered in the palette opened **from a detached, full-screen
+      session**, not only from the main window — and the naming dialog appears **in front of**
+      that full-screen window rather than behind it.
 - [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): no workspace string
       is left hard-coded.
 
@@ -562,25 +565,25 @@ itself is WPF and cannot be; these boxes are its only verification.
       every entry then acts on **that** row — not on the one selected a moment earlier. Verify
       with *Edit…* and again with *Delete*; this is the failure this feature is most prone to.
       *(Checked through* Edit… *; the* Delete *half is covered by the two-step item below.)*
-- [ ] **Double-click still connects.** It must not open the editor.
-- [ ] *Connect* from the menu opens the session, exactly as `Enter` does.
+- [x] **Double-click still connects.** It must not open the editor.
+- [x] *Connect* from the menu opens the session, exactly as `Enter` does.
 - [x] *Edit…* opens the connection editor on the right connection, and saving refreshes the row.
 - [x] *Favorite* ticks and unticks, and the row **jumps to or leaves the ★ Favorites group**
       immediately. Reopen the menu: the checkmark reflects the new state.
-- [ ] Toggling *Favorite* on a connection with a full configuration (fixed resolution, notes,
+- [x] Toggling *Favorite* on a connection with a full configuration (fixed resolution, notes,
       redirections, credential) leaves **every other field untouched** — reopen the editor and
       confirm. The write must be one column, never a whole-row save.
-- [ ] *Delete* from the menu **arms** the two-step confirmation in the InfoBar; it does not delete
+- [x] *Delete* from the menu **arms** the two-step confirmation in the InfoBar; it does not delete
       on the first invocation. A second `Delete` (key or menu) then removes the connection.
-- [ ] **Right-click the empty space** below the last row: the menu shows only *New connection* and
+- [x] **Right-click the empty space** below the last row: the menu shows only *New connection* and
       *Import connections…*. Nothing acts on the previously selected row.
-- [ ] Right-click a **group header**: no destructive entry is offered.
+- [x] Right-click a **group header**: no destructive entry is offered.
 - [ ] With the database unavailable (degraded mode), *Favorite* reports the failure in the InfoBar
       and does not take the application down.
-- [ ] In French (`REMOTEDECK_UI_CULTURE=fr-FR`): the entries read naturally and none is
+- [x] In French (`REMOTEDECK_UI_CULTURE=fr-FR`): the entries read naturally and none is
       truncated in the menu's width. *That they exist and are translated is now covered by the
       convention tests; the gesture hint reading* Suppr *rather than* Del *is part of that.*
-- [ ] Light and dark theme: the menu follows the theme like the rest of the chrome.
+- [x] Light and dark theme: the menu follows the theme like the rest of the chrome.
 
 ## Build prerequisites (any lot)
 
