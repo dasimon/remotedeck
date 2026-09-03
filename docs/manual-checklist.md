@@ -1,8 +1,25 @@
 # Manual verification checklist
 
 Run before tagging a release. Items are grouped by the lot that introduced them.
-Automated tests cover `RemoteDeck.Core`; everything below touches COM or WPF and
-cannot be automated reliably.
+Automated tests cover `RemoteDeck.Core`; everything below touches COM, WPF, real
+hardware or a real server, and cannot be automated reliably.
+
+**What no longer needs a human.** `tests/RemoteDeck.Core.Tests/Conventions/` now asserts
+things about the repository itself, and the boxes they replaced have been removed:
+
+- **Resources** — every key exists in `Strings.resx`, `Strings.fr.resx` *and*
+  `Strings.Designer.cs`, with the property name and the `GetString` argument matching the
+  key; no orphan on either side; the same `{0}`/`{1}` placeholders in both languages; no
+  empty value. That file is versioned rather than generated, so a key added to the two
+  resx files and forgotten in the designer used to fail **silently at runtime**, and only a
+  careful reader stood in the way.
+- **Markup** — no user-visible text left as a literal in any XAML, and no `{x:Static
+  res:Strings.…}` pointing at a key that no longer exists.
+- **Artwork** — `RemoteDeck.ico` and `RemoteDeck-32.png` are committed, and the icon really
+  carries its nine sizes.
+
+So where a box below says "no missing string" or "no hard-coded English", that half is now
+proven; what remains yours is whether the French **reads** well and fits its control.
 
 Probe evidence for the lot 0 items lives in
 `docs/superpowers/probes/l0-probe-results.md`.
@@ -24,8 +41,8 @@ Probe evidence for the lot 0 items lives in
 
 ### Session
 
-- [ ] Connect with valid credentials: remote desktop renders inside the window.
-- [ ] Connect to a nonexistent host: InfoBar shows an error with reason code and
+- [x] Connect with valid credentials: remote desktop renders inside the window.
+- [x] Connect to a nonexistent host: InfoBar shows an error with reason code and
       Windows description; no MessageBox.
 - [ ] Wrong password: no crash; `OnLogonError` or CredSSP prompt.
 - [ ] Close the window while connected: on the server, `query session` shows the
@@ -47,7 +64,7 @@ Probe evidence for the lot 0 items lives in
 
 ### Keyboard
 
-- [ ] `Ctrl+K` and `Ctrl+Tab` are intercepted while the remote desktop has focus, and
+- [x] `Ctrl+K` and `Ctrl+Tab` are intercepted while the remote desktop has focus, and
       the keystrokes do **not** reach the remote session. The working mechanism is the
       low-level hook (`WH_KEYBOARD_LL`, `ShortcutInterceptor.Mechanism.LowLevelKeyboardHook`);
       the three thread-scoped mechanisms (`WpfThreadFilter`, `WinFormsMessageFilter`,
@@ -75,7 +92,7 @@ Probe evidence for the lot 0 items lives in
 
 ### Editor
 
-- [ ] `Ctrl+N` opens the connection editor. Saving with an empty name, an empty host, a
+- [x] `Ctrl+N` opens the connection editor. Saving with an empty name, an empty host, a
       host containing a space, or a port outside 1–65535 is **refused**, and every reason
       is listed at once in the editor's InfoBar — no `MessageBox`, no partial save.
 - [ ] With the display mode set to *Dynamic*, the fixed width/height fields are disabled
@@ -86,9 +103,9 @@ Probe evidence for the lot 0 items lives in
 
 ### Connecting from the list
 
-- [ ] Select a connection **with** a credential attached and press `Enter`: the session
+- [x] Select a connection **with** a credential attached and press `Enter`: the session
       opens without any prompt, and the log shows `Password supplied from credential …`.
-- [ ] Select a connection **with no credential** (or one whose credential was deleted):
+- [x] Select a connection **with no credential** (or one whose credential was deleted):
       RemoteDeck puts **no** password and the control raises its own **CredSSP prompt**.
       Typing the password there must connect. RemoteDeck itself has no manual password
       entry any more.
@@ -318,7 +335,9 @@ success criteria of §1.
       the log — it must never prevent startup.
 - [ ] French pass over the **four modal windows** — *Connection editor*, *Credentials*,
       *Credential editor*, *Import*: every label, button, title, placeholder, tooltip and
-      status message is in French, with no leftover English and no missing string.
+      status message **reads** like French someone would write. *"No missing string" and "no
+      leftover English" are now proven by the convention tests — what is left here is whether
+      the wording is any good.*
 - [ ] **Watch for truncation**: the label columns of the connection editor and the
       credential editor are fixed at **120 px** and **110 px**. French labels are longer
       than English ones — check that none is cut off or ellipsised at those widths, at
@@ -433,6 +452,156 @@ for most of it; `TEST-VM` is the reference target.
 - [ ] Corrupt the `detachedWindows` section by hand (set it to `null`, or truncate the
       file), restart and detach: the app starts and detaches on the default placement, with
       no error dialog.
+
+## Application icon
+
+- [ ] **Explorer** shows the deck icon on `RemoteDeck.exe` — in the extra-large view (the
+      256 px frame, the only one stored as a PNG) and in the details view (16 px). Never the
+      default .NET icon.
+- [ ] **Taskbar and Alt-Tab** show it, and the three stacked cards are still told apart at
+      that size rather than reading as one blue blob.
+- [ ] **Main window**: the icon sits at the left of the title bar, before *RemoteDeck*.
+- [ ] **A detached session window** carries the same icon at the left of its 32 px strip,
+      before the status dot — and the strip still drags the window: the icon must not
+      swallow the gesture.
+- [ ] Switch Windows between light and dark: the icon is unchanged. It is a fixed colour and
+      does **not** follow the accent, unlike the rest of the interface — expected, not a bug.
+*(The box that used to sit here — regenerated icon files committed after editing
+`tools/icon/New-RemoteDeckIcon.ps1` — is now `ShippedAssetTests`, which fails the build if
+either file is missing or the icon has lost a size. The convention it guarded still stands:
+CI publishes what is versioned and never generates artwork.)*
+
+## Session navigation — double-click and the full-screen selector
+
+None of this is covered by automated tests: it all lives in `RemoteDeck.App`, which has no
+test project. These boxes are the only verification.
+
+### Double-click to detach and to reattach
+
+- [ ] **Double-click a docked tab**: it leaves for a window of its own, placed where that
+      connection was last seen or under the pointer. The remote desktop is the same one —
+      it must **not** flash, blank or reconnect.
+- [ ] The **single** click still only activates. Click tabs back and forth quickly but
+      deliberately on *different* tabs: nothing detaches. Only two clicks on the *same* tab
+      inside the double-click time do.
+- [ ] **A sideways drag still reorders** and a 40 px downward drag still detaches. Neither
+      gesture was replaced.
+- [ ] **Double-click the caption strip** of a detached window: it goes back into the tab
+      strip. Again, no reconnection.
+- [ ] **Dragging the caption strip still moves the window** — the double-click must not have
+      cost the drag.
+- [ ] Press the **cross** on a detached window, then double-click its caption strip while the
+      close protocol is still running: nothing happens. The session must not be moved back
+      into the shell mid-close.
+
+### The full-screen session selector
+
+- [ ] With **two or more sessions**, put one full screen (`F11`) and bring the pointer to the
+      top edge: the bar slides in and shows **a chip per other session**, each with its
+      status dot and the connection's name; the host is in its tooltip.
+- [ ] With **one session only**, no chips appear and the bar looks exactly as it did.
+- [ ] **Click the chip of a docked session**: the main window comes forward with that tab
+      active. The full-screen window stays full screen and connected behind it.
+- [ ] **Click the chip of a session detached and full screen on another monitor**: that
+      window comes forward, still full screen. Nothing is re-parented on either side.
+- [ ] After a click, the bar **retracts on its own** — no `Topmost` strip left floating over
+      the main window.
+- [ ] Open and close a session while a bar is up: the chips follow, without a flicker of the
+      full-screen surface.
+- [ ] A chip whose session is reconnecting shows the **amber** dot, and turns green again on
+      its own — the chips read state live, they are not a snapshot.
+- [ ] Press a chip and slide the pointer off it before releasing: nothing happens.
+- [ ] Light and dark: the chips' border, hover and text follow the theme like the rest.
+
+## Workspaces
+
+- [ ] Capture a workspace of three sessions, two of them detached on two monitors, then
+      close everything and reopen it: all three come back, each in its place.
+- [ ] A workspace holding a full-screen session, mounted cold (that connection not
+      running): the window comes up full screen on the recorded monitor once the session
+      is connected, not merely detached and windowed.
+- [ ] Open a workspace while two of its sessions are already running: **nothing is closed
+      or reconnected**, and the two live sessions are only moved.
+- [ ] A docked session that the workspace wants detached: it is detached. The reverse
+      reattaches it.
+- [ ] Save under a name that already exists: the confirmation appears, and declining
+      leaves the workspace unchanged.
+- [ ] Delete a connection that belongs to a workspace: it disappears from the workspace,
+      the workspace stays, and the other connections are untouched.
+- [x] A workspace whose connections have all been deleted: it stays listed, and opening
+      it shows "Nothing to open" instead of opening anything.
+- [ ] Unplug the monitor a workspace window was on, then open the workspace: the window
+      lands on a monitor that is actually connected and reachable — approximate on mixed
+      scaling factors, which is expected.
+- [x] `AutoConnect` unticked: the tabs appear without any session starting, and stay that
+      way. Selecting a tab shows a session that is *Not connected* and starts nothing;
+      *Reconnect* is what connects it.
+- [ ] Connections open **in series**: on a workspace of four, each dot turns green — or
+      red — before the next connection is even issued, never all four negotiating at once.
+      A machine that answers nothing holds the mount for five seconds at most, then the
+      next one starts anyway.
+- [x] A workspace connection whose password is refused: only that one fails, with its own
+      reason, and it is **not** retried. The others are mounted.
+- [x] Last-session restore is **off by default** on a fresh install.
+- [x] With it **on**, every launch says so in the InfoBar — and says how many sessions came
+      back, or that nothing was open at the last close. It is the only place this setting's
+      state is visible.
+- [x] With it **off**, launching says nothing about it.
+- [x] Turn it on: close with two sessions open, restart, and both come back. Kill the
+      process instead of closing cleanly: the previous snapshot is kept.
+- [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
+      an empty or whitespace-only name, and its appearance follows both the light and
+      dark theme.
+- [x] A saved workspace appears in a **Workspaces** section at the top of the connection pane,
+      above the connections, with its name and how many connections it holds.
+- [x] With **no** workspace saved, that section is **absent entirely** — no empty heading.
+- [x] **Clicking a workspace row opens it**, exactly as the palette entry does.
+- [x] **Right-click a workspace row** → *Open*, *Update from the open sessions*, *Delete*.
+      *Delete* asks for confirmation and removes only the workspace, never its connections.
+- [x] *Update from the open sessions* opens the naming window **with the name already filled**
+      and the auto-connect box in the workspace's own state, then asks to replace. Confirm, and
+      the row's connection count reflects what is open now.
+- [x] Cancelling that dialog, or refusing the replace, leaves the workspace untouched.
+- [x] The section updates **immediately** after a capture and after a deletion, without
+      restarting the application.
+- [x] Deleting a connection that a workspace listed: the workspace's count in the pane drops by
+      one on the next refresh.
+- [x] *Save layout as…* is offered in the palette opened **from a detached, full-screen
+      session**, not only from the main window — and the naming dialog appears **in front of**
+      that full-screen window rather than behind it.
+- [ ] Interface in English, then in French (`REMOTEDECK_UI_CULTURE`): no workspace string
+      is left hard-coded.
+
+## Connection list — context menu
+
+Only `ConnectionRepository.SetFavorite` is covered by automated tests (4 of them). The menu
+itself is WPF and cannot be; these boxes are its only verification.
+
+- [x] **Right-click a connection**: the menu opens with *Connect* in bold, then *Edit…* (F2),
+      *Favorite*, then *Delete* (Del) under its own separator.
+- [x] **Right-click a row that is not selected**: it becomes selected *before* the menu opens, and
+      every entry then acts on **that** row — not on the one selected a moment earlier. Verify
+      with *Edit…* and again with *Delete*; this is the failure this feature is most prone to.
+      *(Checked through* Edit… *; the* Delete *half is covered by the two-step item below.)*
+- [x] **Double-click still connects.** It must not open the editor.
+- [x] *Connect* from the menu opens the session, exactly as `Enter` does.
+- [x] *Edit…* opens the connection editor on the right connection, and saving refreshes the row.
+- [x] *Favorite* ticks and unticks, and the row **jumps to or leaves the ★ Favorites group**
+      immediately. Reopen the menu: the checkmark reflects the new state.
+- [x] Toggling *Favorite* on a connection with a full configuration (fixed resolution, notes,
+      redirections, credential) leaves **every other field untouched** — reopen the editor and
+      confirm. The write must be one column, never a whole-row save.
+- [x] *Delete* from the menu **arms** the two-step confirmation in the InfoBar; it does not delete
+      on the first invocation. A second `Delete` (key or menu) then removes the connection.
+- [x] **Right-click the empty space** below the last row: the menu shows only *New connection* and
+      *Import connections…*. Nothing acts on the previously selected row.
+- [x] Right-click a **group header**: no destructive entry is offered.
+- [ ] With the database unavailable (degraded mode), *Favorite* reports the failure in the InfoBar
+      and does not take the application down.
+- [x] In French (`REMOTEDECK_UI_CULTURE=fr-FR`): the entries read naturally and none is
+      truncated in the menu's width. *That they exist and are translated is now covered by the
+      convention tests; the gesture hint reading* Suppr *rather than* Del *is part of that.*
+- [x] Light and dark theme: the menu follows the theme like the rest of the chrome.
 
 ## Build prerequisites (any lot)
 

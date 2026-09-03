@@ -41,6 +41,23 @@ public sealed partial class ConnectionItem : ObservableObject
 }
 
 /// <summary>
+/// One saved workspace, as the pane shows it: a name and how many connections it holds.
+///
+/// It carries the id rather than the <see cref="Workspace"/> itself. The row only ever needs to say
+/// which workspace was clicked; re-reading it from the database at that moment is also what keeps a
+/// stale row — one whose workspace was emptied by a connection being deleted — from acting on a
+/// snapshot taken minutes ago.
+/// </summary>
+public sealed record WorkspaceListItem(long Id, string Name, int ConnectionCount)
+{
+    /// <summary>Reuses the palette's wording so the same workspace reads the same in both places,
+    /// and pluralises: a workspace of one connection reading "1 connections" is the kind of detail
+    /// that makes an interface look unfinished.</summary>
+    public string Subtitle =>
+        Text.Plural(ConnectionCount, Strings.Workspace_CountOne, Strings.Workspace_CountMany, ConnectionCount);
+}
+
+/// <summary>
 /// Backs the connection pane: the saved connections, the search box, and the intents the shell acts on.
 ///
 /// The view-model owns no UI: it raises <see cref="ConnectRequested"/>, <see cref="EditRequested"/> and
@@ -79,6 +96,35 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// <c>CollectionViewSource</c> bound to it — and its grouping — survives every refresh.</summary>
     public ObservableCollection<ConnectionItem> Items { get; } = [];
 
+    /// <summary>
+    /// The saved workspaces, shown above the connections. Deliberately a list of its own rather than
+    /// rows mixed into <see cref="Items"/>: a workspace is not a connection, and the row template a
+    /// connection needs — status pill, accent rail, match highlighting — has nothing to say about one.
+    /// </summary>
+    public ObservableCollection<WorkspaceListItem> Workspaces { get; } = [];
+
+    /// <summary>True when there is at least one workspace, so the section can disappear entirely
+    /// rather than leave a heading over nothing.</summary>
+    [ObservableProperty] private bool _hasWorkspaces;
+
+    /// <summary>
+    /// Where the workspaces come from. The shell owns <c>WorkspaceRepository</c> and sets this, the
+    /// same way it sets <see cref="StatusProvider"/>: the pane reads what it is given and owns no
+    /// repository of its own. Left null, the section simply never appears.
+    /// </summary>
+    public Func<IReadOnlyList<Workspace>>? WorkspacesProvider { get; set; }
+
+    /// <summary>The user asked to open a workspace. The shell mounts it.</summary>
+    public event Action<long>? WorkspaceOpenRequested;
+
+    /// <summary>The user asked to delete a workspace. The shell owns the confirmation, exactly as it
+    /// does for a connection.</summary>
+    public event Action<long>? WorkspaceDeleteRequested;
+
+    /// <summary>The user asked to re-capture a workspace under its own name. The only way one
+    /// changes: there is no workspace editor.</summary>
+    public event Action<long>? WorkspaceUpdateRequested;
+
     /// <summary>Raised when the user asks to open a session (Enter, or a double-click).</summary>
     public event Action<Connection>? ConnectRequested;
 
@@ -90,6 +136,10 @@ public sealed partial class ConnectionListViewModel : ObservableObject
 
     /// <summary>Raised when the user asks for the import window. The shell owns it, like every other window.</summary>
     public event Action? ImportRequested;
+
+    /// <summary>The favorite flag was toggled on a connection. Carries the value it should now have,
+    /// read from the row the user acted on — the shell writes it and reloads.</summary>
+    public event Action<Connection, bool>? FavoriteToggleRequested;
 
     /// <summary>
     /// How a row learns whether its connection currently has a session, given the connection's id.
@@ -122,7 +172,44 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     public void Reload()
     {
         _all = _repository.GetAll();
+        ReloadWorkspaces();
         Refresh();
+    }
+
+    /// <summary>
+    /// Re-reads the workspaces. Called by <see cref="Reload"/>, and on its own by the shell after a
+    /// capture — that changes the workspaces without touching a single connection.
+    /// </summary>
+    public void ReloadWorkspaces()
+    {
+        Workspaces.Clear();
+        foreach (var workspace in WorkspacesProvider?.Invoke() ?? [])
+        {
+            Workspaces.Add(new WorkspaceListItem(workspace.Id, workspace.Name, workspace.Items.Count));
+        }
+
+        HasWorkspaces = Workspaces.Count > 0;
+    }
+
+    /// <summary>A click on a workspace row.</summary>
+    [RelayCommand]
+    private void OpenWorkspace(WorkspaceListItem? item)
+    {
+        if (item is not null) WorkspaceOpenRequested?.Invoke(item.Id);
+    }
+
+    /// <summary>Re-captures the current layout under this workspace's name.</summary>
+    [RelayCommand]
+    private void UpdateWorkspace(WorkspaceListItem? item)
+    {
+        if (item is not null) WorkspaceUpdateRequested?.Invoke(item.Id);
+    }
+
+    /// <summary>Its context menu's only destructive entry.</summary>
+    [RelayCommand]
+    private void DeleteWorkspace(WorkspaceListItem? item)
+    {
+        if (item is not null) WorkspaceDeleteRequested?.Invoke(item.Id);
     }
 
     /// <summary>Re-applies the search to the in-memory snapshot. Cheap: no I/O.</summary>
@@ -199,6 +286,14 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     private void DeleteSelected()
     {
         if (Selected is { } item) DeleteRequested?.Invoke(item.Connection);
+    }
+
+    /// <summary>Flips the favorite flag of the selected row. The new value is computed here rather
+    /// than by the shell, so the menu's checkmark and the write always agree on what was on screen.</summary>
+    [RelayCommand]
+    private void ToggleFavoriteSelected()
+    {
+        if (Selected is { } item) FavoriteToggleRequested?.Invoke(item.Connection, !item.IsFavorite);
     }
 
     /// <summary>Typing restarts the debounce; the filter runs once the user pauses.</summary>

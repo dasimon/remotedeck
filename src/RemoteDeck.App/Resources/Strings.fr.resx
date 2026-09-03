@@ -86,6 +86,69 @@
   <data name="Pane_ImportToolTip" xml:space="preserve">
     <value>Importer des connexions depuis des fichiers .rdp ou l'historique du Bureau à distance</value>
   </data>
+  <data name="Pane_GroupWorkspaces" xml:space="preserve">
+    <value>Espaces de travail</value>
+  </data>
+  <data name="Pane_MenuOpenWorkspace" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Workspace_CountOne" xml:space="preserve">
+    <value>{0} connexion</value>
+  </data>
+  <data name="Workspace_CountMany" xml:space="preserve">
+    <value>{0} connexions</value>
+  </data>
+  <data name="Shell_WorkspaceSavedOne" xml:space="preserve">
+    <value>{0} connexion, et sa place.</value>
+  </data>
+  <data name="Shell_WorkspaceSavedMany" xml:space="preserve">
+    <value>{0} connexions, et la place de chacune.</value>
+  </data>
+  <data name="Shell_RestoreOnTitle" xml:space="preserve">
+    <value>Reprise de session activée</value>
+  </data>
+  <data name="Shell_RestoreOnMessage" xml:space="preserve">
+    <value>Les sessions ouvertes à la fermeture de RemoteDeck seront rouvertes au prochain démarrage.</value>
+  </data>
+  <data name="Shell_RestoreOffTitle" xml:space="preserve">
+    <value>Reprise de session désactivée</value>
+  </data>
+  <data name="Shell_RestoreOffMessage" xml:space="preserve">
+    <value>Le prochain démarrage n'ouvrira aucune session.</value>
+  </data>
+  <data name="Pane_MenuUpdateWorkspace" xml:space="preserve">
+    <value>Mettre à jour depuis les sessions ouvertes</value>
+  </data>
+  <data name="Shell_RestoredOne" xml:space="preserve">
+    <value>{0} session rouverte depuis la dernière fermeture de RemoteDeck.</value>
+  </data>
+  <data name="Shell_RestoredMany" xml:space="preserve">
+    <value>{0} sessions rouvertes depuis la dernière fermeture de RemoteDeck.</value>
+  </data>
+  <data name="Shell_RestoredNothing" xml:space="preserve">
+    <value>Rien n'était ouvert à la dernière fermeture de RemoteDeck, donc rien n'a été rouvert.</value>
+  </data>
+  <data name="Pane_MenuConnect" xml:space="preserve">
+    <value>Connecter</value>
+  </data>
+  <data name="Pane_MenuEdit" xml:space="preserve">
+    <value>Modifier…</value>
+  </data>
+  <data name="Pane_MenuFavorite" xml:space="preserve">
+    <value>Favori</value>
+  </data>
+  <data name="Pane_MenuDelete" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="Pane_MenuGestureDelete" xml:space="preserve">
+    <value>Suppr</value>
+  </data>
+  <data name="Pane_MenuGestureEdit" xml:space="preserve">
+    <value>F2</value>
+  </data>
+  <data name="Pane_MenuGestureNew" xml:space="preserve">
+    <value>Ctrl+N</value>
+  </data>
   <data name="Pane_Unavailable" xml:space="preserve">
     <value>Les connexions enregistrées sont indisponibles : la base de données n'a pas pu être ouverte. Voir le journal.</value>
   </data>
@@ -199,6 +262,9 @@
   </data>
   <data name="Shell_ConnectFailedMessage" xml:space="preserve">
     <value>{0} (0x{1}) : {2}</value>
+  </data>
+  <data name="Shell_FavoriteFailedTitle" xml:space="preserve">
+    <value>Impossible de modifier le favori</value>
   </data>
   <data name="Shell_DiagnosticsCopiedTitle" xml:space="preserve">
     <value>Diagnostic copié</value>
@@ -718,5 +784,77 @@
   </data>
   <data name="Shell_DetachRefusedMessage" xml:space="preserve">
     <value>« {0} » n’a pas pu être déplacée dans une fenêtre à elle et reste dans la fenêtre principale.</value>
+  </data>
+  <data name="WorkspaceName_Title" xml:space="preserve">
+    <value>Enregistrer la disposition sous…</value>
+  </data>
+  <data name="WorkspaceName_NameLabel" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="WorkspaceName_NamePlaceholder" xml:space="preserve">
+    <value>PROD</value>
+  </data>
+  <data name="WorkspaceName_AutoConnect" xml:space="preserve">
+    <value>Connecter les sessions à l'ouverture de l'espace</value>
+  </data>
+  <data name="WorkspaceName_Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="WorkspaceName_Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="WorkspaceName_ReplaceTitle" xml:space="preserve">
+    <value>Remplacer « {0} » ?</value>
+  </data>
+  <data name="WorkspaceName_ReplaceMessage" xml:space="preserve">
+    <value>Un espace nommé « {0} » existe déjà. L'enregistrer remplace son contenu — c'est sans retour.</value>
+  </data>
+  <data name="Palette_GroupWorkspaces" xml:space="preserve">
+    <value>Espaces de travail</value>
+  </data>
+  <data name="Palette_SaveLayout" xml:space="preserve">
+    <value>Enregistrer la disposition sous…</value>
+  </data>
+  <data name="Palette_SaveLayoutSubtitle" xml:space="preserve">
+    <value>Mémorise les sessions ouvertes et leur place</value>
+  </data>
+  <data name="Palette_OpenWorkspace" xml:space="preserve">
+    <value>Ouvrir l'espace « {0} »</value>
+  </data>
+  <data name="Palette_DeleteWorkspace" xml:space="preserve">
+    <value>Supprimer l'espace « {0} »</value>
+  </data>
+  <data name="Palette_DeleteWorkspaceSubtitle" xml:space="preserve">
+    <value>Retire l'espace, jamais les connexions</value>
+  </data>
+  <data name="Palette_ToggleRestore" xml:space="preserve">
+    <value>Rouvrir la dernière session au démarrage</value>
+  </data>
+  <data name="Palette_ToggleRestoreSubtitle" xml:space="preserve">
+    <value>Actuellement : {0}</value>
+  </data>
+  <data name="Palette_On" xml:space="preserve">
+    <value>activé</value>
+  </data>
+  <data name="Palette_Off" xml:space="preserve">
+    <value>désactivé</value>
+  </data>
+  <data name="Shell_WorkspaceSaved" xml:space="preserve">
+    <value>Espace « {0} » enregistré</value>
+  </data>
+  <data name="Shell_WorkspaceSaveFailedTitle" xml:space="preserve">
+    <value>Espace non enregistré</value>
+  </data>
+  <data name="Shell_WorkspaceEmptyTitle" xml:space="preserve">
+    <value>Rien à ouvrir</value>
+  </data>
+  <data name="Shell_WorkspaceEmptyMessage" xml:space="preserve">
+    <value>« {0} » ne référence plus aucune connexion existante.</value>
+  </data>
+  <data name="Shell_DeleteWorkspaceTitle" xml:space="preserve">
+    <value>Supprimer « {0} » ?</value>
+  </data>
+  <data name="Shell_DeleteWorkspaceMessage" xml:space="preserve">
+    <value>L'espace est supprimé. Les connexions qu'il liste ne sont pas touchées.</value>
   </data>
 </root>
