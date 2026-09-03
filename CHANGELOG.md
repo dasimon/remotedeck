@@ -2,7 +2,12 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.3.0 — 2026-09-03
+
+Workspaces: name the sessions you have open, arranged the way you arranged them, and get the
+whole thing back with one command. Plus a right-click menu on the connection list, two gestures
+that were only reachable by dragging, and a way out of a full-screen session.
+
 
 ### Where the settings are, and are not
 
