@@ -4,6 +4,18 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### Two things you could not see
+
+- **A workspace can be updated from its own row** — right-click → *Update from the open
+  sessions*. Re-capturing is the only way a workspace changes, since there is deliberately no
+  editor; until now you had to know that, and retype the name exactly. The entry opens the
+  naming window with the name and the auto-connect box already filled, so it lands straight on
+  the replace confirmation.
+- **The session-restore toggle says what it did.** Pressing Enter on *Reopen the last session at
+  startup* flipped the setting and showed nothing at all: the palette closes on Enter, and the
+  only way to learn the new state was to reopen the palette and read the subtitle again. A
+  setting you cannot confirm you changed is a setting you change twice.
+
 ### Workspaces you can see
 
 - **Saved workspaces now sit at the top of the connection pane**, above the connections, each

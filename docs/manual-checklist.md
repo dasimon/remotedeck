@@ -542,8 +542,8 @@ test project. These boxes are the only verification.
       next one starts anyway.
 - [ ] A workspace connection whose password is refused: only that one fails, with its own
       reason, and it is **not** retried. The others are mounted.
-- [ ] Last-session restore is **off by default** on a fresh install.
-- [ ] Turn it on: close with two sessions open, restart, and both come back. Kill the
+- [x] Last-session restore is **off by default** on a fresh install.
+- [x] Turn it on: close with two sessions open, restart, and both come back. Kill the
       process instead of closing cleanly: the previous snapshot is kept.
 - [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
       an empty or whitespace-only name, and its appearance follows both the light and
@@ -552,6 +552,11 @@ test project. These boxes are the only verification.
       above the connections, with its name and how many connections it holds.
 - [ ] With **no** workspace saved, that section is **absent entirely** — no empty heading.
 - [ ] **Clicking a workspace row opens it**, exactly as the palette entry does.
+- [ ] **Right-click a workspace row** → *Open*, *Update from the open sessions*, *Delete*.
+- [ ] *Update from the open sessions* opens the naming window **with the name already filled**
+      and the auto-connect box in the workspace's own state, then asks to replace. Confirm, and
+      the row's connection count reflects what is open now.
+- [ ] Cancelling that dialog, or refusing the replace, leaves the workspace untouched.
 - [ ] **Right-click a workspace row** → *Open* and *Delete*. Delete asks for confirmation, and
       removes only the workspace.
 - [ ] The section updates **immediately** after a capture and after a deletion, without

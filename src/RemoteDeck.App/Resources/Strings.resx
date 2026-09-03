@@ -116,6 +116,9 @@
   <data name="Shell_RestoreOffMessage" xml:space="preserve">
     <value>The next launch will open no session.</value>
   </data>
+  <data name="Pane_MenuUpdateWorkspace" xml:space="preserve">
+    <value>Update from the open sessions</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>

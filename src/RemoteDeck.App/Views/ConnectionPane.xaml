@@ -159,6 +159,15 @@
                                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                               CommandParameter="{Binding}" />
                                     <Separator />
+                                    <!-- The only way a workspace changes: there is no editor, so
+                                         updating one means capturing the open sessions again under
+                                         its name. Here rather than left to the user to rediscover by
+                                         re-saving and typing the same name from memory. -->
+                                    <MenuItem Header="{x:Static res:Strings.Pane_MenuUpdateWorkspace}"
+                                              Command="{Binding PlacementTarget.Tag.UpdateWorkspaceCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                    <Separator />
                                     <MenuItem Header="{x:Static res:Strings.Pane_MenuDelete}"
                                               Command="{Binding PlacementTarget.Tag.DeleteWorkspaceCommand,
                                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}"
