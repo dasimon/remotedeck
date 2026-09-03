@@ -557,12 +557,11 @@ test project. These boxes are the only verification.
 - [ ] With **no** workspace saved, that section is **absent entirely** — no empty heading.
 - [ ] **Clicking a workspace row opens it**, exactly as the palette entry does.
 - [ ] **Right-click a workspace row** → *Open*, *Update from the open sessions*, *Delete*.
+      *Delete* asks for confirmation and removes only the workspace, never its connections.
 - [ ] *Update from the open sessions* opens the naming window **with the name already filled**
       and the auto-connect box in the workspace's own state, then asks to replace. Confirm, and
       the row's connection count reflects what is open now.
 - [ ] Cancelling that dialog, or refusing the replace, leaves the workspace untouched.
-- [ ] **Right-click a workspace row** → *Open* and *Delete*. Delete asks for confirmation, and
-      removes only the workspace.
 - [ ] The section updates **immediately** after a capture and after a deletion, without
       restarting the application.
 - [ ] Deleting a connection that a workspace listed: the workspace's count in the pane drops by
