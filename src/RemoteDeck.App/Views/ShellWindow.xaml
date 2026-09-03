@@ -27,7 +27,22 @@
             <ColumnDefinition Width="*" MinWidth="320" />
         </Grid.ColumnDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Title="RemoteDeck" />
+        <!-- The Icon is not decoration and not inherited: ExtendsContentIntoTitleBar replaces the
+             system caption, so the executable's own icon — which WPF hands to every Window whose
+             Icon is unset — never reaches this bar. ui:TitleBar draws one only when given one.
+
+             The source is the 32 px bitmap rather than the .ico: pointed at a multi-frame .ico,
+             WPF picks a frame on its own terms, whereas a single 32 px image is an exact 2:1
+             reduction at 100 % scaling and pixel-for-pixel at 200 %. -->
+        <ui:TitleBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Title="RemoteDeck">
+            <ui:TitleBar.Icon>
+                <!-- No Width or Height: the ui:TitleBar template already lays the icon out in a
+                     16 px box, which is the exact half of the 32 px source. Measured on the
+                     running window, the mark spans 14 x 13 px — precisely its geometry at 16 px,
+                     so the reduction lands on whole pixels and nothing here needs pinning. -->
+                <ui:ImageIcon Source="pack://application:,,,/RemoteDeck;component/Resources/RemoteDeck-32.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
         <Grid x:Name="PaneHost" Grid.Row="1" Grid.Column="0">
             <views:ConnectionPane x:Name="Pane" />

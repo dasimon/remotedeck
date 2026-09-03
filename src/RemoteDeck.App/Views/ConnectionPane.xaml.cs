@@ -82,6 +82,53 @@ public partial class ConnectionPane : System.Windows.Controls.UserControl
         e.Handled = true;
     }
 
+    /// <summary>A click on a workspace row opens it. On button-up, like the connection menu's entries:
+    /// the press says the row is live, and sliding off before releasing changes nothing.</summary>
+    private void OnWorkspaceClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel is null
+            || sender is not System.Windows.FrameworkElement { DataContext: WorkspaceListItem item })
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _viewModel.OpenWorkspaceCommand.Execute(item);
+    }
+
+    /// <summary>
+    /// Right-click, before the context menu opens: selects the row under the pointer and picks the
+    /// menu that fits what was aimed at.
+    /// </summary>
+    /// <remarks>
+    /// Selecting first is the whole point. A context menu whose entries act on
+    /// <see cref="ConnectionListViewModel.Selected"/> would otherwise act on the row selected
+    /// <em>before</em> the right-click — the classic way this feature deletes the wrong connection.
+    /// Handled in the preview pass because WPF opens the menu on the button-up that follows.
+    /// </remarks>
+    private void OnListPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var row = e.OriginalSource is System.Windows.DependencyObject source
+            ? List.ContainerFromElement(source) as System.Windows.Controls.ListViewItem
+            : null;
+
+        if (row is null)
+        {
+            // Empty space below the last row: nothing to select, and the row menu would act on
+            // whatever happened to be selected already.
+            List.ContextMenu = (System.Windows.Controls.ContextMenu)Resources["EmptyMenu"];
+            return;
+        }
+
+        row.IsSelected = true;
+        List.ContextMenu = (System.Windows.Controls.ContextMenu)Resources["RowMenu"];
+    }
+
     /// <summary>Double-click connects — but only on a row, not on the empty space below the last one,
     /// which would otherwise open a session the user never aimed at.</summary>
     private void OnListMouseDoubleClick(object sender, MouseButtonEventArgs e)

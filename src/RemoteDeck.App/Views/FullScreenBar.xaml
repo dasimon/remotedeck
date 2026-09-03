@@ -100,6 +100,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <Ellipse Grid.Column="0" Style="{StaticResource StatusDotStyle}" />
@@ -122,7 +123,53 @@
                        Foreground="{DynamicResource RdTextMuted}"
                        TextTrimming="CharacterEllipsis" />
 
-            <ui:Button x:Name="ReattachButton" Grid.Column="3"
+            <!-- The other sessions, so that full screen stops being a dead end: from here the user
+                 reaches any of them without leaving it first. The source is set in code — the
+                 DataContext is this bar's own tab, and the list is deliberately a *different*
+                 collection, filtered to everything but that tab. It is empty when this is the only
+                 session, and an empty ItemsControl measures to nothing, so the bar keeps exactly
+                 the shape it had before. -->
+            <ItemsControl x:Name="OtherSessions" Grid.Column="3" VerticalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="ChipRoot"
+                                Height="{StaticResource RdControlHeight}"
+                                Margin="0,0,4,0"
+                                Padding="4,0,8,0"
+                                Background="Transparent"
+                                CornerRadius="{StaticResource RdRadiusSm}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource RdBorder}"
+                                Cursor="Hand"
+                                ToolTip="{Binding Subtitle}"
+                                MouseLeftButtonUp="OnSessionChipClick">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- The same dot as everywhere else, only with the bar's 12 px lead
+                                     margin dropped: inside a chip it needs 6 px, not an indent. -->
+                                <Ellipse Style="{StaticResource StatusDotStyle}" Margin="4,0,6,0" />
+                                <TextBlock Text="{Binding Title}"
+                                           VerticalAlignment="Center"
+                                           MaxWidth="140"
+                                           Foreground="{DynamicResource RdText}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <Trigger SourceName="ChipRoot" Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ChipRoot" Property="Background"
+                                        Value="{DynamicResource RdSurface2}" />
+                            </Trigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ui:Button x:Name="ReattachButton" Grid.Column="4"
                        Style="{StaticResource BarButtonStyle}"
                        Icon="{ui:SymbolIcon TabDesktop20}"
                        ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
@@ -130,13 +177,13 @@
 
             <!-- The bar exists only while full screen lasts, so this button only ever leaves it;
                  SessionWindow_FullScreen is the same toggle's wording as in the caption strip. -->
-            <ui:Button Grid.Column="4"
+            <ui:Button Grid.Column="5"
                        Style="{StaticResource BarButtonStyle}"
                        Icon="{ui:SymbolIcon FullScreenMinimize20}"
                        ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
                        Click="OnLeaveFullScreenClick" />
 
-            <ui:Button Grid.Column="5"
+            <ui:Button Grid.Column="6"
                        Style="{StaticResource BarButtonStyle}"
                        Margin="2,0,4,0"
                        Icon="{ui:SymbolIcon Dismiss20}"

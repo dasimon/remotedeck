@@ -36,6 +36,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly SessionTabViewModel _tab;
 
+    /// <summary>All the open sessions. This window shows exactly one of them and never touches the
+    /// rest; it is held only so the full-screen bar can list the others and offer to go there —
+    /// where "there" means is decided by the shell, not here.</summary>
+    private readonly SessionsViewModel _sessions;
+
     /// <summary>What full screen replaced, so leaving it can put all three back (spec §5).</summary>
     private WindowState _restoreState = WindowState.Normal;
     private WindowStyle _restoreStyle = WindowStyle.SingleBorderWindow;
@@ -65,11 +70,13 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <see cref="CaptionDragMoved"/>.</summary>
     private bool _captionDragging;
 
-    public SessionWindow(SessionTabViewModel tab)
+    public SessionWindow(SessionTabViewModel tab, SessionsViewModel sessions)
     {
         ArgumentNullException.ThrowIfNull(tab);
+        ArgumentNullException.ThrowIfNull(sessions);
 
         _tab = tab;
+        _sessions = sessions;
         InitializeComponent();
         SystemThemeWatcher.Watch(this);
 
@@ -114,6 +121,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>Raised by the cross — and by any other close — until <see cref="AllowClose"/> has
     /// been called. The shell runs the close protocol and calls it when the session is done.</summary>
     public event Action<SessionWindow>? CloseRequested;
+
+    /// <summary>Another session was picked from the full-screen bar. Relayed untouched: this window
+    /// keeps showing what it was showing, and the shell brings the named session forward wherever it
+    /// happens to live.</summary>
+    public event Action<SessionTabViewModel>? SessionRequested;
 
     /// <summary>
     /// The window moved while the user is dragging it by its caption strip. Raised on every step of
@@ -258,10 +270,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     private void StartBar()
     {
         // One bar per episode: the previous one, if any, was closed when its full screen ended.
-        _bar = new FullScreenBar(this, _tab);
+        _bar = new FullScreenBar(this, _tab, _sessions);
         _bar.ReattachRequested += OnBarReattachRequested;
         _bar.LeaveFullScreenRequested += () => SetFullScreen(false);
         _bar.CloseSessionRequested += () => Close();
+        _bar.SessionRequested += tab => SessionRequested?.Invoke(tab);
         _bar.SetLive(!_closeRequested);
         _bar.Begin();
     }
@@ -294,8 +307,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- caption
 
     /// <summary>
-    /// Drags the window by its strip. Refused on a double-click and on a maximized window: neither
-    /// has anything to drag, and <c>DragMove</c> throws when the button is no longer down.
+    /// Drags the window by its strip — or, on a double-click, reattaches: the strip is where a
+    /// window is offered back to the tab strip by hand, and the double-click is that same offer
+    /// without the travel, mirroring the double-click that tears a tab out. Refused on a maximized
+    /// window, which has nothing to drag, and <c>DragMove</c> throws when the button is no longer
+    /// down.
     /// </summary>
     /// <remarks>
     /// <c>DragMove</c> runs Windows' own modal move loop and only returns once the button is up, so
@@ -306,7 +322,20 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// </remarks>
     private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ClickCount > 1 || WindowState != WindowState.Normal)
+        if (e.ClickCount > 1)
+        {
+            // Same guard as the bar's Reattach and as the caption's own button: a session on its way
+            // out through the §6.5 protocol must not be moved back into the shell mid-close.
+            e.Handled = true;
+            if (!_closeRequested)
+            {
+                ReattachRequested?.Invoke(this);
+            }
+
+            return;
+        }
+
+        if (WindowState != WindowState.Normal)
         {
             return;
         }

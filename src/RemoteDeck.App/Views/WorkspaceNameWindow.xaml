@@ -1,0 +1,52 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.WorkspaceNameWindow"
+                 x:ClassModifier="internal"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+                 Title="{x:Static res:Strings.WorkspaceName_Title}"
+                 Width="420" SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round">
+    <Grid Margin="0,0,0,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{x:Static res:Strings.WorkspaceName_Title}" ShowMaximize="False" ShowMinimize="False" />
+
+        <TextBlock Grid.Row="1" Margin="16,8,16,4"
+                   Text="{x:Static res:Strings.WorkspaceName_NameLabel}"
+                   Foreground="{DynamicResource RdTextMuted}" />
+
+        <!-- No Height: RdControlHeight is the button token, and forcing it here clipped the text —
+             a WPF-UI TextBox carries its own padding and must be left to size itself. Every other
+             text field in the application sets a margin and nothing else; this one follows. -->
+        <ui:TextBox x:Name="NameBox" Grid.Row="2" Margin="16,0,16,12"
+                    PlaceholderText="{x:Static res:Strings.WorkspaceName_NamePlaceholder}"
+                    TextChanged="OnNameChanged" />
+
+        <CheckBox x:Name="AutoConnectBox" Grid.Row="3" Margin="16,0,16,16"
+                  Content="{x:Static res:Strings.WorkspaceName_AutoConnect}"
+                  Foreground="{DynamicResource RdText}" />
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,0">
+            <ui:Button x:Name="SaveButton" MinWidth="96"
+                       Appearance="Primary"
+                       Content="{x:Static res:Strings.WorkspaceName_Save}"
+                       IsDefault="True"
+                       Click="OnSaveClick" />
+            <ui:Button MinWidth="96" Margin="8,0,0,0"
+                       Content="{x:Static res:Strings.WorkspaceName_Cancel}"
+                       IsCancel="True"
+                       Click="OnCancelClick" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

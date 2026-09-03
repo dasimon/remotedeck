@@ -8,6 +8,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The icon Windows shows for the executable itself: Explorer, the taskbar, Alt-Tab, the
+         properties page. It also becomes every Window's icon for free — WPF falls back to the
+         application's own icon whenever Window.Icon is unset, which is the case throughout.
+         What it does NOT reach is ui:TitleBar; see the RemoteDeck-32.png Resource below. -->
+    <ApplicationIcon>Resources\RemoteDeck.ico</ApplicationIcon>
     <!-- Pinned, not inherited: the MSTSCLib interop below is generated with /machine:X64, so an
          AnyCPU host would fail to load it whenever the process happens not to be x64 — which is
          exactly what a source build on an ARM64 machine produces. x64 also matches the published
@@ -37,6 +42,27 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RemoteDeck.Core\RemoteDeck.Core.csproj" />
+  </ItemGroup>
+
+  <!-- ===================================================================================
+       The title-bar bitmap. ui:TitleBar and the detached window's caption strip draw no icon
+       at all unless one is handed to them: ExtendsContentIntoTitleBar replaces the system
+       caption, so the ApplicationIcon above never appears there.
+
+       A <Resource> rather than <Content>: it is compiled into the assembly and reached through
+       a pack:// URI, which is the only form that survives PublishSingleFile. A Content file
+       would sit beside the .exe, and the release workflow deliberately fails a publish whose
+       output directory holds anything but RemoteDeck.exe.
+
+       Declared explicitly because no default glob covers it: the WPF SDK auto-includes .xaml
+       as Page and nothing else — an image is never picked up on its own.
+
+       This file and Resources\RemoteDeck.ico are both produced by
+       tools\icon\New-RemoteDeckIcon.ps1 and committed. CI publishes what is versioned; it does
+       not generate artwork.
+       ================================================================================== -->
+  <ItemGroup>
+    <Resource Include="Resources\RemoteDeck-32.png" />
   </ItemGroup>
 
   <!-- ===================================================================================

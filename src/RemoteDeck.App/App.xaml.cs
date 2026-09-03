@@ -65,6 +65,7 @@ public partial class App : System.Windows.Application
             services.AddSingleton(Database);
             services.AddSingleton<CredentialRepository>();
             services.AddSingleton<ConnectionRepository>();
+            services.AddSingleton<WorkspaceRepository>();
         }
         services.AddSingleton<ICredentialVault, DpapiCredentialVault>();
         Services = services.BuildServiceProvider();

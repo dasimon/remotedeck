@@ -2,6 +2,168 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.3.0 — 2026-09-03
+
+Workspaces: name the sessions you have open, arranged the way you arranged them, and get the
+whole thing back with one command. Plus a right-click menu on the connection list, two gestures
+that were only reachable by dragging, and a way out of a full-screen session.
+
+
+### Where the settings are, and are not
+
+- **Turning session restore on is now visible at every launch**: the InfoBar says the setting
+  is on, and whether it reopened anything. It was the one setting in RemoteDeck with no surface
+  of its own — the palette command that toggles it closes on Enter, so the only way to learn its
+  state was to reopen the palette and read the subtitle.
+- The README gained a **Settings** section saying plainly that there is no settings window and
+  why: almost everything RemoteDeck remembers is set by using it — pane width by dragging,
+  collapsed by `Ctrl+B`, window geometry by moving it — and comes back because it was observed,
+  not configured. Session restore is the exception, which is why it announces itself.
+- It also names the three timings that are **fixed and not configurable** — the reconnection
+  schedule, the close budget, and how long opening a workspace waits for one session before
+  starting the next. A settings window earns its place the day one of them is wrong for a real
+  network, not before.
+- **Both environment variables are documented**, including `REMOTEDECK_PROBE_SHORTCUTS`, which
+  was undocumented. It is a lot 0 leftover, and its three non-default values are the mechanisms
+  the probe proved intercept nothing — a way to silently lose every application shortcut. Saying
+  so is cheaper than finding out.
+
+### Two things you could not see
+
+- **A workspace can be updated from its own row** — right-click → *Update from the open
+  sessions*. Re-capturing is the only way a workspace changes, since there is deliberately no
+  editor; until now you had to know that, and retype the name exactly. The entry opens the
+  naming window with the name and the auto-connect box already filled, so it lands straight on
+  the replace confirmation.
+- **The session-restore toggle says what it did.** Pressing Enter on *Reopen the last session at
+  startup* flipped the setting and showed nothing at all: the palette closes on Enter, and the
+  only way to learn the new state was to reopen the palette and read the subtitle again. A
+  setting you cannot confirm you changed is a setting you change twice.
+
+### Workspaces you can see
+
+- **Saved workspaces now sit at the top of the connection pane**, above the connections, each
+  with its name and how many connections it holds. Clicking one opens it; right-clicking gives
+  *Open* and *Delete*.
+- Until now the only way to reach a workspace was `Ctrl+K` and typing its name — which requires
+  knowing the feature exists before you can find it. Saving a layout and then having to ask where
+  it went is the symptom of a feature that hides.
+- The section **disappears entirely** when no workspace is saved, so anyone who never captures a
+  layout never sees a heading over nothing.
+- Workspaces are their own list rather than rows mixed into the connections: a workspace is not a
+  connection, and the row a connection needs — status pill, accent rail, search highlighting —
+  has nothing to say about one.
+- Deleting from the pane asks the same confirmation as deleting from the palette. Both now go
+  through one method, so the confirmation cannot exist on one path and be forgotten on the other.
+
+### The checklist gets shorter
+
+- **Fifteen tests now assert things about the repository itself**, in
+  `tests/RemoteDeck.Core.Tests/Conventions/`. They replace boxes a human used to tick, and
+  they close a class of bug nothing could catch before: `Strings.Designer.cs` is versioned
+  here rather than generated, so a key added to the two `.resx` files and forgotten in the
+  designer failed **silently at runtime**, as a label that simply never appeared.
+- They check that every key exists in all three files with the property name and the
+  `GetString` argument matching it, that neither language holds an orphan, that both use the
+  same `{0}`/`{1}` placeholders, that no value is empty, that no user-visible text was left
+  as a literal in any XAML, that no `{x:Static}` points at a key that no longer exists, and
+  that the icon is committed with all nine of its sizes.
+- Each was proved by breaking the thing it guards and watching it fail — a guard test that
+  has never failed is a guard test nobody has tested.
+- `docs/manual-checklist.md` says at the top what no longer needs a human. Where a box read
+  "no missing string" or "no hard-coded English", that half is now proven and what remains is
+  whether the French reads well and fits its control.
+- The two menu gesture hints became resources like every other visible string, even the ones
+  the two languages spell identically: a rule with an exception for whatever happens to match
+  today is a rule someone has to remember.
+
+### A right-click menu on the connection list
+
+- **Right-click a connection** and you get *Connect*, *Edit…*, a *Favorite* toggle and *Delete* —
+  the place Windows has put a thing's properties for thirty years, and until now the only way to
+  reach the editor with a mouse was to know that `F2` existed.
+- **Double-click still connects**, and deliberately so. It is the primary action, the one `Enter`
+  runs and the one every other connection manager binds it to; moving it to *Edit* would have
+  cost the fastest path to the point of the application.
+- Right-clicking a row **selects it first**, so the menu acts on the row you aimed at rather than
+  on whatever was selected before — the classic way this feature deletes the wrong thing.
+- *Delete* in the menu arms the same two-step confirmation as the `Delete` key. A menu entry is
+  not a shortcut past a confirmation.
+- Right-click the empty space below the last row and the menu shrinks to *New connection* and
+  *Import connections…* — the only two actions that need nothing selected.
+- **Favorite is now a one-click toggle.** It used to mean opening the editor, ticking a box and
+  saving; the pane sorts favorites to the top, so the setting was three clicks further away than
+  the thing it controls. It writes that one column and nothing else, so it cannot save a stale
+  copy of the rest of the connection over what is on disk.
+
+### Workspaces
+
+- **A workspace names the sessions you already have open — arranged, detached, full
+  screen — so the whole thing comes back with one command.** `Ctrl+K` → *Save layout
+  as…* captures what is on screen right now; `Ctrl+K` → *Open workspace "PROD"*
+  brings it back. There is no editor: saving over an existing name replaces it, after
+  confirmation, and that is the only way a workspace changes.
+- **Opening a workspace never closes anything.** A connection already running stays
+  connected and is only moved to where the workspace remembers it — nothing
+  reconnects. Open two workspaces in a row and the screen can end up with more
+  sessions than either one describes on its own: a deliberate trade, made so that
+  opening a workspace can never end a live production session behind your back.
+- Its connections open **one after another, not all at once** — six RDP negotiations
+  fired together on a network that has only just come up produce six failures that
+  are nobody's fault. A failure stays with its own session, with its own reason,
+  *Reconnect* and *Copy diagnostics*; the rest keep opening, and a refused password is
+  still never retried.
+- **Restoring the last session is off by default.** A separate setting, toggled from
+  the palette, snapshots what was open at a clean shutdown and reopens it at the next
+  launch; killing the process instead leaves the previous snapshot alone. Launching
+  RemoteDeck must never connect to anything nobody asked for, so the switch starts
+  off.
+- Deleting a connection removes it from every workspace that lists it; deleting a
+  workspace removes only the workspace, never the connections. Workspaces live in
+  `connections.db`; the last-session snapshot lives in `settings.json`.
+
+### Full screen is no longer a dead end
+
+- **The full-screen connection bar now lists the other sessions**, one chip each with its
+  status dot. Click one and you go there: a detached session is brought forward in its own
+  window, keeping whatever full screen it was in; a docked one is activated and the main
+  window raised. Until now, reaching another session from a full-screen one meant leaving
+  full screen or hunting for the right window in Alt-Tab.
+- Nothing moves and nothing reconnects — the session you came from stays full screen and
+  connected exactly where it was. The chips are navigation, not a re-parenting.
+- With a single session open the list is empty and the bar keeps the shape it had.
+- Documentation fix: the README still claimed that nothing appears at the top of a
+  full-screen session. The connection bar has been there since 0.2.0; the passage
+  describing its absence — and the reasoning for it — was never updated when it landed.
+
+### Detaching, in one gesture
+
+- **Double-click a tab to detach it**, and **double-click a detached window's caption strip
+  to bring it back**. Both were already possible by dragging — 40 px down out of the strip,
+  or the window back onto it — but a drag is a gesture you have to know about, and the
+  double-click is the one every other tabbed application has taught. Nothing else changes:
+  the window opens where that connection was last seen, or under the pointer, and the
+  session is re-parented rather than reconnected, exactly as the drag does it.
+- The caption strip's double-click did nothing at all before, so no existing gesture was
+  taken away.
+
+### An icon of its own
+
+- **RemoteDeck has an application icon**: three screens stacked into a deck — the pile of
+  connections the pane holds. Windows shows it in Explorer, on the taskbar and in Alt-Tab,
+  and both title bars carry it too, the main window's and a detached session's. Until now
+  the executable wore the default .NET icon and the title bars wore nothing at all, because
+  `ExtendsContentIntoTitleBar` replaces the system caption and takes the icon Windows would
+  have drawn with it.
+- It ships as nine sizes, 16 to 256 px, each one **drawn at its own size** rather than
+  shrunk from a single large image: reduced to 16 px, a 256 px render turns the steps
+  between the cards into a smear. The geometry lives in
+  [`tools/icon/New-RemoteDeckIcon.ps1`](tools/icon/New-RemoteDeckIcon.ps1), which is the
+  icon's source — run it and commit what it writes; the release workflow publishes what is
+  versioned and does not generate artwork.
+- Its colour is fixed, unlike everything else in the interface. An `.ico` is static, so the
+  icon cannot follow the Windows accent that the design tokens track.
+
 ## 0.2.1 — 2026-09-01
 
 **The published binaries of 0.1.0 and 0.2.0 do not start. Use this one instead.**

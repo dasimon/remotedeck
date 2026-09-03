@@ -145,6 +145,204 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Workspaces.
+        /// </summary>
+        public static string Pane_GroupWorkspaces {
+            get {
+                return ResourceManager.GetString("Pane_GroupWorkspaces", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        public static string Pane_MenuOpenWorkspace {
+            get {
+                return ResourceManager.GetString("Pane_MenuOpenWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connection.
+        /// </summary>
+        public static string Workspace_CountOne {
+            get {
+                return ResourceManager.GetString("Workspace_CountOne", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connections.
+        /// </summary>
+        public static string Workspace_CountMany {
+            get {
+                return ResourceManager.GetString("Workspace_CountMany", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connection, and where it sits..
+        /// </summary>
+        public static string Shell_WorkspaceSavedOne {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSavedOne", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connections, and where each one sits..
+        /// </summary>
+        public static string Shell_WorkspaceSavedMany {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSavedMany", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Session restore is on.
+        /// </summary>
+        public static string Shell_RestoreOnTitle {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOnTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The sessions open when you close RemoteDeck will reopen at the next launch..
+        /// </summary>
+        public static string Shell_RestoreOnMessage {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOnMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Session restore is off.
+        /// </summary>
+        public static string Shell_RestoreOffTitle {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOffTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The next launch will open no session..
+        /// </summary>
+        public static string Shell_RestoreOffMessage {
+            get {
+                return ResourceManager.GetString("Shell_RestoreOffMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Update from the open sessions.
+        /// </summary>
+        public static string Pane_MenuUpdateWorkspace {
+            get {
+                return ResourceManager.GetString("Pane_MenuUpdateWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} session reopened from the last time you closed RemoteDeck..
+        /// </summary>
+        public static string Shell_RestoredOne {
+            get {
+                return ResourceManager.GetString("Shell_RestoredOne", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} sessions reopened from the last time you closed RemoteDeck..
+        /// </summary>
+        public static string Shell_RestoredMany {
+            get {
+                return ResourceManager.GetString("Shell_RestoredMany", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing was open when RemoteDeck last closed, so nothing was reopened..
+        /// </summary>
+        public static string Shell_RestoredNothing {
+            get {
+                return ResourceManager.GetString("Shell_RestoredNothing", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connect.
+        /// </summary>
+        public static string Pane_MenuConnect {
+            get {
+                return ResourceManager.GetString("Pane_MenuConnect", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Edit….
+        /// </summary>
+        public static string Pane_MenuEdit {
+            get {
+                return ResourceManager.GetString("Pane_MenuEdit", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Favorite.
+        /// </summary>
+        public static string Pane_MenuFavorite {
+            get {
+                return ResourceManager.GetString("Pane_MenuFavorite", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete.
+        /// </summary>
+        public static string Pane_MenuDelete {
+            get {
+                return ResourceManager.GetString("Pane_MenuDelete", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Del.
+        /// </summary>
+        public static string Pane_MenuGestureDelete {
+            get {
+                return ResourceManager.GetString("Pane_MenuGestureDelete", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to F2.
+        /// </summary>
+        public static string Pane_MenuGestureEdit {
+            get {
+                return ResourceManager.GetString("Pane_MenuGestureEdit", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+N.
+        /// </summary>
+        public static string Pane_MenuGestureNew {
+            get {
+                return ResourceManager.GetString("Pane_MenuGestureNew", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Could not change the favorite.
+        /// </summary>
+        public static string Shell_FavoriteFailedTitle {
+            get {
+                return ResourceManager.GetString("Shell_FavoriteFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Saved connections are unavailable: the database could not be opened. See the log..
         /// </summary>
         public static string Pane_Unavailable {
@@ -2040,6 +2238,222 @@ namespace RemoteDeck.App.Resources {
         public static string Shell_DetachRefusedMessage {
             get {
                 return ResourceManager.GetString("Shell_DetachRefusedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Save layout as….
+        /// </summary>
+        public static string WorkspaceName_Title {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string WorkspaceName_NameLabel {
+            get {
+                return ResourceManager.GetString("WorkspaceName_NameLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to PROD.
+        /// </summary>
+        public static string WorkspaceName_NamePlaceholder {
+            get {
+                return ResourceManager.GetString("WorkspaceName_NamePlaceholder", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connect the sessions when the workspace opens.
+        /// </summary>
+        public static string WorkspaceName_AutoConnect {
+            get {
+                return ResourceManager.GetString("WorkspaceName_AutoConnect", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Save.
+        /// </summary>
+        public static string WorkspaceName_Save {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Save", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        public static string WorkspaceName_Cancel {
+            get {
+                return ResourceManager.GetString("WorkspaceName_Cancel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Replace “{0}”?.
+        /// </summary>
+        public static string WorkspaceName_ReplaceTitle {
+            get {
+                return ResourceManager.GetString("WorkspaceName_ReplaceTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to A workspace called “{0}” already exists. Saving replaces what it holds — there is no undo..
+        /// </summary>
+        public static string WorkspaceName_ReplaceMessage {
+            get {
+                return ResourceManager.GetString("WorkspaceName_ReplaceMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Workspaces.
+        /// </summary>
+        public static string Palette_GroupWorkspaces {
+            get {
+                return ResourceManager.GetString("Palette_GroupWorkspaces", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Save layout as….
+        /// </summary>
+        public static string Palette_SaveLayout {
+            get {
+                return ResourceManager.GetString("Palette_SaveLayout", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Remember the open sessions and where they sit.
+        /// </summary>
+        public static string Palette_SaveLayoutSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_SaveLayoutSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open workspace “{0}”.
+        /// </summary>
+        public static string Palette_OpenWorkspace {
+            get {
+                return ResourceManager.GetString("Palette_OpenWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete workspace “{0}”.
+        /// </summary>
+        public static string Palette_DeleteWorkspace {
+            get {
+                return ResourceManager.GetString("Palette_DeleteWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Removes the workspace, never the connections.
+        /// </summary>
+        public static string Palette_DeleteWorkspaceSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_DeleteWorkspaceSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reopen last session at startup.
+        /// </summary>
+        public static string Palette_ToggleRestore {
+            get {
+                return ResourceManager.GetString("Palette_ToggleRestore", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Currently: {0}.
+        /// </summary>
+        public static string Palette_ToggleRestoreSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_ToggleRestoreSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to on.
+        /// </summary>
+        public static string Palette_On {
+            get {
+                return ResourceManager.GetString("Palette_On", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to off.
+        /// </summary>
+        public static string Palette_Off {
+            get {
+                return ResourceManager.GetString("Palette_Off", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Workspace “{0}” saved.
+        /// </summary>
+        public static string Shell_WorkspaceSaved {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSaved", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Workspace not saved.
+        /// </summary>
+        public static string Shell_WorkspaceSaveFailedTitle {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSaveFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing to open.
+        /// </summary>
+        public static string Shell_WorkspaceEmptyTitle {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceEmptyTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to “{0}” no longer references any existing connection..
+        /// </summary>
+        public static string Shell_WorkspaceEmptyMessage {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceEmptyMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete “{0}”?.
+        /// </summary>
+        public static string Shell_DeleteWorkspaceTitle {
+            get {
+                return ResourceManager.GetString("Shell_DeleteWorkspaceTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The workspace is removed. The connections it lists are left untouched..
+        /// </summary>
+        public static string Shell_DeleteWorkspaceMessage {
+            get {
+                return ResourceManager.GetString("Shell_DeleteWorkspaceMessage", resourceCulture);
             }
         }
     }

@@ -47,6 +47,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>How long an armed delete stays armed before it disarms itself.</summary>
     private static readonly TimeSpan DeleteConfirmationWindow = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// How long one workspace action waits for its session to answer before the mount moves on to
+    /// the next one. Deliberately the very budget the project already grants a single session to
+    /// answer a single protocol exchange — <see cref="SessionsViewModel.DefaultCloseTimeout"/>, and
+    /// <c>ClosePlan.PerSessionSeconds</c> behind it — rather than a number invented here: this is
+    /// the same kind of promise, "one server gets five seconds to answer, then we carry on without
+    /// it".
+    /// </summary>
+    private static readonly TimeSpan ConnectWaitTimeout = SessionsViewModel.DefaultCloseTimeout;
+
     /// <summary>Narrowest usable pane; mirrors <c>PaneColumn.MinWidth</c> in the XAML and is what
     /// unfolding restores when the stored width is unusable.</summary>
     private const double MinimumPaneWidth = 220;
@@ -88,6 +98,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private readonly SessionsViewModel _sessions;
 
     private ConnectionRepository? _connections;
+
+    /// <summary>The workspaces, or <c>null</c> in degraded mode — the same rule as
+    /// <see cref="_connections"/>, whose database it shares.</summary>
+    private WorkspaceRepository? _workspaces;
+
     private CredentialRepository? _credentials;
     private ICredentialVault? _vault;
     private ConnectionListViewModel? _list;
@@ -109,6 +124,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private bool _paneCollapsed;
     private double _paneWidth;
     private bool _connecting;
+
+    /// <summary>True while <see cref="MountWorkspaceAsync"/> is walking a plan. Its own guard, and
+    /// not <see cref="_connecting"/>: the mount really does yield between two connections now — it
+    /// waits for each session to answer — and <c>_connecting</c> is false for the whole of that
+    /// wait. Without this a second workspace started from the palette in that gap would interleave
+    /// its opens with the first one's.</summary>
+    private bool _mounting;
+
     private bool _settingsSaved;
     private bool _closeInProgress;
     private bool _reentrantCloseLogged;
@@ -168,6 +191,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // there. GetService, not GetRequiredService — the repositories are absent when the database
         // failed to open (spec §6.6), which is a degraded mode, not a crash.
         _connections = App.Current.Services.GetService<ConnectionRepository>();
+        _workspaces = App.Current.Services.GetService<WorkspaceRepository>();
         _credentials = App.Current.Services.GetService<CredentialRepository>();
         _vault = App.Current.Services.GetService<ICredentialVault>();
         BuildPane();
@@ -237,6 +261,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
                 Text.Of(Strings.Shell_ReadyTitle, _version.Label), Strings.Shell_ReadyMessage);
         }
+
+        // Last, and deliberately so: the resume opens sessions, and OpenConnectionAsync returns on
+        // its `_version is null` guard, so everything above has to have run first.
+        // (discarded: the returned Task is deliberately not awaited — Loaded cannot be awaited, and
+        // MountWorkspaceAsync reports its own failures)
+        _ = RestoreLastSessionIfAsked();
     }
 
     // ---------------------------------------------------------------- pane
@@ -262,6 +292,15 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list.EditRequested += OnEditRequested;
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
+        _list.FavoriteToggleRequested += OnFavoriteToggleRequested;
+        _list.WorkspaceOpenRequested += OnPaneWorkspaceOpenRequested;
+        _list.WorkspaceDeleteRequested += OnPaneWorkspaceDeleteRequested;
+        _list.WorkspaceUpdateRequested += OnPaneWorkspaceUpdateRequested;
+
+        // Pull, like StatusProvider: the pane owns no repository and must not start to. Set before
+        // the reload below, so the first paint already has the workspaces.
+        _list.WorkspacesProvider = () => _workspaces?.GetAll() ?? [];
+        _list.ReloadWorkspaces();
         // The pane holds no reference to the sessions: the shell is the one place that knows both,
         // so it hands the list a way to ask rather than a way to be told.
         _list.StatusProvider = StatusOf;
@@ -316,6 +355,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>The splitter is the only way the width changes, so it is also where it is persisted.</summary>
+    /// <remarks>
+    /// <c>rememberDetached: false</c> — dragging the pane splitter is not one of the three triggers
+    /// spec espaces §7 allows to write the per-connection placement memory, and a workspace that had
+    /// just imposed its own rectangles would otherwise see them written over the fallback.
+    /// </remarks>
     private void OnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
     {
         if (PaneColumn.ActualWidth >= MinimumPaneWidth)
@@ -323,7 +367,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             _paneWidth = PaneColumn.ActualWidth;
         }
 
-        SaveSettings();
+        SaveSettings(rememberDetached: false);
     }
 
     private void FocusSearch()
@@ -641,6 +685,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             Strings.Palette_TogglePane, Strings.Palette_TogglePaneSubtitle, CommandPriority,
             Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands));
+        // The one place the resume is switched on and off. Its subtitle carries the current state
+        // rather than a rephrasing of the title: a toggle whose value cannot be read before pressing
+        // Enter is a coin flip. Offered unconditionally — it is a setting, not an act on a session.
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:restore-toggle",
+            Strings.Palette_ToggleRestore,
+            Text.Of(Strings.Palette_ToggleRestoreSubtitle,
+                _settings.RestoreLastSession ? Strings.Palette_On : Strings.Palette_Off),
+            CommandPriority, Group: Strings.Palette_GroupCommands));
         // The session this palette is about: the one the window it was opened from is showing, or
         // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
         // only thing that can name the session in front of the user here, and offering these two
@@ -682,6 +734,33 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
         }
 
+        // Saving only means something with something to save. Offered from a detached window too,
+        // and deliberately: the capture reads every session, so where the palette was opened from
+        // changes nothing about what it records — and arranging sessions across monitors, then
+        // saving that arrangement, is the whole point of the feature. Hiding it from a full-screen
+        // window would mean leaving full screen to save the layout that full screen is part of.
+        if (_sessions.Tabs.Count > 0)
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:workspace-save",
+                Strings.Palette_SaveLayout, Strings.Palette_SaveLayoutSubtitle, CommandPriority,
+                Group: Strings.Palette_GroupWorkspaces));
+        }
+
+        foreach (var workspace in _workspaces?.GetAll() ?? [])
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command,
+                string.Create(CultureInfo.InvariantCulture, $"ws:{workspace.Id}"),
+                Text.Of(Strings.Palette_OpenWorkspace, workspace.Name),
+                Text.Plural(workspace.Items.Count, Strings.Workspace_CountOne, Strings.Workspace_CountMany,
+                    workspace.Items.Count), CommandPriority,
+                Group: Strings.Palette_GroupWorkspaces));
+            items.Add(new PaletteItem(PaletteItemKind.Command,
+                string.Create(CultureInfo.InvariantCulture, $"wsdel:{workspace.Id}"),
+                Text.Of(Strings.Palette_DeleteWorkspace, workspace.Name),
+                Strings.Palette_DeleteWorkspaceSubtitle, CommandPriority,
+                Group: Strings.Palette_GroupWorkspaces));
+        }
+
         return items;
     }
 
@@ -701,6 +780,38 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             {
                 // The same path Enter takes in the pane: one tab per connection, existing tab reused.
                 OnConnectRequested(connection);
+            }
+
+            return;
+        }
+
+        if (id.StartsWith("ws:", StringComparison.Ordinal))
+        {
+            // A mount in flight owns the strip until it is done, so a second one is simply not
+            // taken. MountWorkspaceAsync refuses it as well; asking here spares the repository read
+            // and puts the refusal where the user's gesture landed.
+            if (!_mounting
+                && long.TryParse(id.AsSpan(3), CultureInfo.InvariantCulture, out long openId)
+                && _workspaces?.Get(openId) is { } toOpen)
+            {
+                // Fire and forget: the mount is asynchronous because it connects in series, and the
+                // palette has nothing to wait for. MountWorkspaceAsync reports its own failures —
+                // its whole body sits inside one try — so the dropped task can carry none.
+                _ = MountWorkspaceAsync(toOpen);
+            }
+
+            return;
+        }
+
+        if (id.StartsWith("wsdel:", StringComparison.Ordinal))
+        {
+            // Confirmed, and deliberately not the two-press arm/confirm the connection list uses:
+            // the palette closes on selection and cannot hold an armed state. Open and Delete sit
+            // next to each other in the same group with near-identical text, and a deletion has no
+            // undo — while saving over a name, which destroys nothing, already asks.
+            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long deleteId))
+            {
+                DeleteWorkspace(deleteId, from);
             }
 
             return;
@@ -733,6 +844,29 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:pane":
                 TogglePane();
+                break;
+
+            case "cmd:restore-toggle":
+                _settings.RestoreLastSession = !_settings.RestoreLastSession;
+                // Written now rather than at the next clean close: this is the user's answer to a
+                // question, and a crash must not take it back. rememberDetached: false — answering
+                // that question is not one of the three triggers spec espaces §7 allows to write the
+                // per-connection placement memory, and a Ctrl+K toggle right after a workspace was
+                // mounted would otherwise stamp that workspace's imposed rectangles onto the
+                // fallback the next one relies on.
+                SaveSettings(rememberDetached: false);
+
+                // Say so. The palette closes on Enter and this setting has no visible surface of its
+                // own, so without this the toggle looks like it did nothing — the only way to learn
+                // the new state was to reopen the palette and read the subtitle again. A setting the
+                // user cannot confirm they changed is a setting they will change twice.
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    _settings.RestoreLastSession ? Strings.Shell_RestoreOnTitle : Strings.Shell_RestoreOffTitle,
+                    _settings.RestoreLastSession ? Strings.Shell_RestoreOnMessage : Strings.Shell_RestoreOffMessage);
+                break;
+
+            case "cmd:workspace-save":
+                SaveCurrentLayout(from);
                 break;
 
             // BuildPaletteItems no longer produces "cmd:disconnect": RemoteDeck has no disconnect
@@ -818,7 +952,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_sessions.Active is { IsDetached: false } tab)
         {
-            DetachTab(tab, null);
+            // Cast: the workspace overload takes a nullable too, and a bare null no longer says
+            // which. This is still the pointer-less detach it has always been.
+            DetachTab(tab, (System.Windows.Point?)null);
         }
     }
 
@@ -838,7 +974,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        var window = new SessionWindow(tab);
+        var window = new SessionWindow(tab, _sessions);
         var placement = RememberedPlacement(tab, window)
             ?? (screenPoint is { } point ? PlaceUnder(point, window) : null);
         if (placement is not null)
@@ -860,6 +996,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         window.CloseRequested += OnSessionWindowCloseRequested;
         window.CaptionDragMoved += OnSessionWindowCaptionDragMoved;
         window.CaptionDragEnded += OnSessionWindowCaptionDragEnded;
+        window.SessionRequested += GoToSession;
         window.Show();
 
         if (_sessions.Detach(tab, window))
@@ -952,30 +1089,70 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Screens(VisualTreeHelper.GetDpi(this)), window.MinWidth, window.MinHeight);
 
     /// <summary>
+    /// Where a detached window is right now, or <c>null</c> when that describes nothing usable.
+    /// A minimized window has no placement: it shows nothing the user could recognise, and what is
+    /// already on file — where it was before it was minimized — is the better answer.
+    /// <see cref="SessionWindow.CurrentPlacement"/> handles the maximized and full-screen cases
+    /// itself, reporting the restore bounds rather than the screen-sized frame.
+    /// </summary>
+    private static DetachedWindowPlacement? PlacementOf(SessionWindow window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+        {
+            return null;
+        }
+
+        var placement = window.CurrentPlacement();
+        return placement is { Width: > 0, Height: > 0 } ? placement : null;
+    }
+
+    /// <summary>
     /// Records where a detached window is, for the next time this connection is torn off. Called on
     /// both paths out of a detached window — its own close, and the shell saving on the way down —
     /// and on a reattach, which is a window disappearing just the same.
     /// </summary>
-    /// <remarks>
-    /// A minimized window is skipped: it describes nothing the user could recognise, and the entry
-    /// already on file — where the window was before it was minimized — is the better answer.
-    /// <see cref="SessionWindow.CurrentPlacement"/> handles the maximized and full-screen cases
-    /// itself, reporting the restore bounds rather than the screen-sized frame.
-    /// </remarks>
     private void RememberPlacement(SessionWindow window)
     {
-        if (window.WindowState == WindowState.Minimized)
+        if (PlacementOf(window) is { } placement)
         {
+            _settings.DetachedWindows[PlacementKey(window.Tab)] = placement;
+        }
+    }
+
+    /// <summary>
+    /// A session was picked from a full-screen bar. The shell is the only thing that knows where each
+    /// session is, so it is the only thing that can say what "go there" means: a detached session is
+    /// its own window and is simply brought forward, keeping whatever full screen it was in; a docked
+    /// one is a tab, so it is activated and the main window raised over it.
+    ///
+    /// The window the pick came from is deliberately left alone — still full screen, still showing
+    /// its own session. Nothing is re-parented and nothing reconnects; this is navigation, not a
+    /// move.
+    /// </summary>
+    private void GoToSession(SessionTabViewModel tab)
+    {
+        if (_sessions.DetachedWindowOf(tab) is { } window)
+        {
+            // A minimised window has to be restored first: Activate() on one only flashes its
+            // taskbar button. WindowState is the window's own, not the full-screen bookkeeping —
+            // SessionWindow restores that itself when it needs to.
+            if (window.WindowState == WindowState.Minimized)
+            {
+                window.WindowState = WindowState.Normal;
+            }
+
+            _ = window.Activate();
             return;
         }
 
-        var placement = window.CurrentPlacement();
-        if (placement is not { Width: > 0, Height: > 0 })
+        _sessions.Activate(tab);
+
+        if (WindowState == WindowState.Minimized)
         {
-            return;
+            WindowState = WindowState.Normal;
         }
 
-        _settings.DetachedWindows[PlacementKey(window.Tab)] = placement;
+        _ = Activate();
     }
 
     /// <summary>The <em>Reattach</em> button of a detached window.</summary>
@@ -1077,6 +1254,490 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         TabStrip.ShowDropHint(false);
     }
 
+    // ---------------------------------------------------------------- workspaces
+
+    /// <summary>
+    /// Captures the open sessions as a named workspace. Where each detached window sits is read off
+    /// the real window rather than off what was remembered: what a workspace records is what the
+    /// user sees on screen at the moment they record it.
+    /// </summary>
+    /// <param name="from">The detached window the palette was opened from, or <c>null</c> for the
+    /// shell. It owns the dialogs below, the same way it owns the palette itself: a window owned by
+    /// the shell would open <em>behind</em> a full-screen session, which is topmost — an invisible
+    /// modal, and an application that looks frozen.</param>
+    /// <param name="existing">The workspace being updated, or <c>null</c> to capture a new one. It
+    /// only pre-fills the dialog: an update is the same capture under a name already taken, which is
+    /// exactly what replacing means here. There is no editor for a workspace, so re-capturing is how
+    /// one changes — this parameter is what makes that reachable from the row itself instead of
+    /// requiring the user to know it and retype the name.</param>
+    private void SaveCurrentLayout(SessionWindow? from, Workspace? existing = null)
+    {
+        if (_workspaces is null || _sessions.Tabs.Count == 0)
+        {
+            return;
+        }
+
+        // The cast is what the palette's own owner line already does: the two window types share no
+        // base but Window, so the conditional needs to be told which one it is producing.
+        Window owner = from ?? (Window)this;
+        var dialog = new WorkspaceNameWindow(existing?.Name, existing?.AutoConnect ?? true) { Owner = owner };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        // A duplicate name is not a mistake: replacing is the only way a workspace can evolve, since
+        // there is no editor for one. But it overwrites, so it is confirmed.
+        if (_workspaces.FindByName(dialog.WorkspaceName) is not null)
+        {
+            var confirm = System.Windows.MessageBox.Show(owner,
+                Text.Of(Strings.WorkspaceName_ReplaceMessage, dialog.WorkspaceName),
+                Text.Of(Strings.WorkspaceName_ReplaceTitle, dialog.WorkspaceName),
+                MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.OK)
+            {
+                return;
+            }
+        }
+
+        var workspace = new Workspace { Name = dialog.WorkspaceName, AutoConnect = dialog.AutoConnect };
+        for (int i = 0; i < _sessions.Tabs.Count; i++)
+        {
+            var tab = _sessions.Tabs[i];
+            var window = _sessions.DetachedWindowOf(tab);
+            workspace.Items.Add(new WorkspaceItem
+            {
+                ConnectionId = tab.Session.Connection.Id,
+                Ordinal = i,
+                Detached = window is not null,
+                Placement = window is null ? null : PlacementOf(window),
+            });
+        }
+
+        // Guarded like every other repository write in this file: a locked database, a full disk or
+        // a read-only %APPDATA% throws here, and an unhandled exception on the UI thread takes the
+        // process down with every live RDP session — without the §6.5 close protocol, which is
+        // exactly the server-side zombie this project spends its shutdown avoiding.
+        try
+        {
+            _ = _workspaces.Save(workspace);
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("workspaces",
+                $"Saving '{workspace.Name}' failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
+                Strings.Shell_WorkspaceSaveFailedTitle, ex.Message);
+            return;
+        }
+
+        // The pane shows the workspaces, so a capture changes it even though no connection moved.
+        _list?.ReloadWorkspaces();
+
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
+            Text.Of(Strings.Shell_WorkspaceSaved, workspace.Name),
+            Text.Plural(workspace.Items.Count, Strings.Shell_WorkspaceSavedOne,
+                Strings.Shell_WorkspaceSavedMany, workspace.Items.Count));
+    }
+
+    /// <summary>
+    /// Deletes a workspace after confirming it. One method for the two entry points — the palette's
+    /// <c>wsdel:</c> row and the pane's context menu — so the confirmation cannot exist on one path
+    /// and be forgotten on the other.
+    /// </summary>
+    /// <param name="from">The detached window the gesture came from, or <c>null</c> for the shell.
+    /// It owns the message box, which would otherwise open behind a full-screen session.</param>
+    /// <remarks>
+    /// A single press, deliberately not the two-step arming the connection list uses: the palette
+    /// closes on selection and cannot hold an armed state. Deleting has no undo, while saving over a
+    /// name — which destroys nothing — already asks, so the risk ordering would otherwise be
+    /// inverted.
+    /// </remarks>
+    private void DeleteWorkspace(long id, SessionWindow? from)
+    {
+        if (_workspaces?.Get(id) is not { } toDelete)
+        {
+            // Already gone: a race between the click and the write, not a mistake the user made.
+            return;
+        }
+
+        var confirm = System.Windows.MessageBox.Show(from ?? (Window)this,
+            Strings.Shell_DeleteWorkspaceMessage,
+            Text.Of(Strings.Shell_DeleteWorkspaceTitle, toDelete.Name),
+            MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        // Guarded like every other repository write in this file: a locked database, a full disk or
+        // a read-only %APPDATA% throws here, and an unhandled exception on the UI thread takes the
+        // process down with every live RDP session — without the §6.5 close protocol, which is
+        // exactly the server-side zombie this project spends its shutdown avoiding.
+        try
+        {
+            _workspaces.Delete(id);
+            _list?.ReloadWorkspaces();
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("workspaces",
+                $"Deleting '{toDelete.Name}' failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
+                Strings.Common_DeleteFailedTitle, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// <em>Update</em> from a workspace row's context menu: re-captures the sessions as they are now,
+    /// under that workspace's name.
+    /// </summary>
+    /// <remarks>
+    /// The same capture the palette runs, with the name and the auto-connect box already filled, so
+    /// it lands on the replace confirmation rather than on an empty form. Re-capturing is the only
+    /// way a workspace changes — there is deliberately no editor — and until this entry existed the
+    /// user had to know that and retype the name exactly.
+    /// </remarks>
+    private void OnPaneWorkspaceUpdateRequested(long id)
+    {
+        if (_workspaces?.Get(id) is { } workspace)
+        {
+            SaveCurrentLayout(from: null, existing: workspace);
+        }
+    }
+
+    /// <summary>A workspace row was clicked in the pane.</summary>
+    private void OnPaneWorkspaceOpenRequested(long id)
+    {
+        if (_workspaces?.Get(id) is { } workspace)
+        {
+            _ = MountWorkspaceAsync(workspace);
+        }
+    }
+
+    /// <summary><em>Delete</em> from a workspace row's context menu. Same confirmation as the palette.</summary>
+    private void OnPaneWorkspaceDeleteRequested(long id) => DeleteWorkspace(id, from: null);
+
+    /// <summary>
+    /// Detaches <paramref name="tab"/> at an imposed placement. A workspace's own placement wins
+    /// over the per-connection memory, which is only the fallback when the workspace has none —
+    /// otherwise opening "INCIDENT" would leave "PROD" unusable.
+    /// </summary>
+    private void DetachTab(SessionTabViewModel tab, DetachedWindowPlacement? placement)
+    {
+        if (_closeInProgress || tab.IsDetached)
+        {
+            return;
+        }
+
+        var window = new SessionWindow(tab, _sessions);
+        var chosen = placement ?? RememberedPlacement(tab, window);
+        if (chosen is not null)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = chosen.Left;
+            window.Top = chosen.Top;
+            window.Width = chosen.Width;
+            window.Height = chosen.Height;
+        }
+        else
+        {
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        window.ReattachRequested += OnSessionWindowReattachRequested;
+        window.CloseRequested += OnSessionWindowCloseRequested;
+        window.CaptionDragMoved += OnSessionWindowCaptionDragMoved;
+        window.CaptionDragEnded += OnSessionWindowCaptionDragEnded;
+        window.SessionRequested += GoToSession;
+        window.Show();
+
+        if (_sessions.Detach(tab, window))
+        {
+            if (chosen?.FullScreen == true)
+            {
+                window.ToggleFullScreen();
+            }
+
+            return;
+        }
+
+        window.AllowClose();
+        window.Close();
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DetachRefusedTitle,
+            Text.Of(Strings.Shell_DetachRefusedMessage, tab.Title));
+    }
+
+    /// <summary>
+    /// Mounts a workspace: each connection is brought into the state the workspace describes.
+    /// Nothing is closed — a workspace adds, it does not replace — and nothing reconnects: a session
+    /// that is already open is moved, which is re-parenting.
+    /// </summary>
+    /// <param name="announceEmpty">False for the resume at startup: an empty resume is the normal
+    /// case there, not an incident worth warning about.</param>
+    /// <remarks>
+    /// In series and not in parallel: six simultaneous RDP negotiations over a network that has just
+    /// come up are six failures, none of which is any machine's fault. In series means the next
+    /// action is not started until the previous session has connected or failed — see
+    /// <see cref="WaitForConnectionAsync"/>, without which the loop would only serialise the
+    /// <em>issuing</em> of six connections that then negotiate together anyway.
+    /// </remarks>
+    private async Task MountWorkspaceAsync(Workspace workspace, bool announceEmpty = true)
+    {
+        // Everything is inside the try, the null check included: the only call sites drop the task
+        // on the floor, and an unobserved faulted task in .NET neither crashes nor logs a line. A
+        // mount that failed on anything other than a connection would otherwise be a palette that
+        // closes and does nothing at all, with nothing written anywhere to say why.
+        try
+        {
+            ArgumentNullException.ThrowIfNull(workspace);
+
+            // _connecting too: a mount opens sessions without going through OnConnectRequested, so
+            // its re-entrancy guard is not on this path. Two mounts overlapping — the second started
+            // from the palette while the first is waiting on a session — would each open a tab for
+            // the same connection, and the duplicate would then break every later mount. _mounting
+            // is what closes that door now that the loop really does yield: _connecting is only
+            // raised inside OpenConnectionAsync and is false for the whole of the wait between two
+            // connections.
+            if (_connections is null || _closeInProgress || _connecting || _mounting)
+            {
+                return;
+            }
+
+            _mounting = true;
+            try
+            {
+                var existing = _connections.GetAll().Select(c => c.Id).ToHashSet();
+
+                // Through Find rather than straight off Tabs: Find drops the tabs whose close is
+                // already in flight, and the plan is applied through Find as well. Built on the
+                // wider set, a session that is going away would be planned as Activate and then
+                // silently dropped, instead of being reopened. Indexed assignment, not ToDictionary:
+                // a duplicate key is a throw there, and this is the one place that must survive one.
+                var open = new Dictionary<long, bool>();
+                foreach (var tab in _sessions.Tabs)
+                {
+                    if (_sessions.Find(tab.Session.Connection.Id) is { } live)
+                    {
+                        open[live.Session.Connection.Id] = live.IsDetached;
+                    }
+                }
+
+                var plan = WorkspacePlan.Build(workspace, existing, open, Screens(VisualTreeHelper.GetDpi(this)));
+
+                if (plan.Count == 0)
+                {
+                    if (announceEmpty)
+                    {
+                        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                            Strings.Shell_WorkspaceEmptyTitle,
+                            Text.Of(Strings.Shell_WorkspaceEmptyMessage, workspace.Name));
+                    }
+
+                    return;
+                }
+
+                foreach (var action in plan)
+                {
+                    // Re-tested on every turn, not only on entry: the loop really yields now, and
+                    // the window can start going down between two connections. Opening a further
+                    // session into a close-all pass that has already walked past it would leave the
+                    // server with exactly the zombie the §6.5 protocol exists to avoid.
+                    if (_closeInProgress)
+                    {
+                        break;
+                    }
+
+                    await ApplyWorkspaceActionAsync(action, workspace.AutoConnect);
+                }
+            }
+            finally
+            {
+                // Every path out, the throw included: a flag left raised would refuse every later
+                // workspace for the life of the process.
+                _mounting = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            // The same pair OpenConnectionAsync uses on its own failure path. The workspace is not
+            // named: the throw can be the null check itself, and there would then be nothing to name.
+            ProbeLog.Write("session",
+                $"Mounting a workspace failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_ConnectFailedTitle,
+                Text.Of(Strings.Shell_ConnectFailedMessage, ex.GetType().Name,
+                    ex.HResult.ToString("X8", CultureInfo.InvariantCulture), ex.Message));
+        }
+    }
+
+    /// <summary>One action of the plan.</summary>
+    private async Task ApplyWorkspaceActionAsync(WorkspaceAction action, bool autoConnect)
+    {
+        var tab = _sessions.Find(action.ConnectionId);
+
+        switch (action.Kind)
+        {
+            case WorkspaceActionKind.Activate when tab is not null:
+                GoToSession(tab);
+                break;
+
+            case WorkspaceActionKind.MoveDetached when tab is not null:
+                if (_sessions.DetachedWindowOf(tab) is { } window && action.Placement is { } target)
+                {
+                    // Leave full screen first: moving a full-screen window means nothing, and
+                    // SetFullScreen restores its own bounds on the way out.
+                    if (window.IsFullScreen && !target.FullScreen)
+                    {
+                        window.ToggleFullScreen();
+                    }
+
+                    // And out of maximized as well — the same normalisation SetFullScreen does on
+                    // the way in. Left/Top/Width/Height on a window that is not Normal change
+                    // nothing the user can see, and CurrentPlacement saved the restore rectangle of
+                    // a maximized window precisely so that it could be applied here.
+                    if (!window.IsFullScreen && window.WindowState != WindowState.Normal)
+                    {
+                        window.WindowState = WindowState.Normal;
+                    }
+
+                    if (!window.IsFullScreen)
+                    {
+                        window.Left = target.Left;
+                        window.Top = target.Top;
+                        window.Width = target.Width;
+                        window.Height = target.Height;
+                    }
+
+                    if (target.FullScreen && !window.IsFullScreen)
+                    {
+                        window.ToggleFullScreen();
+                    }
+                }
+
+                GoToSession(tab);
+                break;
+
+            case WorkspaceActionKind.Detach when tab is not null:
+                DetachTab(tab, action.Placement);
+                break;
+
+            case WorkspaceActionKind.Reattach when tab is not null:
+                if (_sessions.DetachedWindowOf(tab) is { } toReattach)
+                {
+                    Reattach(toReattach);
+                }
+
+                break;
+
+            // Only when nothing is open for this connection. The plan was built before the first
+            // await and can be stale by the time it is applied; OpenConnectionAsync has no
+            // already-open guard of its own — that one lives in OnConnectRequested, which this path
+            // does not go through — and SessionsViewModel.Open does not enforce one session per
+            // connection either. Without this guard a stale Open would build a second tab and a
+            // second RDP session for a connection that already has one.
+            case WorkspaceActionKind.OpenDocked when tab is null:
+            case WorkspaceActionKind.OpenDetached when tab is null:
+                if (_connections?.Get(action.ConnectionId) is { } connection)
+                {
+                    await OpenConnectionAsync(connection, start: autoConnect);
+
+                    // Find again: the tab did not exist before the open.
+                    if (_sessions.Find(action.ConnectionId) is not { } opened)
+                    {
+                        break;
+                    }
+
+                    // The wait that makes "in series" mean what §4.2 says it means. StartAsync only
+                    // *issues* the connection — the ActiveX negotiation is asynchronous and the
+                    // session is Connecting when it returns — so without this the loop would
+                    // serialise six issuings and leave six negotiations to run together, which is
+                    // the very thing being avoided. Nothing to wait for when AutoConnect is off: the
+                    // tab is deliberately left Idle.
+                    if (autoConnect)
+                    {
+                        await WaitForConnectionAsync(opened);
+                    }
+
+                    // Only now, and this is the other half of the wait: SetFullScreen refuses any
+                    // session that is not Connected, and until here it never was. A session that
+                    // failed or never answered is still detached, in a window of its own, simply not
+                    // full screen — which is what a detached window whose session is down looks like
+                    // anywhere else in the product.
+                    if (action.Kind == WorkspaceActionKind.OpenDetached)
+                    {
+                        DetachTab(opened, action.Placement);
+                    }
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Waits until <paramref name="tab"/>'s session has stopped negotiating — connected, dropped,
+    /// failed or ended — or until <see cref="ConnectWaitTimeout"/> runs out, whichever comes first.
+    /// Never throws and never waits longer than the cap, so a machine that answers nothing costs the
+    /// mount five seconds and the next action still runs (spec §4.3: a failure is isolated to its
+    /// own session).
+    /// </summary>
+    /// <remarks>
+    /// Built on <see cref="SessionTabViewModel.Changed"/>, which is raised on the UI thread, and the
+    /// handler is removed in a <c>finally</c> so neither the timeout nor a throw can leave this
+    /// window subscribed to a session it no longer cares about. The state is re-read after
+    /// subscribing: it can settle between the first test and the subscription, and the event that
+    /// said so is gone by then.
+    /// </remarks>
+    private static async Task WaitForConnectionAsync(SessionTabViewModel tab)
+    {
+        if (HasSettled(tab.State))
+        {
+            return;
+        }
+
+        var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnChanged(SessionTabViewModel changed)
+        {
+            if (HasSettled(changed.State))
+            {
+                settled.TrySetResult();
+            }
+        }
+
+        tab.Changed += OnChanged;
+        try
+        {
+            if (HasSettled(tab.State))
+            {
+                return;
+            }
+
+            // WhenAny, never the completion source alone: a control that raises nothing at all —
+            // no OnConnected, no OnDisconnected — would otherwise hang the mount for good.
+            using var cap = new CancellationTokenSource(ConnectWaitTimeout);
+            await Task.WhenAny(settled.Task, Task.Delay(Timeout.Infinite, cap.Token));
+
+            if (!HasSettled(tab.State))
+            {
+                ProbeLog.Write("session",
+                    $"'{tab.Title}': still {tab.State} after {ConnectWaitTimeout.TotalSeconds:F0}s; the mount carries on");
+            }
+        }
+        finally
+        {
+            tab.Changed -= OnChanged;
+        }
+    }
+
+    /// <summary>
+    /// Whether a session has stopped negotiating. <see cref="SessionState.Connecting"/> and
+    /// <see cref="SessionState.Reconnecting"/> are the only two states where an answer is still on
+    /// its way; every other one — connected, interrupted, failed, idle, closing, closed — is an
+    /// outcome the mount can act on and move past. Waiting out a retry countdown is deliberately not
+    /// part of it: <c>ReconnectPolicy</c> owns that, and it outlasts any mount.
+    /// </summary>
+    private static bool HasSettled(SessionState state) =>
+        state is not (SessionState.Connecting or SessionState.Reconnecting);
+
     /// <summary>
     /// Opens one connection, or brings its tab forward when it already has one — a connection has
     /// at most one session. <c>async void</c> is the only shape an event handler that awaits can
@@ -1095,6 +1756,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        await OpenConnectionAsync(connection, start: true);
+    }
+
+    /// <summary>
+    /// Opens a tab for <paramref name="connection"/> and, when <paramref name="start"/>, starts the
+    /// session. Awaitable, which <see cref="OnConnectRequested"/> cannot be: mounting a workspace
+    /// connects in series, and a series needs somewhere to wait.
+    /// </summary>
+    /// <param name="start">False for a workspace whose <c>AutoConnect</c> is off: the tab exists,
+    /// the session waits to be selected.</param>
+    private async Task OpenConnectionAsync(Connection connection, bool start)
+    {
         if (_version is null)
         {
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_SessionUnavailableTitle,
@@ -1115,7 +1788,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             SessionsArea.UpdateLayout();
 
             _settings.LastConnectionId = connection.Id;
-            await session.StartAsync();
+            if (start)
+            {
+                await session.StartAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -1346,6 +2022,42 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- editor and delete
 
     /// <summary><c>null</c> means "new connection"; both cases go through the same modal editor.</summary>
+    /// <summary>
+    /// <em>Favorite</em> from the row's context menu. A one-column write, so it goes straight to the
+    /// repository rather than through the editor — there is no form to reopen, and the pane re-sorts
+    /// itself on the reload because favorites lead its ordering.
+    /// </summary>
+    /// <remarks>
+    /// Guarded like every other repository write in this window: an unhandled <c>SqliteException</c>
+    /// on the UI thread takes the application down, and with it every live session, without the §6.5
+    /// close protocol.
+    /// </remarks>
+    private void OnFavoriteToggleRequested(Connection connection, bool isFavorite)
+    {
+        if (connection is null)
+        {
+            return;
+        }
+
+        if (_connections is null)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoEditMessage);
+            return;
+        }
+
+        try
+        {
+            _connections.SetFavorite(connection.Id, isFavorite);
+            _list?.Reload();
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("connections", $"Favorite toggle failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Shell_FavoriteFailedTitle, ex.Message);
+        }
+    }
+
     private void OnEditRequested(Connection? existing)
     {
         if (_connections is null)
@@ -1515,9 +2227,112 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
+    /// <summary>
+    /// Photographs the tab strip for the next start-up. Written on every clean close and only
+    /// there — deliberately not from <see cref="SaveSettings"/>, which the splitter also calls: a
+    /// close by crash leaves the previous snapshot on disk, which is the useful behaviour
+    /// (spec espaces §3.2).
+    /// </summary>
+    private void CaptureLastSession()
+    {
+        var entries = new List<LastSessionEntry>();
+        for (int i = 0; i < _sessions.Tabs.Count; i++)
+        {
+            var tab = _sessions.Tabs[i];
+            var window = _sessions.DetachedWindowOf(tab);
+            entries.Add(new LastSessionEntry
+            {
+                ConnectionId = tab.Session.Connection.Id,
+                Ordinal = i,
+                Detached = window is not null,
+                Placement = window is null ? null : PlacementOf(window),
+            });
+        }
+
+        _settings.LastSession = entries;
+    }
+
+    /// <summary>
+    /// Reopens the last session, if the user asked for it. Goes through the same
+    /// <see cref="WorkspacePlan"/> as the named workspaces: it is the same decision on another
+    /// source, and it has no business being written twice.
+    /// </summary>
+    private async Task RestoreLastSessionIfAsked()
+    {
+        if (!_settings.RestoreLastSession || _connections is null)
+        {
+            return;
+        }
+
+        // An empty snapshot is not an early return any more: the setting being on is worth saying
+        // even when it had nothing to reopen, because that is precisely the case where a user who
+        // forgot they enabled it would otherwise see no sign of it at all.
+        if (_settings.LastSession.Count == 0)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                Strings.Shell_RestoreOnTitle, Strings.Shell_RestoredNothing);
+            return;
+        }
+
+        // An ephemeral workspace, never written to the database: it is the adapter between the
+        // windowing state held in settings.json and the mounting decision.
+        var asWorkspace = new Workspace
+        {
+            Name = string.Empty,
+            AutoConnect = true,
+            Items = [.. _settings.LastSession.Select(e => new WorkspaceItem
+            {
+                ConnectionId = e.ConnectionId,
+                Ordinal = e.Ordinal,
+                Detached = e.Detached,
+                Placement = e.Placement,
+            })],
+        };
+
+        // OpenConnectionAsync writes LastConnectionId for every connection it opens, so the mount
+        // would leave it on the last item of the plan instead of on the row the user had selected.
+        // BuildPane has already re-selected that row from this very value, so it is simply put back:
+        // a resume is not a selection, and the next SaveSettings falls back to it when the pane has
+        // none of its own.
+        long? selected = _settings.LastConnectionId;
+
+        // Counted rather than taken from the plan: the plan drops connections deleted since, and an
+        // action can still be refused, so only the strip knows how many sessions really came back.
+        int before = _sessions.Tabs.Count;
+        try
+        {
+            // announceEmpty: false — at start-up a resume that yields nothing (connections deleted
+            // since) is the normal case, not an incident worth its own warning. It is reported
+            // below instead, as part of saying the setting is on.
+            await MountWorkspaceAsync(asWorkspace, announceEmpty: false);
+        }
+        finally
+        {
+            _settings.LastConnectionId = selected;
+        }
+
+        // Said out loud, every launch the setting is on. It is the only place the state of this
+        // setting is visible at all — the palette command that toggles it closes on Enter and shows
+        // nothing, and RemoteDeck has no settings window. Reporting it here also answers the
+        // question at the moment it has an effect, which no permanent indicator would do better.
+        int reopened = _sessions.Tabs.Count - before;
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+            Strings.Shell_RestoreOnTitle,
+            reopened > 0
+                ? Text.Plural(reopened, Strings.Shell_RestoredOne, Strings.Shell_RestoredMany, reopened)
+                : Strings.Shell_RestoredNothing);
+    }
+
     /// <summary>Writes the layout to <c>%APPDATA%\RemoteDeck\settings.json</c>. Losing it only costs
     /// geometry, so a failure is logged and swallowed — never surfaced on the way out of the app.</summary>
-    private void SaveSettings()
+    /// <param name="rememberDetached">Whether the detached windows still open are also written into
+    /// the per-connection placement memory. True only where spec espaces §7 allows it — the
+    /// application closing — and false everywhere else this method is called for a reason of its own.
+    /// <see cref="RememberPlacement"/> is triggered by a caption drag ending, a reattach and the
+    /// close, and by nothing else: a programmatic placement is not one of them, so folding the pane
+    /// or toggling the resume right after mounting a workspace must not write that workspace's
+    /// imposed rectangle over the fallback another workspace relies on.</param>
+    private void SaveSettings(bool rememberDetached = true)
     {
         // RestoreBounds, not Left/Top/Width/Height: those describe the maximized frame, and
         // restoring them would make an un-maximized window fill the screen with no way back.
@@ -1543,11 +2358,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // still open. OnClosing runs this on its first pass, before the close-all protocol takes
         // those windows away, so each is still standing where the user left it. A window that closed
         // on its own earlier already wrote its own entry and is no longer in this list.
-        foreach (var tab in _sessions.Tabs)
+        if (rememberDetached)
         {
-            if (_sessions.DetachedWindowOf(tab) is { } detached)
+            foreach (var tab in _sessions.Tabs)
             {
-                RememberPlacement(detached);
+                if (_sessions.DetachedWindowOf(tab) is { } detached)
+                {
+                    RememberPlacement(detached);
+                }
             }
         }
 
@@ -1592,6 +2410,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         if (!_settingsSaved)
         {
             _settingsSaved = true;
+            // Before SaveSettings writes the file, and before the close-all pass below takes the
+            // sessions away: the strip has to still be there to be photographed. This is the only
+            // call site, which is what makes the snapshot a clean-close-only affair.
+            CaptureLastSession();
             SaveSettings();
         }
 
