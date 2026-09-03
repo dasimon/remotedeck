@@ -26,8 +26,10 @@
                    Text="{x:Static res:Strings.WorkspaceName_NameLabel}"
                    Foreground="{DynamicResource RdTextMuted}" />
 
+        <!-- No Height: RdControlHeight is the button token, and forcing it here clipped the text —
+             a WPF-UI TextBox carries its own padding and must be left to size itself. Every other
+             text field in the application sets a margin and nothing else; this one follows. -->
         <ui:TextBox x:Name="NameBox" Grid.Row="2" Margin="16,0,16,12"
-                    Height="{StaticResource RdControlHeight}"
                     PlaceholderText="{x:Static res:Strings.WorkspaceName_NamePlaceholder}"
                     TextChanged="OnNameChanged" />
 
