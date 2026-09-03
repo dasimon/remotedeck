@@ -92,6 +92,18 @@
   <data name="Pane_MenuOpenWorkspace" xml:space="preserve">
     <value>Open</value>
   </data>
+  <data name="Workspace_CountOne" xml:space="preserve">
+    <value>{0} connection</value>
+  </data>
+  <data name="Workspace_CountMany" xml:space="preserve">
+    <value>{0} connections</value>
+  </data>
+  <data name="Shell_WorkspaceSavedOne" xml:space="preserve">
+    <value>{0} connection, and where it sits.</value>
+  </data>
+  <data name="Shell_WorkspaceSavedMany" xml:space="preserve">
+    <value>{0} connections, and where each one sits.</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>
@@ -785,9 +797,6 @@
   <data name="Palette_OpenWorkspace" xml:space="preserve">
     <value>Open workspace “{0}”</value>
   </data>
-  <data name="Palette_OpenWorkspaceSubtitle" xml:space="preserve">
-    <value>{0} connections</value>
-  </data>
   <data name="Palette_DeleteWorkspace" xml:space="preserve">
     <value>Delete workspace “{0}”</value>
   </data>
@@ -808,9 +817,6 @@
   </data>
   <data name="Shell_WorkspaceSaved" xml:space="preserve">
     <value>Workspace “{0}” saved</value>
-  </data>
-  <data name="Shell_WorkspaceSavedMessage" xml:space="preserve">
-    <value>{0} connections and where each one sits.</value>
   </data>
   <data name="Shell_WorkspaceSaveFailedTitle" xml:space="preserve">
     <value>Workspace not saved</value>

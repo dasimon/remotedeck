@@ -92,6 +92,18 @@
   <data name="Pane_MenuOpenWorkspace" xml:space="preserve">
     <value>Ouvrir</value>
   </data>
+  <data name="Workspace_CountOne" xml:space="preserve">
+    <value>{0} connexion</value>
+  </data>
+  <data name="Workspace_CountMany" xml:space="preserve">
+    <value>{0} connexions</value>
+  </data>
+  <data name="Shell_WorkspaceSavedOne" xml:space="preserve">
+    <value>{0} connexion, et sa place.</value>
+  </data>
+  <data name="Shell_WorkspaceSavedMany" xml:space="preserve">
+    <value>{0} connexions, et la place de chacune.</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connecter</value>
   </data>
@@ -785,9 +797,6 @@
   <data name="Palette_OpenWorkspace" xml:space="preserve">
     <value>Ouvrir l'espace « {0} »</value>
   </data>
-  <data name="Palette_OpenWorkspaceSubtitle" xml:space="preserve">
-    <value>{0} connexions</value>
-  </data>
   <data name="Palette_DeleteWorkspace" xml:space="preserve">
     <value>Supprimer l'espace « {0} »</value>
   </data>
@@ -808,9 +817,6 @@
   </data>
   <data name="Shell_WorkspaceSaved" xml:space="preserve">
     <value>Espace « {0} » enregistré</value>
-  </data>
-  <data name="Shell_WorkspaceSavedMessage" xml:space="preserve">
-    <value>{0} connexions, et la place de chacune.</value>
   </data>
   <data name="Shell_WorkspaceSaveFailedTitle" xml:space="preserve">
     <value>Espace non enregistré</value>

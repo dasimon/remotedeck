@@ -163,6 +163,42 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to {0} connection.
+        /// </summary>
+        public static string Workspace_CountOne {
+            get {
+                return ResourceManager.GetString("Workspace_CountOne", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connections.
+        /// </summary>
+        public static string Workspace_CountMany {
+            get {
+                return ResourceManager.GetString("Workspace_CountMany", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connection, and where it sits..
+        /// </summary>
+        public static string Shell_WorkspaceSavedOne {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSavedOne", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} connections, and where each one sits..
+        /// </summary>
+        public static string Shell_WorkspaceSavedMany {
+            get {
+                return ResourceManager.GetString("Shell_WorkspaceSavedMany", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Pane_MenuConnect {
@@ -2242,15 +2278,6 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to {0} connections.
-        /// </summary>
-        public static string Palette_OpenWorkspaceSubtitle {
-            get {
-                return ResourceManager.GetString("Palette_OpenWorkspaceSubtitle", resourceCulture);
-            }
-        }
-
-        /// <summary>
         ///   Looks up a localized string similar to Delete workspace “{0}”.
         /// </summary>
         public static string Palette_DeleteWorkspace {
@@ -2310,15 +2337,6 @@ namespace RemoteDeck.App.Resources {
         public static string Shell_WorkspaceSaved {
             get {
                 return ResourceManager.GetString("Shell_WorkspaceSaved", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized string similar to {0} connections and where each one sits..
-        /// </summary>
-        public static string Shell_WorkspaceSavedMessage {
-            get {
-                return ResourceManager.GetString("Shell_WorkspaceSavedMessage", resourceCulture);
             }
         }
 
