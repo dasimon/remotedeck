@@ -4,6 +4,25 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### Where the settings are, and are not
+
+- **Turning session restore on is now visible at every launch**: the InfoBar says the setting
+  is on, and whether it reopened anything. It was the one setting in RemoteDeck with no surface
+  of its own — the palette command that toggles it closes on Enter, so the only way to learn its
+  state was to reopen the palette and read the subtitle.
+- The README gained a **Settings** section saying plainly that there is no settings window and
+  why: almost everything RemoteDeck remembers is set by using it — pane width by dragging,
+  collapsed by `Ctrl+B`, window geometry by moving it — and comes back because it was observed,
+  not configured. Session restore is the exception, which is why it announces itself.
+- It also names the three timings that are **fixed and not configurable** — the reconnection
+  schedule, the close budget, and how long opening a workspace waits for one session before
+  starting the next. A settings window earns its place the day one of them is wrong for a real
+  network, not before.
+- **Both environment variables are documented**, including `REMOTEDECK_PROBE_SHORTCUTS`, which
+  was undocumented. It is a lot 0 leftover, and its three non-default values are the mechanisms
+  the probe proved intercept nothing — a way to silently lose every application shortcut. Saying
+  so is cheaper than finding out.
+
 ### Two things you could not see
 
 - **A workspace can be updated from its own row** — right-click → *Update from the open

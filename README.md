@@ -295,6 +295,41 @@ meant for diagnosis and bug reports, and the disconnect reasons and validation
 messages, which come from the core library. A French interface therefore shows a
 French sentence around an English reason. Translating them is a v2 job.
 
+### Settings, and where they are not
+
+RemoteDeck has **no settings window**. Almost everything it remembers is set by using
+it — the pane's width by dragging its edge, whether it is collapsed by `Ctrl+B`, the
+window's size and position by moving it — and comes back because it was observed, not
+because it was configured.
+
+One setting is not like that: **reopening the last session at startup**, which is off
+until you turn it on from the palette (`Ctrl+K` → *Reopen the last session at startup*).
+It has no other surface, so the application says so at every launch it is on, and
+whether it reopened anything.
+
+Three timings are **fixed and not configurable**: the reconnection schedule (five
+attempts, 2 s, 5 s, 10 s, 30 s, 60 s), the close protocol's budget (5 s per session,
+30 s overall), and how long opening a workspace waits for one session before starting
+the next (5 s). If one of them turns out to be wrong for a real network, that is when a
+settings window earns its place — not before.
+
+### Environment variables
+
+Both are diagnostic tools rather than configuration, and neither is needed for ordinary
+use.
+
+| Variable | Effect |
+|---|---|
+| `REMOTEDECK_UI_CULTURE` | Forces the interface language for one run (`en-US`, `fr-FR`). Unrecognised values are ignored and the Windows display language is kept. |
+| `REMOTEDECK_PROBE_SHORTCUTS` | Selects which of the four keyboard-interception mechanisms is used. |
+
+`REMOTEDECK_PROBE_SHORTCUTS` is a leftover from the lot 0 probe and should normally be
+left unset. Its default, `LowLevelKeyboardHook`, is the **only** mechanism the probe
+found to intercept anything while the remote desktop holds the keyboard; the three
+thread-scoped alternatives arm without error and then see no keystrokes at all. Setting
+it to one of those is a way to silently lose every application shortcut. An unknown
+value falls back to the default and says so in the log.
+
 ## Credentials
 
 A credential (user name, optional domain, password) is saved once and reused by

@@ -2259,8 +2259,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private async Task RestoreLastSessionIfAsked()
     {
-        if (!_settings.RestoreLastSession || _settings.LastSession.Count == 0 || _connections is null)
+        if (!_settings.RestoreLastSession || _connections is null)
         {
+            return;
+        }
+
+        // An empty snapshot is not an early return any more: the setting being on is worth saying
+        // even when it had nothing to reopen, because that is precisely the case where a user who
+        // forgot they enabled it would otherwise see no sign of it at all.
+        if (_settings.LastSession.Count == 0)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                Strings.Shell_RestoreOnTitle, Strings.Shell_RestoredNothing);
             return;
         }
 
@@ -2285,16 +2295,32 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // a resume is not a selection, and the next SaveSettings falls back to it when the pane has
         // none of its own.
         long? selected = _settings.LastConnectionId;
+
+        // Counted rather than taken from the plan: the plan drops connections deleted since, and an
+        // action can still be refused, so only the strip knows how many sessions really came back.
+        int before = _sessions.Tabs.Count;
         try
         {
             // announceEmpty: false — at start-up a resume that yields nothing (connections deleted
-            // since) is the normal case, not an incident worth an InfoBar.
+            // since) is the normal case, not an incident worth its own warning. It is reported
+            // below instead, as part of saying the setting is on.
             await MountWorkspaceAsync(asWorkspace, announceEmpty: false);
         }
         finally
         {
             _settings.LastConnectionId = selected;
         }
+
+        // Said out loud, every launch the setting is on. It is the only place the state of this
+        // setting is visible at all — the palette command that toggles it closes on Enter and shows
+        // nothing, and RemoteDeck has no settings window. Reporting it here also answers the
+        // question at the moment it has an effect, which no permanent indicator would do better.
+        int reopened = _sessions.Tabs.Count - before;
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+            Strings.Shell_RestoreOnTitle,
+            reopened > 0
+                ? Text.Plural(reopened, Strings.Shell_RestoredOne, Strings.Shell_RestoredMany, reopened)
+                : Strings.Shell_RestoredNothing);
     }
 
     /// <summary>Writes the layout to <c>%APPDATA%\RemoteDeck\settings.json</c>. Losing it only costs
