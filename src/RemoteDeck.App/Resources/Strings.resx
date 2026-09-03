@@ -119,6 +119,15 @@
   <data name="Pane_MenuUpdateWorkspace" xml:space="preserve">
     <value>Update from the open sessions</value>
   </data>
+  <data name="Shell_RestoredOne" xml:space="preserve">
+    <value>{0} session reopened from the last time you closed RemoteDeck.</value>
+  </data>
+  <data name="Shell_RestoredMany" xml:space="preserve">
+    <value>{0} sessions reopened from the last time you closed RemoteDeck.</value>
+  </data>
+  <data name="Shell_RestoredNothing" xml:space="preserve">
+    <value>Nothing was open when RemoteDeck last closed, so nothing was reopened.</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>

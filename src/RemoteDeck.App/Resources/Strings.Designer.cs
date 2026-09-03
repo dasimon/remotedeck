@@ -244,6 +244,33 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to {0} session reopened from the last time you closed RemoteDeck..
+        /// </summary>
+        public static string Shell_RestoredOne {
+            get {
+                return ResourceManager.GetString("Shell_RestoredOne", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} sessions reopened from the last time you closed RemoteDeck..
+        /// </summary>
+        public static string Shell_RestoredMany {
+            get {
+                return ResourceManager.GetString("Shell_RestoredMany", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing was open when RemoteDeck last closed, so nothing was reopened..
+        /// </summary>
+        public static string Shell_RestoredNothing {
+            get {
+                return ResourceManager.GetString("Shell_RestoredNothing", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Pane_MenuConnect {

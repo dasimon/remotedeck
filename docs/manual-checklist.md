@@ -543,6 +543,10 @@ test project. These boxes are the only verification.
 - [ ] A workspace connection whose password is refused: only that one fails, with its own
       reason, and it is **not** retried. The others are mounted.
 - [x] Last-session restore is **off by default** on a fresh install.
+- [ ] With it **on**, every launch says so in the InfoBar — and says how many sessions came
+      back, or that nothing was open at the last close. It is the only place this setting's
+      state is visible.
+- [ ] With it **off**, launching says nothing about it.
 - [x] Turn it on: close with two sessions open, restart, and both come back. Kill the
       process instead of closing cleanly: the previous snapshot is kept.
 - [ ] The naming window: `Enter` confirms, `Escape` cancels, the button stays disabled on
