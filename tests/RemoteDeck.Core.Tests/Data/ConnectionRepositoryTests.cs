@@ -223,6 +223,47 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void WebAccountUpn_roundtrips_and_is_normalised()
+    {
+        var x = Make("Entra host");
+        x.UseWebAccount = true;
+        x.WebAccountUpn = "  david.simon@financieredelacite.com  ";
+        _repo.Insert(x);
+
+        // Trimmed on the way in, like VpnProfile: the value is typed by hand and goes straight to
+        // the control as the account hint.
+        Assert.Equal("david.simon@financieredelacite.com", _repo.Get(x.Id)!.WebAccountUpn);
+    }
+
+    [Fact]
+    public void A_blank_WebAccountUpn_is_stored_as_null()
+    {
+        foreach (var blank in new string?[] { null, "", "   " })
+        {
+            var x = Make($"Blank {blank?.Length ?? -1}");
+            x.WebAccountUpn = blank;
+            _repo.Insert(x);
+            Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+        }
+    }
+
+    [Fact]
+    public void Update_carries_the_WebAccountUpn()
+    {
+        var x = Make("Later an Entra host");
+        _repo.Insert(x);
+        Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+
+        x.WebAccountUpn = "user@contoso.com";
+        _repo.Update(x);
+        Assert.Equal("user@contoso.com", _repo.Get(x.Id)!.WebAccountUpn);
+
+        x.WebAccountUpn = null;
+        _repo.Update(x);
+        Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+    }
+
+    [Fact]
     public void SetFavorite_flips_the_flag_both_ways()
     {
         var x = Make("Star");
