@@ -147,10 +147,7 @@
     <value>Connect the VPN</value>
   </data>
   <data name="Shell_VpnDialFailedTitle" xml:space="preserve">
-    <value>Could not start rasdial</value>
-  </data>
-  <data name="Shell_VpnDialFailedMessage" xml:space="preserve">
-    <value>Raise “{0}” yourself, then connect again.</value>
+    <value>Could not raise “{0}”</value>
   </data>
   <data name="Shell_VpnDialingTitle" xml:space="preserve">
     <value>Raising {0}</value>

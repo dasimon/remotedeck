@@ -132,25 +132,64 @@ internal static class WindowsVpn
     /// hang.
     /// </para>
     /// </remarks>
-    /// <returns>False when the process could not even be started; the caller reports it.</returns>
-    public static bool Dial(string profile)
+    /// <returns>
+    /// What <c>rasdial</c> said. <c>null</c> when it succeeded; otherwise the message to show the
+    /// user — its own words where it produced any, and its exit code where it did not.
+    /// </returns>
+    /// <remarks>
+    /// The output is captured rather than left to a console window. The first version showed the
+    /// window, on the reasoning that <c>rasdial</c> is where Windows would prompt for a missing
+    /// password — but a console that closes the instant the command ends takes any error message
+    /// with it, which is exactly what happened: a black flash and no connection, with nothing to
+    /// read. An error nobody can see is worse than no attempt at all.
+    /// </remarks>
+    public static string? Dial(string profile)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profile);
 
+        var entry = profile.Trim();
         try
         {
-            var started = Process.Start(new ProcessStartInfo("rasdial", $"\"{profile.Trim()}\"")
+            using var process = Process.Start(new ProcessStartInfo("rasdial", $"\"{entry}\"")
             {
-                UseShellExecute = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
             });
 
-            ProbeLog.Write("vpn", $"rasdial \"{profile.Trim()}\" started (pid {started?.Id.ToString() ?? "unknown"})");
-            return started is not null;
+            if (process is null)
+            {
+                ProbeLog.Write("vpn", $"rasdial \"{entry}\": the process did not start");
+                return "rasdial did not start.";
+            }
+
+            // Standard input is deliberately NOT redirected: rasdial prompts on it when the profile
+            // has no stored credential, and a redirected, never-written stdin would hang the wait
+            // below instead of failing.
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+
+            if (!process.WaitForExit(TimeSpan.FromSeconds(45)))
+            {
+                ProbeLog.Write("vpn", $"rasdial \"{entry}\": still running after 45 s, left alone");
+                return "rasdial is still running. Watch the Windows VPN indicator, then connect again.";
+            }
+
+            var said = string.Join(" ", (output + " " + error)
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(l => l.Length > 0));
+
+            ProbeLog.Write("vpn", $"rasdial \"{entry}\" exited {process.ExitCode}: {said}");
+
+            return process.ExitCode == 0
+                ? null
+                : said.Length > 0 ? said : $"rasdial returned {process.ExitCode}.";
         }
         catch (Exception ex)
         {
-            ProbeLog.Write("vpn", $"rasdial \"{profile.Trim()}\" failed to start: {ex.GetType().Name} {ex.Message}");
-            return false;
+            ProbeLog.Write("vpn", $"rasdial \"{entry}\" failed to start: {ex.GetType().Name} {ex.Message}");
+            return ex.Message;
         }
     }
 }
