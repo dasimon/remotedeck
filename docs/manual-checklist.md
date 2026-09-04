@@ -634,6 +634,47 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
 - [ ] The field survives a round trip through the editor, and clearing it really clears it.
 - [ ] English and French: the field, its hint and the three messages are translated.
 
+## Web account (Entra) sign-in without a prompt
+
+**What actually makes the sign-in silent: the Windows WAM account cache, not RemoteDeck.**
+A web-account connection was asking for the full Microsoft sign-in on every connect, while
+`mstsc.exe` on the same client reconnected silently. Investigation on 2026-09-04 settled it:
+
+- The token path is **not** private to `mstsc.exe`. `mstscax.dll` itself carries the WAM
+  calls (`WebAuthenticationCoreManager`, `GetTokenSilentlyAsync`, `FindAccountAsync`) and the
+  Remote Desktop app id `a4a365df-50f1-4397-bc59-1a1564b8bb9c`, and those modules load inside
+  RemoteDeck's own process. So a third-party ActiveX host is not structurally shut out.
+- The silence came from the **broker's account cache**. Once a `.tbacct` for the account
+  exists under `%LOCALAPPDATA%\Packages\Microsoft.AAD.BrokerPlugin_cw5n1h2txyewy\AC\TokenBroker\Accounts`,
+  `mstscax` acquires the RDS AAD token silently — for **any** build. Proven by running the
+  shipped v0.3.0 (whose `RdpSessionHost`/`app.manifest` are byte-identical to this branch) on
+  a fresh database with no UPN: it connected without a prompt. The reference client is not
+  Entra-joined and has no PRT (`WamDefaultSet: YES`); the cache alone carries it.
+- So this branch's UPN field is **not** the fix. It is `mstsc` parity: the `.rdp` mstsc
+  exports has no `username` line, but the client keeps the UPN per server under
+  `HKCU\Software\Microsoft\Terminal Server Client\Servers\<host>\UsernameHint` and hands it
+  to the control as an account hint. It matters when the broker cache is **cold** (a fresh
+  machine, a cleared cache) or when several accounts are cached and one must be named. When
+  the cache is warm it changes nothing.
+
+`EnableRdsAadAuth` is documented under `IMsRdpExtendedSettings::Property` and is the only
+Entra property there; no undocumented property or token-injection interface is needed.
+
+- [ ] With a **warm** broker cache, a web-account connection reconnects with no prompt even
+      with the UPN **empty** — the cache, not the field, is doing the work.
+- [ ] The UPN field appears only while **Use web account** is checked, in English and French,
+      with its hint; unchecking the box hides it and the value it held is still saved.
+- [ ] The UPN is **trimmed** on save and a blank one reads back as empty.
+- [ ] Importing a folder of `.rdp` files: a file with `enablerdsaadauth:i:1` and no
+      `username` line gets the UPN Remote Desktop Connection remembers for that host, and
+      the preview no longer warns that the identity is left behind. A file **without**
+      `enablerdsaadauth` keeps its user name out of the connection, as before.
+- [ ] A credential attached to a web-account connection is ignored on connect: no domain,
+      no password reaches the control; only the UPN goes, as the account hint.
+- [ ] Upgrading a database from V3 keeps every row; the new column reads null everywhere.
+- [ ] To reproduce the original "prompt every time", start from an **empty** broker cache,
+      not by changing RemoteDeck.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
