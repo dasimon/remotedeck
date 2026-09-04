@@ -77,6 +77,12 @@ public static class SchemaMigrator
         """
         ALTER TABLE Connection ADD COLUMN VpnProfile TEXT NULL;
         """,
+
+        // V4 — the account hint of a web-account connection. Nullable for the same reason as V3:
+        // every existing row gave the control no hint, and keeps doing so.
+        """
+        ALTER TABLE Connection ADD COLUMN WebAccountUpn TEXT NULL;
+        """,
     ];
 
     public static int GetVersion(SqliteConnection connection)
