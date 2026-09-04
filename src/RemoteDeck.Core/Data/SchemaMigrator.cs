@@ -70,6 +70,13 @@ public static class SchemaMigrator
 
         CREATE INDEX IX_WorkspaceItem_Connection ON WorkspaceItem(ConnectionId);
         """,
+
+        // V3 — the Windows VPN profile a connection needs before it can be reached. Nullable and
+        // added with ALTER: every existing row means "no VPN required", which is the truth for all
+        // of them.
+        """
+        ALTER TABLE Connection ADD COLUMN VpnProfile TEXT NULL;
+        """,
     ];
 
     public static int GetVersion(SqliteConnection connection)

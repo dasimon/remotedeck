@@ -21,6 +21,13 @@ public sealed class Connection
     public bool UseWebAccount { get; set; }
     public int? AuthenticationLevel { get; set; }
     public string? AcceptedCertThumbprint { get; set; }
+    /// <summary>
+    /// The Windows VPN profile this connection needs, or <c>null</c> when it needs none. Matched
+    /// loosely against the profiles that are up — see <c>VpnRequirement</c>. RemoteDeck stores the
+    /// name only: the credentials stay in the Windows profile, where the user put them.
+    /// </summary>
+    public string? VpnProfile { get; set; }
+
     public string Notes { get; set; } = "";
     public DateTime? LastConnectedUtc { get; set; }
     public DateTime CreatedUtc { get; set; }
