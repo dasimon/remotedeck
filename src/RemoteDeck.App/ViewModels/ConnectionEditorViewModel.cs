@@ -80,6 +80,12 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     /// and blank is normalised to null by the repository.</summary>
     [ObservableProperty] private string _vpnProfile = "";
 
+    /// <summary>
+    /// What the profile box offers. Suggestions only — the box stays typeable, so a profile this
+    /// could not discover is still reachable, and an empty list costs nothing.
+    /// </summary>
+    public IReadOnlyList<string> AvailableVpnProfiles { get; init; } = [];
+
     [ObservableProperty] private string _notes = "";
     [ObservableProperty] private string _errors = "";
 
@@ -150,7 +156,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     }
 
     /// <summary>Builds the form for an existing connection, or a blank one when <paramref name="connection"/> is null.</summary>
-    public static ConnectionEditorViewModel From(Connection? connection, IEnumerable<Credential> credentials, IEnumerable<string> groups)
+    /// <param name="vpnProfiles">What the VPN box offers. Suggestions only, and an empty list is a
+    /// perfectly good answer — the box is typeable.</param>
+    public static ConnectionEditorViewModel From(Connection? connection, IEnumerable<Credential> credentials, IEnumerable<string> groups, IEnumerable<string>? vpnProfiles = null)
     {
         ArgumentNullException.ThrowIfNull(credentials);
         ArgumentNullException.ThrowIfNull(groups);
@@ -159,6 +167,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         var viewModel = new ConnectionEditorViewModel
         {
             Credentials = choices,
+            AvailableVpnProfiles = [.. vpnProfiles ?? []],
             KnownGroups = [.. groups],
             Name = connection?.Name ?? "",
             Host = connection?.Host ?? "",

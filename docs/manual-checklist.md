@@ -627,6 +627,10 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
       `rasdial` reports the unknown entry itself.
 - [ ] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
+- [ ] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
+      machine knows — check `VPN FDC` is offered without typing it.
+- [ ] A profile the list does **not** offer can still be typed by hand and works: the list is a
+      convenience, never a constraint.
 - [ ] The field survives a round trip through the editor, and clearing it really clears it.
 - [ ] English and French: the field, its hint and the three messages are translated.
 

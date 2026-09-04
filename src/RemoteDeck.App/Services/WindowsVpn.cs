@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net.NetworkInformation;
 
 namespace RemoteDeck.App.Services;
@@ -57,6 +58,65 @@ internal static class WindowsVpn
             : $"VPN interfaces up: {string.Join(", ", names.Order(StringComparer.OrdinalIgnoreCase))}");
 
         return names;
+    }
+
+    /// <summary>
+    /// Every VPN profile worth offering in the editor: the ones defined in the RAS phonebooks,
+    /// whether up or not, plus any tunnel that is up.
+    /// </summary>
+    /// <remarks>
+    /// The phonebook is an INI file whose section names are the entry names, which is the only part
+    /// of it this reads. Its location is not something this project has verified on a machine that
+    /// has one, so nothing depends on finding it: the editor's field stays typeable, and a phonebook
+    /// that is missing, moved or unreadable simply means the list is shorter. That is why the
+    /// currently-up tunnels are unioned in — on the machine where it matters, at least the profile
+    /// in use will be offered.
+    /// </remarks>
+    public static IReadOnlyList<string> KnownProfiles()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var phonebook in Phonebooks())
+        {
+            try
+            {
+                if (!File.Exists(phonebook))
+                {
+                    continue;
+                }
+
+                foreach (var line in File.ReadLines(phonebook))
+                {
+                    var text = line.Trim();
+                    if (text.Length > 2 && text[0] == '[' && text[^1] == ']')
+                    {
+                        names.Add(text[1..^1]);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                ProbeLog.Write("vpn", $"Could not read '{phonebook}': {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        foreach (var up in ConnectedProfiles())
+        {
+            names.Add(up);
+        }
+
+        return [.. names.Order(StringComparer.CurrentCultureIgnoreCase)];
+    }
+
+    private static IEnumerable<string> Phonebooks()
+    {
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Microsoft", "Network", "Connections", "Pbk", "rasphone.pbk");
+
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Microsoft", "Network", "Connections", "Pbk", "rasphone.pbk");
     }
 
     /// <summary>
