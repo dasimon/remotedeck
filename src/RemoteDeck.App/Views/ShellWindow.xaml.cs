@@ -1905,13 +1905,15 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             }
         }
 
-        // The connection row carries no identity of its own: the user name and domain come from
-        // the credential, and with none attached both stay empty on purpose.
+        // The user name and domain come from the credential, and with none attached both stay empty
+        // on purpose. The one exception is a web-account connection: it carries its account hint
+        // (the UPN mstsc keeps as UsernameHint for the server), which the control needs to find the
+        // Entra account without prompting. No domain goes with it, and never a password.
         var settings = new RdpConnectionSettings(
             Host: connection.Host,
             Port: connection.Port,
-            UserName: credential?.UserName ?? "",
-            Domain: credential?.Domain,
+            UserName: connection.UseWebAccount ? connection.WebAccountUpn ?? "" : credential?.UserName ?? "",
+            Domain: connection.UseWebAccount ? null : credential?.Domain,
             UseWebAccount: connection.UseWebAccount,
             AdminSession: connection.AdminSession,
             RedirectClipboard: connection.RedirectClipboard,

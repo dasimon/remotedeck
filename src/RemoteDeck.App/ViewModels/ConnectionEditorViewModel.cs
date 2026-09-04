@@ -75,6 +75,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private bool _redirectAudio;
     [ObservableProperty] private bool _adminSession;
     [ObservableProperty] private bool _useWebAccount;
+    /// <summary>The Entra account (UPN) of a web-account connection, or blank to let the control
+    /// ask. Stored trimmed, and blank is normalised to null by the repository.</summary>
+    [ObservableProperty] private string _webAccountUpn = "";
     [ObservableProperty] private AuthenticationLevelOption? _selectedAuthenticationLevel = AllAuthenticationLevels[0];
     /// <summary>The Windows VPN profile this connection needs, or blank for none. Stored trimmed,
     /// and blank is normalised to null by the repository.</summary>
@@ -150,6 +153,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         connection.RedirectAudio = RedirectAudio;
         connection.AdminSession = AdminSession;
         connection.UseWebAccount = UseWebAccount;
+        connection.WebAccountUpn = WebAccountUpn;
         connection.AuthenticationLevel = SelectedAuthenticationLevel?.Value;
         connection.Notes = Notes ?? "";
         connection.VpnProfile = VpnProfile;
@@ -183,6 +187,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
             RedirectAudio = connection?.RedirectAudio ?? false,
             AdminSession = connection?.AdminSession ?? false,
             UseWebAccount = connection?.UseWebAccount ?? false,
+            WebAccountUpn = connection?.WebAccountUpn ?? "",
             Notes = connection?.Notes ?? "",
             VpnProfile = connection?.VpnProfile ?? "",
         };

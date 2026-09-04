@@ -530,6 +530,15 @@
   <data name="Editor_UseWebAccount" xml:space="preserve">
     <value>Utiliser un compte web (expérimental)</value>
   </data>
+  <data name="Editor_WebAccountUpn" xml:space="preserve">
+    <value>Compte (UPN)</value>
+  </data>
+  <data name="Editor_WebAccountUpnPlaceholder" xml:space="preserve">
+    <value>utilisateur@contoso.com</value>
+  </data>
+  <data name="Editor_WebAccountUpnHint" xml:space="preserve">
+    <value>Le compte déjà connu de Windows, pour une connexion sans nouvelle demande. Vide : l'identification est demandée à chaque fois.</value>
+  </data>
   <data name="Editor_SectionDisplay" xml:space="preserve">
     <value>Affichage</value>
   </data>
