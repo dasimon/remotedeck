@@ -1820,17 +1820,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return false;
         }
 
-        if (WindowsVpn.Dial(profile))
-        {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                Text.Of(Strings.Shell_VpnDialingTitle, profile), Strings.Shell_VpnDialingMessage);
-        }
-        else
+        // rasdial's own words when it refuses, rather than a message of ours guessing at the cause:
+        // 691 is a bad credential, 789 an IPsec negotiation that failed, 809 a NAT in the way, and
+        // none of that is something RemoteDeck could paraphrase usefully.
+        if (WindowsVpn.Dial(profile) is { } complaint)
         {
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
-                Strings.Shell_VpnDialFailedTitle, Text.Of(Strings.Shell_VpnDialFailedMessage, profile));
+                Text.Of(Strings.Shell_VpnDialFailedTitle, profile), complaint);
+            return false;
         }
 
+        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
+            Text.Of(Strings.Shell_VpnDialingTitle, profile), Strings.Shell_VpnDialingMessage);
         return false;
     }
 

@@ -325,20 +325,11 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Could not start rasdial.
+        ///   Looks up a localized string similar to Could not raise “{0}”.
         /// </summary>
         public static string Shell_VpnDialFailedTitle {
             get {
                 return ResourceManager.GetString("Shell_VpnDialFailedTitle", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized string similar to Raise “{0}” yourself, then connect again..
-        /// </summary>
-        public static string Shell_VpnDialFailedMessage {
-            get {
-                return ResourceManager.GetString("Shell_VpnDialFailedMessage", resourceCulture);
             }
         }
 
