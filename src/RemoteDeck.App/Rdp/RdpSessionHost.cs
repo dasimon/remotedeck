@@ -199,7 +199,15 @@ internal sealed class RdpSessionHost : IDisposable
         }
     }
 
-    /// <summary>R7 probe. Property name is NOT in Microsoft's documented list; we only observe.</summary>
+    /// <summary>
+    /// Switches the control to RDS AAD Auth. <c>EnableRdsAadAuth</c> is documented under
+    /// <c>IMsRdpExtendedSettings::Property</c> (VT_BOOL, write only) and is the only Entra-related
+    /// property there. What makes the sign-in silent is the Windows broker's account cache, not this
+    /// call: once the account is cached, <c>mstscax</c> gets the token with no prompt. The account
+    /// hint the caller puts in <c>UserName</c> (the connection's UPN) is <c>mstsc</c> parity for the
+    /// cold-cache case; see docs/manual-checklist.md.
+    /// https://learn.microsoft.com/windows/win32/termserv/imsrdpextendedsettings-property
+    /// </summary>
     private void TryEnableWebAccount()
     {
         try

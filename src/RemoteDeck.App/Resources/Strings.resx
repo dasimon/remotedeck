@@ -530,6 +530,15 @@
   <data name="Editor_UseWebAccount" xml:space="preserve">
     <value>Use web account (experimental)</value>
   </data>
+  <data name="Editor_WebAccountUpn" xml:space="preserve">
+    <value>Account (UPN)</value>
+  </data>
+  <data name="Editor_WebAccountUpnPlaceholder" xml:space="preserve">
+    <value>user@contoso.com</value>
+  </data>
+  <data name="Editor_WebAccountUpnHint" xml:space="preserve">
+    <value>The account Windows already knows, so the sign-in can be silent. Leave empty to be asked each time.</value>
+  </data>
   <data name="Editor_SectionDisplay" xml:space="preserve">
     <value>Display</value>
   </data>

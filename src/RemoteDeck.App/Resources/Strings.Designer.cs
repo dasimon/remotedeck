@@ -1477,6 +1477,33 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Account (UPN).
+        /// </summary>
+        public static string Editor_WebAccountUpn {
+            get {
+                return ResourceManager.GetString("Editor_WebAccountUpn", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to user@contoso.com.
+        /// </summary>
+        public static string Editor_WebAccountUpnPlaceholder {
+            get {
+                return ResourceManager.GetString("Editor_WebAccountUpnPlaceholder", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The account Windows already knows, so the sign-in can be silent. Leave empty to be asked each time..
+        /// </summary>
+        public static string Editor_WebAccountUpnHint {
+            get {
+                return ResourceManager.GetString("Editor_WebAccountUpnHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Display.
         /// </summary>
         public static string Editor_SectionDisplay {
