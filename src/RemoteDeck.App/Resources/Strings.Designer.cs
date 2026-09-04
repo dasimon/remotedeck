@@ -271,6 +271,96 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Windows VPN profile.
+        /// </summary>
+        public static string Editor_VpnProfile {
+            get {
+                return ResourceManager.GetString("Editor_VpnProfile", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to none.
+        /// </summary>
+        public static string Editor_VpnProfilePlaceholder {
+            get {
+                return ResourceManager.GetString("Editor_VpnProfilePlaceholder", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Checked before connecting. If the tunnel is down, RemoteDeck says so and offers to raise it — Windows supplies the credentials, RemoteDeck stores none..
+        /// </summary>
+        public static string Editor_VpnProfileHint {
+            get {
+                return ResourceManager.GetString("Editor_VpnProfileHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} is not connected.
+        /// </summary>
+        public static string Shell_VpnDownTitle {
+            get {
+                return ResourceManager.GetString("Shell_VpnDownTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to “{0}” needs the VPN profile “{1}”, which is not up..
+        /// </summary>
+        public static string Shell_VpnDownMessage {
+            get {
+                return ResourceManager.GetString("Shell_VpnDownMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connect the VPN.
+        /// </summary>
+        public static string Shell_VpnConnect {
+            get {
+                return ResourceManager.GetString("Shell_VpnConnect", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Could not start rasdial.
+        /// </summary>
+        public static string Shell_VpnDialFailedTitle {
+            get {
+                return ResourceManager.GetString("Shell_VpnDialFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Raise “{0}” yourself, then connect again..
+        /// </summary>
+        public static string Shell_VpnDialFailedMessage {
+            get {
+                return ResourceManager.GetString("Shell_VpnDialFailedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Raising {0}.
+        /// </summary>
+        public static string Shell_VpnDialingTitle {
+            get {
+                return ResourceManager.GetString("Shell_VpnDialingTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Windows is dialling the tunnel. Connect again once it is up..
+        /// </summary>
+        public static string Shell_VpnDialingMessage {
+            get {
+                return ResourceManager.GetString("Shell_VpnDialingMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Pane_MenuConnect {

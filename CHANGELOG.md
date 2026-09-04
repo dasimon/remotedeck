@@ -4,6 +4,26 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### A connection can wait for its VPN
+
+- **A connection can name the Windows VPN profile it needs.** Before opening the session,
+  RemoteDeck checks whether that tunnel is up; if it is not, it says so and offers to raise it
+  rather than letting the connection fail with a cryptic RDP error about a host it cannot find.
+- **No VPN credential is stored, and none ever will be.** RemoteDeck keeps the profile's *name*;
+  raising it is `rasdial`, and Windows supplies whatever the user put in the profile. A second
+  secret store beside the DPAPI vault, for tunnels usually behind MFA anyway, would buy nothing
+  and cost the one thing this application is careful about.
+- It **never dials on its own**. A connection attempt is not consent to change the machine's
+  network state, and a tunnel that comes up by itself is a tunnel nobody knows is up.
+- The check is on the path the user asked for. Mounting a **workspace** deliberately skips it:
+  those sessions open in series, and stopping that series on a question would turn one dialog
+  into six.
+- A failure to read the VPN state is **not** read as "the tunnel is down" — that would offer to
+  raise one that may already be up. It is logged and the session proceeds, so a broken check is
+  never worse than no check.
+- Schema V3 adds the column nullable: every existing connection means "no VPN required", which is
+  true of all of them.
+
 ### xUnit v3
 
 - **The test project moved from xUnit 2.9.3 to xUnit v3**, which NuGet marks the older package
