@@ -1756,7 +1756,82 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        if (!VpnIsReady(connection))
+        {
+            return;
+        }
+
         await OpenConnectionAsync(connection, start: true);
+    }
+
+    /// <summary>
+    /// Checks the VPN profile a connection names, and offers to raise it when it is down.
+    /// </summary>
+    /// <returns>True when the session may go ahead: the connection needs no VPN, or the one it needs
+    /// is up. False when the tunnel is down — whether or not the user chose to raise it, because
+    /// dialling is asynchronous and the session has to be started again once it is really up.</returns>
+    /// <remarks>
+    /// <para>
+    /// Only on this path — a connection the user asked for. Mounting a workspace deliberately does
+    /// not check: it opens its sessions in series, and stopping that series on a question would turn
+    /// one dialog into six. A workspace whose sessions are behind a tunnel fails the ordinary way,
+    /// per session, which is the behaviour its own failure isolation already describes.
+    /// </para>
+    /// <para>
+    /// A failure to enumerate is not treated as "the tunnel is down": that would offer to raise a
+    /// VPN that may already be up. It is logged and the session proceeds, so a broken check can
+    /// never be worse than no check at all.
+    /// </para>
+    /// </remarks>
+    private bool VpnIsReady(Connection connection)
+    {
+        if (string.IsNullOrWhiteSpace(connection.VpnProfile))
+        {
+            return true;
+        }
+
+        VpnState state;
+        try
+        {
+            state = VpnRequirement.Check(connection.VpnProfile, WindowsVpn.ConnectedProfiles());
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("vpn", $"Could not read the VPN state: {ex.GetType().Name}: {ex.Message}; connecting anyway");
+            return true;
+        }
+
+        if (state != VpnState.NotConnected)
+        {
+            return true;
+        }
+
+        var profile = connection.VpnProfile.Trim();
+        var answer = System.Windows.MessageBox.Show(this,
+            Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile),
+            Text.Of(Strings.Shell_VpnDownTitle, profile),
+            MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+
+        if (answer != MessageBoxResult.OK)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+                Text.Of(Strings.Shell_VpnDownTitle, profile),
+                Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile));
+            return false;
+        }
+
+        if (WindowsVpn.Dial(profile))
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                Text.Of(Strings.Shell_VpnDialingTitle, profile), Strings.Shell_VpnDialingMessage);
+        }
+        else
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
+                Strings.Shell_VpnDialFailedTitle, Text.Of(Strings.Shell_VpnDialFailedMessage, profile));
+        }
+
+        return false;
     }
 
     /// <summary>

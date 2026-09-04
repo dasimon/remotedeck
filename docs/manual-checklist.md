@@ -603,6 +603,31 @@ itself is WPF and cannot be; these boxes are its only verification.
       convention tests; the gesture hint reading* Suppr *rather than* Del *is part of that.*
 - [x] Light and dark theme: the menu follows the theme like the rest of the chrome.
 
+## VPN pre-flight
+
+The decision (`VpnRequirement`) has ten automated tests. What no test can reach is whether
+Windows names the dial-up interface after the phonebook entry — the assumption the whole
+feature rests on. **Verify that box first: if it fails, the rest is meaningless.**
+
+- [ ] **The assumption.** With the VPN up, run:
+      `[System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | ? { $_.OperationalStatus -eq 'Up' -and $_.NetworkInterfaceType -in 'Ppp','Tunnel' } | ft Name, Description, NetworkInterfaceType`
+      The profile's name must appear under **Name** or **Description**. If nothing is listed,
+      this approach cannot work and the enumeration has to move to `RasEnumConnections`.
+- [ ] A connection with **no** VPN profile connects exactly as before — no check, no delay.
+- [ ] A connection naming a profile that is **up** connects with no interruption at all.
+- [ ] A connection naming a profile that is **down** asks, before connecting, whether to raise it.
+- [ ] Declining leaves the session unopened and says so in the InfoBar. Nothing is dialled.
+- [ ] Accepting runs `rasdial`, its console appears, and the InfoBar says to connect again once
+      the tunnel is up. The session is deliberately **not** opened automatically.
+- [ ] The profile name is matched **case-insensitively and trimmed**: typing `vpn fdc` for a
+      profile named `VPN FDC` works.
+- [ ] Naming a profile that does not exist at all behaves like one that is down — asks, then
+      `rasdial` reports the unknown entry itself.
+- [ ] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
+      the user-initiated path only, by design.
+- [ ] The field survives a round trip through the editor, and clearing it really clears it.
+- [ ] English and French: the field, its hint and the three messages are translated.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the

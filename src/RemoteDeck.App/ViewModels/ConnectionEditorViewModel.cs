@@ -76,6 +76,10 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private bool _adminSession;
     [ObservableProperty] private bool _useWebAccount;
     [ObservableProperty] private AuthenticationLevelOption? _selectedAuthenticationLevel = AllAuthenticationLevels[0];
+    /// <summary>The Windows VPN profile this connection needs, or blank for none. Stored trimmed,
+    /// and blank is normalised to null by the repository.</summary>
+    [ObservableProperty] private string _vpnProfile = "";
+
     [ObservableProperty] private string _notes = "";
     [ObservableProperty] private string _errors = "";
 
@@ -142,6 +146,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         connection.UseWebAccount = UseWebAccount;
         connection.AuthenticationLevel = SelectedAuthenticationLevel?.Value;
         connection.Notes = Notes ?? "";
+        connection.VpnProfile = VpnProfile;
     }
 
     /// <summary>Builds the form for an existing connection, or a blank one when <paramref name="connection"/> is null.</summary>
@@ -170,6 +175,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
             AdminSession = connection?.AdminSession ?? false,
             UseWebAccount = connection?.UseWebAccount ?? false,
             Notes = connection?.Notes ?? "",
+            VpnProfile = connection?.VpnProfile ?? "",
         };
 
         // A credential deleted since the connection was saved simply falls back to "(none)".
