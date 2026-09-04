@@ -609,10 +609,12 @@ The decision (`VpnRequirement`) has ten automated tests. What no test can reach 
 Windows names the dial-up interface after the phonebook entry — the assumption the whole
 feature rests on. **Verify that box first: if it fails, the rest is meaningless.**
 
-- [ ] **The assumption.** With the VPN up, run:
+- [x] **The assumption.** With the VPN up, run:
       `[System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | ? { $_.OperationalStatus -eq 'Up' -and $_.NetworkInterfaceType -in 'Ppp','Tunnel' } | ft Name, Description, NetworkInterfaceType`
       The profile's name must appear under **Name** or **Description**. If nothing is listed,
       this approach cannot work and the enumeration has to move to `RasEnumConnections`.
+      *Observed 2026-09-04 on the reference home machine: `VPN FDC` appears under both*
+      *Name and Description, `NetworkInterfaceType` = `Ppp`. The approach holds.*
 - [ ] A connection with **no** VPN profile connects exactly as before — no check, no delay.
 - [ ] A connection naming a profile that is **up** connects with no interruption at all.
 - [ ] A connection naming a profile that is **down** asks, before connecting, whether to raise it.
