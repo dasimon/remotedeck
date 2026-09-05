@@ -700,6 +700,35 @@ Entra property there; no undocumented property or token-injection interface is n
 - [ ] To reproduce the original "prompt every time", start from an **empty** broker cache,
       not by changing RemoteDeck.
 
+## Hardening — server authentication, crash log, hook re-arm, log rolling
+
+Five changes from the 2026-09-05 full pass (`docs/plans/2026-09-05-full-pass-review.md`). The
+one that matters most is the first: it changes what a spoofed server gets.
+
+- [x] **The measurement.** Instantiated and asked before anything is set, the control reports
+      `AuthenticationLevel = 0` — no authentication of the server.
+      *Observed 2026-09-05 on the reference client, `MsTscAx.MsTscAx` and `MsRDP.MsRDP.9` via*
+      *IDispatch, unsited. Confirm on the real coclass with the next box.*
+- [ ] After the first connection of a launch, `probe-l0.log` holds one `[R8] AuthenticationLevel
+      as shipped by the control, before RemoteDeck sets it: N` line. Record N here: ___
+- [ ] A connection whose authentication is **Default — prompt if failed**, against a host whose
+      certificate is not trusted (a self-signed one), shows the control's certificate warning
+      before connecting. Before this change it connected in silence.
+- [ ] The same host with **No server auth** connects without the warning; with **Required** it
+      refuses. The user's explicit choice is kept, including 0.
+- [ ] The editor's first option reads *Default — prompt if failed* in English and *Par défaut —
+      demander en cas d'échec* in French.
+- [ ] `dotnet publish` (release flags) produces a `RemoteDeck.exe` of about 159 MB, down from
+      175 MB, and `bin/Release/…/win-x64/` holds a `fr` folder and no other culture.
+- [ ] A crash — when one happens — ends `probe-l0.log` with a `[crash]` line naming the thread,
+      the type, the HResult and the stack. Nothing to provoke on purpose; a box to tick the day it
+      is seen.
+- [ ] If application shortcuts (`Ctrl+K`, `Ctrl+W`, `Ctrl+Tab`) ever stop responding while a
+      session has the keyboard, clicking the RemoteDeck window brings them back, and the log may
+      show `[R6] … hook could not be unhooked … re-armed`.
+- [ ] Once `probe-l0.log` passes 1 MB, the next line rolls it: `probe-l0.log.1` appears and the
+      new `probe-l0.log` starts small. The file can be opened in a viewer while RemoteDeck runs.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the

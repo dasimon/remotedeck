@@ -2,6 +2,44 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### Hardening
+
+Five small changes from a full read of the application, each with the measurement that
+motivated it. The full findings, including what was found to be right, are in
+`docs/plans/2026-09-05-full-pass-review.md`.
+
+- **A connection that says nothing about server authentication now gets a warning, not
+  silence.** Measured 2026-09-05: left to itself, the Remote Desktop control's
+  `AuthenticationLevel` is **0** — "no authentication of the server" — so every connection created
+  with the editor's "Default" would have accepted a spoofed host without a word. RemoteDeck now
+  sets the level on every connection, and its default is 2, "attempt authentication and prompt on
+  failure" — what `mstsc.exe` itself writes into every `.rdp` it saves. An explicit 0 chosen in the
+  editor stays 0. The editor's option now reads *Default — prompt if failed* so it says what it
+  does, and the control's own value is written to the log once per launch (`[R8]`) so the checklist
+  can record it on the real control rather than on a probe.
+- **The executable is 16 MB smaller.** RemoteDeck speaks English and French, and shipped the
+  satellite assemblies of thirteen languages — 18 MB of `*.resources.dll` from its packages, bundled
+  into the single file and mapped at every start. `SatelliteResourceLanguages` now names the two.
+  Measured: 175.2 MB → 159.0 MB, the same build.
+- **A crash now leaves a line in the log.** There was no unhandled-exception handler anywhere:
+  an exception escaping any event handler, or any `async void` after its first `await` — which is
+  every handler that connects a session — ended the process with nothing written. The three
+  sources (UI thread, other threads, faulted tasks nobody awaited) are now logged as `[crash]`,
+  type, HResult, message and stack. Nothing is marked handled: an application that swallows what
+  it did not expect keeps running in a state nobody designed.
+- **Application shortcuts no longer die silently after a stall.** Windows removes a low-level
+  keyboard hook that overruns its 300 ms budget and tells nobody — no message, no error, no API to
+  ask. One GC pause or one slow disk write, and every `Ctrl+K`, `Ctrl+W` and `Ctrl+Tab` was gone
+  for the rest of the session. The hook is now re-armed every time the shell is activated, which
+  turns a permanent failure into one that lasts until the next click; when the unhook reports the
+  handle was already gone, the log says so (`[R6]`).
+- **The probe log is bounded and cheaper to write.** It grew without limit — 586 KB and 1,245
+  lines on the reference client — and each line opened and closed the file, usually on the UI
+  thread. One writer now stays open, flushed per line and shared for reading, and the file rolls
+  to `probe-l0.log.1` past 1 MB, so the disk holds two at most.
+
 ## 0.4.0 — 2026-09-05
 
 ### A connection can wait for its VPN
