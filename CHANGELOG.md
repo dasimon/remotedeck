@@ -2,7 +2,7 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.4.0 — 2026-09-05
 
 ### A connection can wait for its VPN
 
