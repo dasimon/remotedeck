@@ -1,3 +1,6 @@
+using System.Runtime.CompilerServices;
+using System.Windows.Threading;
+
 namespace RemoteDeck.App.Controls;
 
 // Wpf.Ui.Controls.* is qualified on purpose: UseWindowsForms puts System.Windows.Forms in scope
@@ -19,6 +22,15 @@ internal static class InfoBarExtensions
     /// <summary>How far above its place the bar starts. Small on purpose: it is a notice, not a sheet.</summary>
     private const double ArrivalOffset = -8;
 
+    /// <summary>
+    /// How long an informational or success notice stays before retiring on its own. Warnings and
+    /// errors stay until acted on: they ask for something. A notice that only tells does not need
+    /// to be dismissed by hand — and the launch notice used to sit on screen for the whole session.
+    /// </summary>
+    private static readonly TimeSpan NoticeLifetime = TimeSpan.FromSeconds(8);
+
+    private static readonly ConditionalWeakTable<Wpf.Ui.Controls.InfoBar, DispatcherTimer> Retirements = new();
+
     internal static void Show(this Wpf.Ui.Controls.InfoBar bar, Wpf.Ui.Controls.InfoBarSeverity severity, string title, string message)
     {
         ArgumentNullException.ThrowIfNull(bar);
@@ -27,6 +39,7 @@ internal static class InfoBarExtensions
         bar.Severity = severity;
         bar.Title = title;
         bar.Message = message;
+        Retire(bar, severity is Wpf.Ui.Controls.InfoBarSeverity.Informational or Wpf.Ui.Controls.InfoBarSeverity.Success);
 
         if (arriving)
         {
@@ -45,6 +58,7 @@ internal static class InfoBarExtensions
     internal static void Hide(this Wpf.Ui.Controls.InfoBar bar)
     {
         ArgumentNullException.ThrowIfNull(bar);
+        Retire(bar, false);
         if (!bar.IsOpen)
         {
             return;
@@ -58,5 +72,21 @@ internal static class InfoBarExtensions
             // invisible.
             bar.Opacity = 1;
         });
+    }
+
+    /// <summary>Arms, or disarms, the bar's own retirement. A newer message restarts the clock.</summary>
+    private static void Retire(Wpf.Ui.Controls.InfoBar bar, bool later)
+    {
+        var timer = Retirements.GetValue(bar, b =>
+        {
+            var t = new DispatcherTimer(DispatcherPriority.Normal, b.Dispatcher) { Interval = NoticeLifetime };
+            t.Tick += (_, _) => { t.Stop(); b.Hide(); };
+            return t;
+        });
+        timer.Stop();
+        if (later)
+        {
+            timer.Start();
+        }
     }
 }
