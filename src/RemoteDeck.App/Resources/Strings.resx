@@ -155,6 +155,12 @@
   <data name="Shell_VpnDialingMessage" xml:space="preserve">
     <value>Windows is dialling the tunnel. Connect again once it is up.</value>
   </data>
+  <data name="Shell_VpnNoCredential" xml:space="preserve">
+    <value>The VPN profile “{0}” has no saved credential. Connect it once from Windows with “Remember my sign-in info” ticked, then try again — RemoteDeck neither asks for nor stores a VPN password.</value>
+  </data>
+  <data name="Shell_VpnUnknownProfile" xml:space="preserve">
+    <value>No Windows phone book knows a VPN profile named “{0}”.</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>
