@@ -84,14 +84,16 @@
 
                 <!-- U+E700 = GlobalNavButton (Segoe Fluent Icons, Segoe MDL2 Assets on Win10):
                      the hamburger that folds the pane. Checked means "pane shown". -->
-                <ToggleButton x:Name="PaneToggle" Grid.Column="0"
-                              Width="36" Height="32" Padding="0" Margin="0,0,8,0"
-                              IsChecked="True"
-                              Content="&#xE700;"
-                              FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                              FontSize="14"
-                              ToolTip="{x:Static res:Strings.Shell_PaneToggleToolTip}"
-                              Click="OnPaneToggleClick" />
+                <!-- A plain button, not a ToggleButton: checked, WPF-UI paints a toggle in the
+                     accent, and the fold of a side pane was the loudest thing on the screen — the
+                     only accent fill in view, louder than New and than the session. The pane
+                     itself shows its state; the hamburger only ever means "fold or unfold". -->
+                <ui:Button x:Name="PaneToggle" Grid.Column="0"
+                           Width="36" Height="32" Padding="0" Margin="0,0,8,0"
+                           Icon="{ui:SymbolIcon Navigation24}"
+                           ToolTip="{x:Static res:Strings.Shell_PaneToggleToolTip}"
+                           AutomationProperties.Name="{x:Static res:Strings.Shell_PaneToggleToolTip}"
+                           Click="OnPaneToggleClick" />
 
                 <TextBlock x:Name="SessionLabel" Grid.Column="1"
                            VerticalAlignment="Center"
@@ -100,7 +102,7 @@
 
                 <ui:Button x:Name="ReconnectButton" Grid.Column="2" Margin="8,0,0,0"
                            Content="{x:Static res:Strings.Shell_Reconnect}"
-                           Icon="{ui:SymbolIcon ArrowClockwise20}"
+                           Icon="{ui:SymbolIcon ArrowClockwise24}"
                            Visibility="Collapsed"
                            ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
                            Click="OnReconnectClick" />
@@ -112,14 +114,16 @@
                            Click="OnCancelRetryClick" />
 
                 <ui:Button x:Name="DiagnosticsButton" Grid.Column="4" Margin="8,0,0,0"
-                           Icon="{ui:SymbolIcon Copy20}"
+                           Icon="{ui:SymbolIcon Copy24}"
                            IsEnabled="False"
                            ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
+                           AutomationProperties.Name="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                            Click="OnCopyDiagnosticsClick" />
 
                 <ui:Button Grid.Column="5" Margin="8,0,0,0"
                            Icon="{ui:SymbolIcon Key24}"
                            ToolTip="{x:Static res:Strings.Shell_CredentialsToolTip}"
+                           AutomationProperties.Name="{x:Static res:Strings.Shell_CredentialsToolTip}"
                            Click="OnManageCredentials" />
 
                 <ui:Button x:Name="DisconnectButton" Grid.Column="6" Margin="8,0,0,0"
@@ -144,7 +148,7 @@
                 <!-- One child per open session, added by SessionsViewModel; the active one is
                      Visible and the others Hidden. Collapsed when there is no tab at all, so the
                      black rectangle does not sit over the message above. -->
-                <Border x:Name="SessionsBorder" CornerRadius="6" Background="#FF000000" Visibility="Collapsed">
+                <Border x:Name="SessionsBorder" CornerRadius="{StaticResource RdRadius}" Background="{DynamicResource RdSessionGround}" Visibility="Collapsed">
                     <Grid x:Name="SessionsArea" />
                 </Border>
             </Grid>

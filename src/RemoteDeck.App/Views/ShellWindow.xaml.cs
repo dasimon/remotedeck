@@ -319,7 +319,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
-    private void OnPaneToggleClick(object sender, RoutedEventArgs e) => ApplyPaneState(PaneToggle.IsChecked != true);
+    private void OnPaneToggleClick(object sender, RoutedEventArgs e) => ApplyPaneState(!_paneCollapsed);
 
     private void TogglePane() => ApplyPaneState(!_paneCollapsed);
 
@@ -355,7 +355,6 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         _paneCollapsed = collapsed;
-        PaneToggle.IsChecked = !collapsed;
     }
 
     /// <summary>The splitter is the only way the width changes, so it is also where it is persisted.</summary>
