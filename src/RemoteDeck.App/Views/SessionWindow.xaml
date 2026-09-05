@@ -192,7 +192,11 @@
                 </Grid>
             </Border>
 
-            <ui:InfoBar x:Name="StatusBar" Margin="8,0,8,6" IsOpen="False" IsClosable="True" />
+            <!-- The slot is reserved: a detached window always holds a session, and a notice must
+                 not resize the desktop under it (see RdNoticeHeight). -->
+            <Grid Margin="8,0,8,6" MinHeight="{StaticResource RdNoticeHeight}">
+                <ui:InfoBar x:Name="StatusBar" IsOpen="False" IsClosable="True" VerticalAlignment="Top" />
+            </Grid>
         </StackPanel>
 
         <!-- Named HostAreaBorder so the Decorator the shell writes into can be the public HostArea
