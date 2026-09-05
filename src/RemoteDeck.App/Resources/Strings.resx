@@ -594,7 +594,7 @@
     <value>(none)</value>
   </data>
   <data name="Editor_AuthDefault" xml:space="preserve">
-    <value>Default</value>
+    <value>Default — prompt if failed</value>
   </data>
   <data name="Editor_AuthNoServerAuth" xml:space="preserve">
     <value>No server auth</value>
