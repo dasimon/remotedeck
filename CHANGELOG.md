@@ -60,6 +60,18 @@ changes they asked for. The two that are defects rather than taste come first.
   literal.
 - The shell's toolbar icons are all 24 px now, where two were 20 — the *copy diagnostics* glyph
   read as a pair of brackets at that size.
+- **The first screen says what to do.** With no session open, the area a remote desktop will fill
+  showed one grey sentence in the middle of most of the window. It now shows a glyph, a title, the
+  one thing to do, and the two keys that do it — `Ctrl+N` and `Ctrl+K` — drawn as keys, with the
+  palette's own key cap, so the two surfaces speak with one voice.
+- **Every palette command has its own icon.** Five commands shared one glyph, which said nothing
+  five times. Each names its symbol now — a plus for *New connection*, a key for *Manage
+  credentials*, a clock for *Reopen the last session at startup*, and so on — and a name the icon
+  font does not have falls back to the generic glyph rather than failing the palette.
+- **Type is three sizes, named.** Fourteen literal `FontSize` values in the views said the same
+  three numbers fourteen times; they are `RdFontSm`, `RdFontMd` and `RdFont` in the sheet now, a
+  closed set like the radii, the heights and the durations, and a convention test refuses the
+  fifteenth literal and the fourth size alike.
 
 ### Motion
 
