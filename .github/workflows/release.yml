@@ -24,10 +24,40 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # The tag is the single source of truth for the version, deliberately: a <Version> kept in
+      # Directory.Build.props is a second place to bump, and the day the two disagree the binary
+      # lies about itself with nothing failing. Nothing inside RemoteDeck displays its own version,
+      # so a development build reading 1.0.0 costs nothing -- only the shipped executable has to be
+      # honest, and that one is built here.
+      - name: Take the version from the tag
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          if ($tag -notmatch '^v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$') {
+            Write-Host "::error::The tag '$tag' is not vMAJOR.MINOR.PATCH[-prerelease]; refusing to stamp a version from it."
+            exit 1
+          }
+          "VERSION=$($Matches[1])" >> $env:GITHUB_ENV
+          Write-Host "Publishing as $($Matches[1])."
+
       - name: Publish single-file executable (x64, self-contained)
         run: >
           dotnet publish src/RemoteDeck.App -c Release -r win-x64
-          --self-contained true -p:PublishSingleFile=true -p:DebugType=none -o publish
+          --self-contained true -p:PublishSingleFile=true -p:DebugType=none
+          -p:Version=${{ env.VERSION }} -o publish
+
+      # Stamping is worth nothing unheard: -p:Version can be silently ignored by a property the
+      # project sets later, and the release would ship a binary claiming 1.0.0 with a green run.
+      - name: Refuse to ship a binary that does not know its own version
+        shell: pwsh
+        run: |
+          $file = (Get-Item publish/RemoteDeck.exe).VersionInfo
+          $expected = '${{ env.VERSION }}'.Split('-')[0]
+          if ($file.FileVersion -notlike "$expected*") {
+            Write-Host "::error::RemoteDeck.exe reports FileVersion $($file.FileVersion), expected $expected."
+            exit 1
+          }
+          Write-Host "RemoteDeck.exe reports $($file.FileVersion) / $($file.ProductVersion)."
 
       # The release attaches publish/RemoteDeck.exe and nothing else, so a publish that leaves
       # anything beside it ships a binary that cannot start: native libraries are not bundled
