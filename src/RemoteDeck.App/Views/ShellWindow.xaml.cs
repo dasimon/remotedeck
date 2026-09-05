@@ -252,6 +252,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 Text.Of(Strings.Shell_ShortcutsUnavailableMessage, ex.Message, ProbeLog.Path));
         }
 
+        // Windows silently removes a low-level hook that overran its 300 ms budget, and never says
+        // so. Re-arming on every activation bounds the damage to "until the next click".
+        Activated += (_, _) => _shortcuts?.Rearm();
+
         // R5 probe: one reflection pass over the interop assembly, once per launch, to record
         // whether any member at all could hand us the server certificate.
         RdpSessionHost.LogCertificateSurface();

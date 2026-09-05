@@ -78,7 +78,7 @@ internal sealed class ShortcutInterceptor : IDisposable
     private readonly Mechanism _mechanism;
     private readonly WinFormsFilter? _winFormsFilter;
     private readonly HookProc? _hookProc;   // kept alive: the native side holds a raw pointer
-    private readonly nint _hook;
+    private nint _hook;
     private bool _disposed;
 
     public ShortcutInterceptor(Mechanism mechanism)
@@ -429,6 +429,44 @@ internal sealed class ShortcutInterceptor : IDisposable
         }
     }
 
+    /// <summary>
+    /// Installs the hook again, whether or not the previous one is still there.
+    /// </summary>
+    /// <remarks>
+    /// Windows removes a <c>WH_KEYBOARD_LL</c> hook that overruns <c>LowLevelHooksTimeout</c> (300 ms)
+    /// and tells nobody: no message, no error, and no API to ask whether a hook is still in the
+    /// chain. Until this existed, one stall on the UI thread — a GC pause, a slow disk — left every
+    /// application shortcut dead for the rest of the session, silently. The shell calls this each
+    /// time it is activated, which turns that permanent failure into one that lasts until the next
+    /// click. Cheap: an unhook and a hook. Nothing to do for the two thread-scoped mechanisms,
+    /// which Windows never removes.
+    /// </remarks>
+    public void Rearm()
+    {
+        if (_disposed || _hookProc is null || _mechanism is not (Mechanism.KeyboardHook or Mechanism.LowLevelKeyboardHook))
+        {
+            return;
+        }
+
+        // Unhooking a handle Windows has already removed fails: that failure is the one piece of
+        // evidence there is that the hook had gone, so it is logged rather than ignored.
+        bool unhooked = _hook != 0 && UnhookWindowsHookEx(_hook);
+        int unhookError = unhooked ? 0 : Marshal.GetLastWin32Error();
+
+        _hook = _mechanism == Mechanism.KeyboardHook
+            ? SetWindowsHookEx(WhKeyboard, _hookProc, 0, GetCurrentThreadId())
+            : SetWindowsHookEx(WhKeyboardLl, _hookProc, GetModuleHandle(null), 0);
+
+        if (_hook == 0)
+        {
+            ProbeLog.Write("R6", $"Re-arming the {_mechanism} hook failed: {Marshal.GetLastWin32Error()}");
+        }
+        else if (!unhooked)
+        {
+            ProbeLog.Write("R6", $"{_mechanism} hook could not be unhooked (error {unhookError}) — Windows had most likely removed it; re-armed");
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -466,7 +504,7 @@ internal sealed class ShortcutInterceptor : IDisposable
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint hWnd, out uint processId);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern nint GetModuleHandle(string? lpModuleName);
     [DllImport("user32.dll", SetLastError = true)] private static extern nint SetWindowsHookEx(int idHook, HookProc lpfn, nint hMod, uint dwThreadId);
-    [DllImport("user32.dll")] private static extern bool UnhookWindowsHookEx(nint hhk);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool UnhookWindowsHookEx(nint hhk);
     [DllImport("user32.dll")] private static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
     [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
 }
