@@ -615,16 +615,37 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
       this approach cannot work and the enumeration has to move to `RasEnumConnections`.
       *Observed 2026-09-04 on the reference home machine: `VPN FDC` appears under both*
       *Name and Description, `NetworkInterfaceType` = `Ppp`. The approach holds.*
+- [x] **The RAS reads.** Measured 2026-09-05 against the real `VPN FDC`, read-only, nothing
+      dialled — these are what the dial code is built on, and none of them was assumed:
+      `RasGetCredentials` with mask `0x7` returns the user name and the sixteen-asterisk password
+      handle; with `0xF` it returns **success and nothing at all**, because `RASCM_DefaultCreds` on
+      a per-user entry poisons the answer. The returned `dwMask` merely echoes the request, so only
+      the string says whether a password exists. RAS's own default phone book answers **621**, which
+      is why the explicit `.pbk` paths are tried first. `RASDIALPARAMSW` accepts `dwSize` **2120 and
+      2112** and refuses 2100, 2116, 2124 and 2128 — so the newest layout is *not* the right one,
+      and the size is negotiated rather than guessed.
 - [ ] A connection with **no** VPN profile connects exactly as before — no check, no delay.
 - [ ] A connection naming a profile that is **up** connects with no interruption at all.
 - [ ] A connection naming a profile that is **down** asks, before connecting, whether to raise it.
 - [ ] Declining leaves the session unopened and says so in the InfoBar. Nothing is dialled.
-- [ ] Accepting runs `rasdial`, its console appears, and the InfoBar says to connect again once
-      the tunnel is up. The session is deliberately **not** opened automatically.
+- [x] **Accepting raises the tunnel with no window at all**, and the session opens by itself once
+      it is up. One click. No console flashes, nothing has to be dismissed.
+      *Observed 2026-09-05 on the reference client, tunnel down beforehand: `VPN FDC` came up*
+      *silently and the session opened by itself. The saved-credential handle is accepted by the*
+      *server — the RAS 628 was the missing credential, as diagnosed.*
+- [ ] The dial uses the credential **saved in the profile**. RemoteDeck asks for nothing and stores
+      nothing: check `probe-l0.log` for `RASDIALPARAMS dwSize … accepted` and a `RasDial … returned
+      0`, and that no password appears anywhere in it.
+- [ ] A profile whose credential is **not** saved (untick "Remember my sign-in info" in Windows,
+      or use a second profile) is **not dialled**: the InfoBar says there is no saved credential and
+      sends you to Windows. Nothing is asked for.
+- [ ] A dial that Windows refuses shows **Windows's own words** — the RAS message, in the interface
+      language, not a paraphrase of ours.
+- [ ] The tunnel stays up after RemoteDeck is closed. `RasHangUp` is deliberately never called.
 - [ ] The profile name is matched **case-insensitively and trimmed**: typing `vpn fdc` for a
       profile named `VPN FDC` works.
-- [ ] Naming a profile that does not exist at all behaves like one that is down — asks, then
-      `rasdial` reports the unknown entry itself.
+- [ ] Naming a profile that does not exist at all behaves like one that is down — asks, then says
+      no Windows phone book knows it. Nothing is dialled.
 - [ ] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
 - [ ] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
@@ -632,7 +653,11 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
 - [ ] A profile the list does **not** offer can still be typed by hand and works: the list is a
       convenience, never a constraint.
 - [ ] The field survives a round trip through the editor, and clearing it really clears it.
-- [ ] English and French: the field, its hint and the three messages are translated.
+- [ ] English and French: the field, its hint and the five messages are translated.
+
+**Out of scope, deliberately: EAP.** `RasDial`'s documentation asks for `RasGetEapUserIdentity`
+first, and the reference profile is PAP/CHAP/MSCHAPv2. An EAP profile will fail with a clear RAS
+code rather than silently — writing an untestable branch would be worse than saying so here.
 
 ## Web account (Entra) sign-in without a prompt
 
