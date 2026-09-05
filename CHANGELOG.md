@@ -34,6 +34,34 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 - Schema V3 adds the column nullable: every existing connection means "no VPN required", which is
   true of all of them.
 
+### A web-account connection can name its account
+
+- **A connection that signs in with a web account can carry the Entra account (UPN) it signs in
+  with.** The field appears in the editor only while *Use web account* is ticked, is trimmed on
+  save, and is handed to the control as an account hint — no domain, no password. This is what
+  `mstsc.exe` does: the `.rdp` it exports has no `username` line, but the client remembers the UPN
+  per server under `HKCU\Software\Microsoft\Terminal Server Client\Servers\<host>\UsernameHint` and
+  hands it over the same way.
+- **Importing brings the identity along.** A `.rdp` file with `enablerdsaadauth:i:1` and no
+  `username` line picks up the UPN Remote Desktop Connection remembers for that host, and the
+  preview no longer warns that the identity is being left behind. A file *without*
+  `enablerdsaadauth` keeps its user name out of the connection, exactly as before.
+- A credential attached to a web-account connection is **ignored on connect**: only the UPN goes.
+- Schema V4 adds the column nullable, so every existing connection reads back as having no hint —
+  which is what they had.
+- **This is not what makes the sign-in silent, and it is worth saying so plainly.** A web-account
+  connection was asking for the full Microsoft sign-in on every connect while `mstsc.exe` on the
+  same client reconnected without a word. The cause turned out to be the Windows WAM broker's
+  account cache, not RemoteDeck: once the broker holds an account, `mstscax` acquires the token
+  silently for *any* host — proven by running the shipped v0.3.0, whose authentication code is
+  byte-identical to this one, on a fresh database with no UPN at all. It connected without a
+  prompt. The token path is not private to `mstsc.exe` either: `mstscax.dll` carries the WAM calls
+  itself and runs them inside RemoteDeck's own process.
+- So the UPN earns its place where the broker cache is **cold** — a fresh machine, a cleared cache —
+  or where several accounts are cached and one has to be named. With a warm cache it changes
+  nothing, and the way to reproduce the original "prompt every time" is to empty the broker cache,
+  not to change RemoteDeck.
+
 ### xUnit v3
 
 - **The test project moved from xUnit 2.9.3 to xUnit v3**, which NuGet marks the older package
