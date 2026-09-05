@@ -210,6 +210,11 @@ reason at once instead of the first.
   WPF-UI 4.3.0 defect: every symbol above the base plane is blank. Fixed here with `Desktop24`
   scaled to the hero size, and the reason written beside it in the markup.
 
+*Fixed the same day, on the `visual` branch, and seen again by driving the 0.4.1-rc.5: E1 (codes in
+Core, words in the App, both languages), E2 (WPF-UI's own list and grid), E3 (the notice row keeps
+one notice's height while a session is open), E4 (the glyph). Of the four below, E5, E6 and E8 are
+fixed there too; E7 is watched, not fixed.*
+
 ### What could be better — taste, in order
 - **E5 — The *ready* InfoBar never leaves.** *Contrôle RDP v12 prêt — choisissez une connexion…*
   stays until closed, on every launch, and now says what the empty state already says beneath it.
