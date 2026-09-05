@@ -66,7 +66,10 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <!-- The notice row. Its MinHeight is set by UpdateSessionsArea: a session's worth
+                     of RdNoticeHeight while one is open, so an InfoBar arriving or leaving never
+                     resizes the remote desktop underneath; nothing while the area is empty. -->
+                <RowDefinition x:Name="NoticeRow" Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 

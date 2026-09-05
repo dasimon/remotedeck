@@ -2094,6 +2094,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         bool any = _sessions.Tabs.Any(t => !t.IsDetached);
         SessionsBorder.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         EmptySessions.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
+        // Measured 2026-09-06: with the row free to collapse, the session area moved by the bar's
+        // height every time a notice came or went, and the control renegotiated its resolution
+        // each time. Reserve the slot while there is a desktop to protect; give it back otherwise.
+        NoticeRow.MinHeight = any ? (double)FindResource("RdNoticeHeight") + StatusBar.Margin.Bottom : 0;
     }
 
     /// <summary>
