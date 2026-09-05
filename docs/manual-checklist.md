@@ -787,6 +787,29 @@ editor). Held by tests: no literal colour in any view, every icon-only button na
 - [ ] The palette's key caps, the pane's row subtitles, the editor's hints and the group headings
       look exactly as they did: the same three sizes, now read from the sheet.
 
+## Driven, then fixed — validation, lists, notices
+
+From driving the 0.4.1-rc.4 on 2026-09-06 (`docs/plans/2026-09-05-full-pass-review.md`,
+*Ergonomics*). Held by tests: every rule returns a code and each code is covered
+(`ConnectionRulesTests`, `CredentialRulesTests`). To be looked at:
+
+- [ ] `Ctrl+N`, Enter on the empty form: the InfoBar lists *Le nom est obligatoire.* and
+      *L'hôte est obligatoire.* in French — and in English under `REMOTEDECK_UI_CULTURE=en-US` —
+      and the **Name and Host fields have a red edge**. Fill the name: its edge clears on the next
+      Enter, the host's stays.
+- [ ] Port `0`: the message quotes the range 1–65535 and the port field is marked. *Fixed* mode
+      with a 100×100 size: both size fields marked, both ranges quoted.
+- [ ] *Manage credentials*: the list and its headers are dark in the dark theme and light in the
+      light theme; a row still selects and double-click still edits. Same for *Import connections*,
+      before and after choosing a source.
+- [ ] With a session open and *Dynamic* resolution, a notice arriving (arm a delete with `Suppr`,
+      let it expire) does **not** resize the remote desktop and writes no `[display]` line to the
+      log. With no session, the empty state may move: the slot is given back.
+- [ ] A detached session window: same test, same result.
+- [ ] The launch notice *Contrôle RDP v12 prêt* fades out on its own after about eight seconds.
+      A warning (an armed delete) or an error stays until acted on.
+- [ ] Search for a name that does not exist: the message ends with *Ctrl+N pour en créer une.*
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
