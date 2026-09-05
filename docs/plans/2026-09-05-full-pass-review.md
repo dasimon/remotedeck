@@ -108,12 +108,19 @@ database opens once at startup and migrations are cheap.
 
 ## Visual polish
 
-### V1 — There is no motion at all
-Zero `Storyboard`, `DoubleAnimation` or transition in 2,095 lines of XAML. The palette — Acrylic,
-round corners — pops into existence; the InfoBar appears; the active tab snaps. A 120–160 ms
-opacity-and-4-px-translate on palette open and close, on InfoBar entrance, and on the tab indicator
-is the single change that would most alter how the application *feels*, and it costs nothing at
-runtime. Medium.
+### V1 — Almost no motion, and what there is has no token
+Corrected after the first version of this review claimed "zero Storyboard": there are three, and
+they are good — the row hover in both lists and on the session tabs fades over 150 ms, declarative,
+with the reason written beside each (selection stays instant so a keyboard user never waits to see
+where they are). All three wrote the number as a literal, `0:0:0.15`, in a sheet that keeps closed
+sets for every other metric — and a grep cut short by `head` is how the first version missed them.
+
+Everything else appears and vanishes in one frame: the palette — Acrylic, round corners — pops into
+existence and pops out; the InfoBar appears; the active tab snaps; the full-screen bar toggles. A
+150 ms opacity-and-6-px arrival on the palette and the InfoBar, an 80 ms departure, and a tab
+indicator that slides are the changes that would most alter how the application *feels*, and they
+cost nothing at runtime. The durations belong in the sheet, as three tokens, and Windows'
+"Animation effects" setting must turn all of them to zero. Medium.
 
 ### V2 — Type is not a token
 `Theme.xaml` keeps closed sets for radii and heights and says a value outside them is a defect;
