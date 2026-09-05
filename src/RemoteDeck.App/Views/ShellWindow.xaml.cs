@@ -678,16 +678,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // with it — French says Maj, not Shift, exactly as the footer already says Échap and Entrée.
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
             Strings.Palette_NewConnection, Strings.Palette_NewConnectionSubtitle, CommandPriority,
-            Shortcut: Strings.Palette_ShortcutNewConnection, Group: Strings.Palette_GroupCommands));
+            Shortcut: Strings.Palette_ShortcutNewConnection, Group: Strings.Palette_GroupCommands, Icon: "Add24"));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
             Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority,
-            Group: Strings.Palette_GroupCommands));
+            Group: Strings.Palette_GroupCommands, Icon: "ArrowImport24"));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:credentials",
             Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority,
-            Group: Strings.Palette_GroupCommands));
+            Group: Strings.Palette_GroupCommands, Icon: "Key24"));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             Strings.Palette_TogglePane, Strings.Palette_TogglePaneSubtitle, CommandPriority,
-            Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands));
+            Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands, Icon: "PanelLeft24"));
         // The one place the resume is switched on and off. Its subtitle carries the current state
         // rather than a rephrasing of the title: a toggle whose value cannot be read before pressing
         // Enter is a coin flip. Offered unconditionally — it is a setting, not an act on a session.
@@ -695,7 +695,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Strings.Palette_ToggleRestore,
             Text.Of(Strings.Palette_ToggleRestoreSubtitle,
                 _settings.RestoreLastSession ? Strings.Palette_On : Strings.Palette_Off),
-            CommandPriority, Group: Strings.Palette_GroupCommands));
+            CommandPriority, Group: Strings.Palette_GroupCommands, Icon: "History24"));
         // The session this palette is about: the one the window it was opened from is showing, or
         // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
         // only thing that can name the session in front of the user here, and offering these two
@@ -709,10 +709,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // this row.
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:close",
                 Strings.Palette_CloseSession, Strings.Palette_CloseSessionSubtitle, CommandPriority,
-                Shortcut: Strings.Palette_ShortcutCloseSession, Group: Strings.Palette_GroupCommands));
+                Shortcut: Strings.Palette_ShortcutCloseSession, Group: Strings.Palette_GroupCommands, Icon: "Dismiss24"));
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reconnect",
                 Strings.Palette_ReconnectTab, Strings.Palette_ReconnectTabSubtitle, CommandPriority,
-                Group: Strings.Palette_GroupCommands));
+                Group: Strings.Palette_GroupCommands, Icon: "ArrowClockwise24"));
         }
 
         // Exactly one of the two, and only when it would do something: from a detached window the
@@ -727,14 +727,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:reattach",
                 Strings.Palette_ReattachSession,
                 Text.Of(Strings.Palette_ReattachSessionSubtitle, from.Tab.Title), CommandPriority,
-                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
+                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands, Icon: "ArrowMinimize24"));
         }
         else if (_sessions.Active is { IsDetached: false } active)
         {
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:detach",
                 Strings.Palette_DetachSession,
                 Text.Of(Strings.Palette_DetachSessionSubtitle, active.Title), CommandPriority,
-                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands));
+                Shortcut: Strings.Palette_ShortcutDetach, Group: Strings.Palette_GroupCommands, Icon: "WindowArrowUp24"));
         }
 
         // Saving only means something with something to save. Offered from a detached window too,
@@ -746,7 +746,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:workspace-save",
                 Strings.Palette_SaveLayout, Strings.Palette_SaveLayoutSubtitle, CommandPriority,
-                Group: Strings.Palette_GroupWorkspaces));
+                Group: Strings.Palette_GroupWorkspaces, Icon: "Save24"));
         }
 
         foreach (var workspace in _workspaces?.GetAll() ?? [])

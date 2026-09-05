@@ -72,6 +72,34 @@
     <sys:Double x:Key="RdControlHeight">28</sys:Double>
     <sys:Double x:Key="RdPaletteRowHeight">42</sys:Double>
 
+    <!-- Type: three sizes, a closed set like the rest. Sm for captions, pills and key caps, Md
+         for hints and secondary lines, the default for body text and the icons that sit beside
+         it. Fourteen literal FontSize values lived in the views before these existed: the same
+         three numbers, written fourteen times. The hero glyph is the one size that is not type:
+         the empty state's icon, and nothing else, may be that large. -->
+    <sys:Double x:Key="RdFontSm">11</sys:Double>
+    <sys:Double x:Key="RdFontMd">12</sys:Double>
+    <sys:Double x:Key="RdFont">14</sys:Double>
+    <sys:Double x:Key="RdGlyphHero">40</sys:Double>
+
+    <!-- A keyboard shortcut, drawn as the key it is: a raised cap whose thicker bottom edge is the
+         whole illusion, monospaced so "Ctrl+W" and "Ctrl+N" stack to the same width. Born in the
+         palette, named here so the empty session area can say Ctrl+N and Ctrl+K in the same
+         voice; a second drawing of the same key would drift from the first. -->
+    <Style x:Key="RdKeyCap" TargetType="Border">
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Padding" Value="6,1,6,0" />
+        <Setter Property="CornerRadius" Value="{StaticResource RdRadiusSm}" />
+        <Setter Property="Background" Value="{DynamicResource RdSurface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource RdBorderStrong}" />
+        <Setter Property="BorderThickness" Value="1,1,1,2" />
+    </Style>
+    <Style x:Key="RdKeyCapText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New" />
+        <Setter Property="FontSize" Value="{StaticResource RdFontSm}" />
+        <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+    </Style>
+
     <!-- Motion: three durations, a closed set like the radii and the heights. Fast for anything
          leaving, default for anything arriving, slow is the ceiling — a surface moving as a
          whole, and nothing may take longer: past that, the user is waiting for the interface.
@@ -100,7 +128,7 @@
              the dot fills with it, the pill tints and outlines with it, the word is written
              in it. One trigger per state is therefore the whole colour story. -->
         <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
-        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontSize" Value="{StaticResource RdFontSm}" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Template">

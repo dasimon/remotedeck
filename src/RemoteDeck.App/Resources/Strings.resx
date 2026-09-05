@@ -233,6 +233,18 @@
   <data name="Shell_EmptySessions" xml:space="preserve">
     <value>Select a connection and press Enter</value>
   </data>
+  <data name="Shell_EmptySessionsTitle" xml:space="preserve">
+    <value>No session open</value>
+  </data>
+  <data name="Shell_EmptyNewHint" xml:space="preserve">
+    <value>New connection</value>
+  </data>
+  <data name="Shell_EmptyPaletteHint" xml:space="preserve">
+    <value>Command palette</value>
+  </data>
+  <data name="Shell_ShortcutPalette" xml:space="preserve">
+    <value>Ctrl+K</value>
+  </data>
   <data name="Shell_SessionLabel" xml:space="preserve">
     <value>{0} — {1} · {2}</value>
   </data>

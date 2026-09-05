@@ -233,6 +233,18 @@
   <data name="Shell_EmptySessions" xml:space="preserve">
     <value>Sélectionnez une connexion et appuyez sur Entrée</value>
   </data>
+  <data name="Shell_EmptySessionsTitle" xml:space="preserve">
+    <value>Aucune session ouverte</value>
+  </data>
+  <data name="Shell_EmptyNewHint" xml:space="preserve">
+    <value>Nouvelle connexion</value>
+  </data>
+  <data name="Shell_EmptyPaletteHint" xml:space="preserve">
+    <value>Palette de commandes</value>
+  </data>
+  <data name="Shell_ShortcutPalette" xml:space="preserve">
+    <value>Ctrl+K</value>
+  </data>
   <data name="Shell_SessionLabel" xml:space="preserve">
     <value>{0} — {1} · {2}</value>
   </data>

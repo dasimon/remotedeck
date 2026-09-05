@@ -82,7 +82,7 @@
                 <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,3" PlaceholderText="{x:Static res:Strings.Editor_WebAccountUpnPlaceholder}"
                             Text="{Binding WebAccountUpn, UpdateSourceTrigger=PropertyChanged}"
                             Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
                            Text="{x:Static res:Strings.Editor_WebAccountUpnHint}"
                            Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
@@ -132,12 +132,12 @@
                       IsEditable="True"
                       ItemsSource="{Binding AvailableVpnProfiles}"
                       Text="{Binding VpnProfile, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
                        Text="{x:Static res:Strings.Editor_VpnProfileHint}" />
             <ui:TextBox Margin="0,6,0,0" Height="72" AcceptsReturn="True" TextWrapping="Wrap"
                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
                         PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Margin="0,4,0,0" Opacity="0.7" FontSize="12" Text="{x:Static res:Strings.Common_RequiredHint}" />
+            <TextBlock Margin="0,4,0,0" Opacity="0.7" FontSize="{StaticResource RdFontMd}" Text="{x:Static res:Strings.Common_RequiredHint}" />
         </StackPanel>
         </ScrollViewer>
 

@@ -139,11 +139,35 @@
             <Grid Grid.Row="3" Margin="0,0,12,12">
                 <!-- Sibling of the session area rather than a child of it: the backdrop behind a
                      remote desktop is black, which no theme text colour reads well against. -->
-                <TextBlock x:Name="EmptySessions"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           TextAlignment="Center" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="{x:Static res:Strings.Shell_EmptySessions}" />
+                <!-- The first thing a new user sees is this, over most of the window. A glyph, a
+                     title, the one thing to do, and the two keys that do it, drawn as keys with
+                     the palette's own cap, so the two surfaces speak with one voice. -->
+                <StackPanel x:Name="EmptySessions"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsHitTestVisible="False">
+                    <ui:SymbolIcon Symbol="Desktop48"
+                                   FontSize="{StaticResource RdGlyphHero}"
+                                   Foreground="{DynamicResource RdTextMuted}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,12" />
+                    <TextBlock Text="{x:Static res:Strings.Shell_EmptySessionsTitle}"
+                               FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource RdText}" />
+                    <TextBlock Text="{x:Static res:Strings.Shell_EmptySessions}"
+                               HorizontalAlignment="Center" Margin="0,4,0,16"
+                               Foreground="{DynamicResource RdTextMuted}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Border Style="{StaticResource RdKeyCap}">
+                            <TextBlock Style="{StaticResource RdKeyCapText}" Text="{x:Static res:Strings.Palette_ShortcutNewConnection}" />
+                        </Border>
+                        <TextBlock Text="{x:Static res:Strings.Shell_EmptyNewHint}" Margin="8,0,20,0"
+                                   VerticalAlignment="Center" Foreground="{DynamicResource RdTextMuted}" />
+                        <Border Style="{StaticResource RdKeyCap}">
+                            <TextBlock Style="{StaticResource RdKeyCapText}" Text="{x:Static res:Strings.Shell_ShortcutPalette}" />
+                        </Border>
+                        <TextBlock Text="{x:Static res:Strings.Shell_EmptyPaletteHint}" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" Foreground="{DynamicResource RdTextMuted}" />
+                    </StackPanel>
+                </StackPanel>
 
                 <!-- One child per open session, added by SessionsViewModel; the active one is
                      Visible and the others Hidden. Collapsed when there is no tab at all, so the
