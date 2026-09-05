@@ -102,7 +102,8 @@
                        Margin="6,0,0,0"
                        Icon="{ui:SymbolIcon ArrowImport24}"
                        Command="{Binding ImportCommand}"
-                       ToolTip="{x:Static res:Strings.Pane_ImportToolTip}" />
+                       ToolTip="{x:Static res:Strings.Pane_ImportToolTip}"
+                       AutomationProperties.Name="{x:Static res:Strings.Pane_ImportToolTip}" />
         </Grid>
 
         <!-- The workspaces, above the connections and below the two buttons.

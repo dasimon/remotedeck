@@ -1,7 +1,8 @@
 <!--
     RemoteDeck design tokens — one sheet, read by every view.
 
-    Colours are never literal here. Each brush derives from a WPF-UI theme colour through a
+    Colours are never literal here — one named exception, RdSessionGround, says why it is one —
+    and never literal in a view at all (ThemeTests). Each brush derives from a WPF-UI theme colour through a
     DynamicResource on its Color property: the accent stays the user's Windows accent, and a
     light/dark switch reaches the whole application without a restart. A StaticResource would
     freeze the value at load time and break both. Merged into App.xaml AFTER the WPF-UI
@@ -49,6 +50,13 @@
     <SolidColorBrush x:Key="RdOk" Color="{DynamicResource SystemFillColorSuccess}" />
     <SolidColorBrush x:Key="RdWarn" Color="{DynamicResource SystemFillColorCaution}" />
     <SolidColorBrush x:Key="RdBad" Color="{DynamicResource SystemFillColorCritical}" />
+
+    <!-- The ground behind a remote desktop: the one colour here that is not the theme's, because it
+         is not ours. It is what a remote machine shows while it has nothing to show — black in
+         either theme, as the control paints it — and a view that framed it in the window's own
+         surface would draw a hole where the desktop is about to appear. Named so that the rule
+         "colours are never literal in a view" holds without exception. -->
+    <SolidColorBrush x:Key="RdSessionGround" Color="#FF000000" />
 
     <!-- Radii: small for inline chips, default for rows and tabs, large for panels. -->
     <CornerRadius x:Key="RdRadiusSm">4</CornerRadius>
@@ -98,7 +106,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type controls:StatusTag}">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- The word is the accessible name: colour is the second channel, never the
+                         only one, and a screen reader gets the same word a sighted user reads. -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                AutomationProperties.Name="{TemplateBinding Text}">
                         <Ellipse Width="8" Height="8" VerticalAlignment="Center"
                                  Fill="{TemplateBinding Foreground}" />
                         <!-- Three layers rather than one border: the tint and the stroke want
