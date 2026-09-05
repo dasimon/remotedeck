@@ -776,6 +776,16 @@ editor). Held by tests: no literal colour in any view, every icon-only button na
 - [ ] With Narrator on, tabbing to an icon-only button announces its tooltip text, and a status
       pill announces its word (Connected / Reconnecting / Offline).
 - [ ] The ground behind a connecting session is black in both themes, as before.
+- [ ] With no session open, the session area shows a large desktop glyph, *No session open* /
+      *Aucune session ouverte*, the *select and press Enter* line, and two key caps — `Ctrl+N`
+      and `Ctrl+K` — drawn exactly like the palette's own, in both themes and both languages.
+      Opening a session hides all of it; closing the last one brings it back.
+- [ ] `Ctrl+K`: each command row has its own icon — plus, import arrow, key, side panel, clock —
+      and *Close session*, *Reconnect*, *Detach* / *Reattach*, *Disconnect* and *Save workspace*
+      each theirs when a session makes them appear. Connections keep the desktop glyph, open tabs
+      the tab glyph.
+- [ ] The palette's key caps, the pane's row subtitles, the editor's hints and the group headings
+      look exactly as they did: the same three sizes, now read from the sheet.
 
 ## Build prerequisites (any lot)
 
