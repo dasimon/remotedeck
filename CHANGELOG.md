@@ -35,6 +35,24 @@ motivated it. The full findings, including what was found to be right, are in
   for the rest of the session. The hook is now re-armed every time the shell is activated, which
   turns a permanent failure into one that lasts until the next click; when the unhook reports the
   handle was already gone, the log says so (`[R6]`).
+### Motion
+
+- **The palette and the InfoBar arrive and leave; they no longer pop.** `Ctrl+K` fades in and
+  settles up by six pixels over 150 ms, easing out; Escape, Enter or a click elsewhere fade it out
+  over 80 ms, easing in — from every exit, so it never vanishes in one frame. The InfoBar slides in
+  from just above with the same arrival and fades on hide; a message replacing one already on
+  screen swaps its text in place, so a reconnect's status updates never flicker. Nothing over the
+  remote desktop moves, deliberately: a `WindowsFormsHost` sits there, and a desktop that
+  "slides" would be a lie about latency.
+- **Three durations, and no others.** `RdMotionFast` (80 ms, leaving), `RdMotion` (150 ms,
+  arriving) and `RdMotionSlow` (220 ms, the ceiling) join the theme sheet as a closed set, like the
+  radii and the heights. The three row-hover fades that already existed — connection list, palette
+  rows, session tabs — wrote `0:0:0.15` as a literal; they now name the token. A convention test
+  reads the sheet and every view: a literal duration anywhere, a token above the ceiling, or a
+  fourth token fails the build's tests, and each guard was proved by breaking it.
+- **Windows' "Animation effects" setting is honoured.** Off, every duration is zero: the end state
+  is applied at once and nothing waits. One class, `Controls.Motion`, owns the two gestures and the
+  switch, so no view has to know.
 - **The probe log is bounded and cheaper to write.** It grew without limit — 586 KB and 1,245
   lines on the reference client — and each line opened and closed the file, usually on the UI
   thread. One writer now stays open, flushed per line and shared for reading, and the file rolls

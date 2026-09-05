@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using RemoteDeck.App.Controls;
 using RemoteDeck.App.ViewModels;
 using RemoteDeck.Core.Search;
 using Wpf.Ui.Appearance;
@@ -49,6 +50,10 @@ public partial class CommandPaletteWindow : Wpf.Ui.Controls.FluentWindow
         _viewModel = new CommandPaletteViewModel(items);
         DataContext = _viewModel;
 
+        // Invisible until OnLoaded brings it in: the first frame would otherwise draw the content
+        // whole and then restart it from transparent — a flash, not an arrival.
+        Root.Opacity = 0;
+
         Loaded += OnLoaded;
         Activated += OnActivated;
     }
@@ -59,6 +64,12 @@ public partial class CommandPaletteWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        // The content arrives — fades in and settles up by a few pixels — while the window's own
+        // acrylic is simply there: Window.Opacity has no effect without AllowsTransparency, and
+        // AllowsTransparency and a DWM backdrop do not coexist. Animating the root is what WinUI
+        // does for its own flyouts, and it reads the same.
+        Motion.Arrive(Root, ArrivalOffset, Motion.Normal);
+
         // Activate before focusing: the palette is useless without the keyboard, and asking for the
         // foreground explicitly is also what lets OnDeactivated tell "never got focus" from "lost it".
         Activate();
@@ -137,6 +148,7 @@ public partial class CommandPaletteWindow : Wpf.Ui.Controls.FluentWindow
         if (System.Windows.Controls.ItemsControl.ItemsControlFromItemContainer(container) != List) return;
         if (container.Content is not PaletteMatch match || !_viewModel.Results.Contains(match)) return;
         if (!container.IsMouseOver) return;
+        if (_closing) return;
 
         ChosenId = match.Item.Id;
         CloseOnce();
@@ -147,6 +159,9 @@ public partial class CommandPaletteWindow : Wpf.Ui.Controls.FluentWindow
     /// deliberately does not close the palette — the user is mid-query.</summary>
     private void Choose()
     {
+        // The palette is on its way out for the 80 ms of its departure; a second Enter in that
+        // window must not swap the choice already made.
+        if (_closing) return;
         if (_viewModel.SelectedId is not { } id) return;
 
         ChosenId = id;
@@ -160,6 +175,13 @@ public partial class CommandPaletteWindow : Wpf.Ui.Controls.FluentWindow
         if (_closing) return;
 
         _closing = true;
-        Close();
+        // The choice is already in ChosenId; the shell reads it after ShowDialog returns, which is
+        // after Close, which is after the departure. Dismissal by a click elsewhere takes the same
+        // path, so the palette never vanishes in one frame from any exit.
+        Motion.Leave(Root, Motion.Fast, Close);
     }
+
+    /// <summary>How far below its place the content starts. Six pixels: enough to read as a
+    /// movement, not enough to read as a slide.</summary>
+    private const double ArrivalOffset = 6;
 }

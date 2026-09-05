@@ -1,35 +1,62 @@
 namespace RemoteDeck.App.Controls;
 
-/// <summary>
-/// The one way RemoteDeck reports status: a Fluent <c>InfoBar</c>, never a <c>MessageBox</c>.
-///
-/// Every window used to carry its own private <c>ShowStatus</c> helper with exactly the same four
-/// assignments; this replaces them so the order (severity and text before <c>IsOpen</c>, so the bar
-/// never flashes its previous message) lives in a single place.
-/// </summary>
 // Wpf.Ui.Controls.* is qualified on purpose: UseWindowsForms puts System.Windows.Forms in scope
 // through implicit usings, and a bare `using Wpf.Ui.Controls;` would make Button, TextBox and
 // friends ambiguous across the app.
+
+/// <summary>
+/// The one way an InfoBar is shown and hidden in this application, and therefore the one place
+/// its motion lives: it slides in from just above and fades, and fades out.
+/// </summary>
+/// <remarks>
+/// Only the bar's arrival is animated. A message replacing one already on screen swaps its text in
+/// place — animating that would make the bar flicker on every status update during a reconnect —
+/// and the bar's own close button, when the window makes it closable, closes it at once: the
+/// user's click is the gesture there.
+/// </remarks>
 internal static class InfoBarExtensions
 {
-    /// <summary>Fills the bar in and opens it. Severity and text are set first, so a bar that is
-    /// already open never shows the new severity next to the old message.</summary>
+    /// <summary>How far above its place the bar starts. Small on purpose: it is a notice, not a sheet.</summary>
+    private const double ArrivalOffset = -8;
+
     internal static void Show(this Wpf.Ui.Controls.InfoBar bar, Wpf.Ui.Controls.InfoBarSeverity severity, string title, string message)
     {
         ArgumentNullException.ThrowIfNull(bar);
+        var arriving = !bar.IsOpen;
 
         bar.Severity = severity;
         bar.Title = title;
         bar.Message = message;
-        bar.IsOpen = true;
+
+        if (arriving)
+        {
+            bar.Opacity = 0;
+            bar.IsOpen = true;
+            Motion.Arrive(bar, ArrivalOffset, Motion.Normal);
+        }
+        else
+        {
+            // Already on screen, possibly mid-departure from a Hide a moment ago: whatever gesture
+            // was running, the bar is wanted now, whole.
+            Motion.Settle(bar);
+        }
     }
 
-    /// <summary>Closes the bar. The text is left in place: it is invisible while closed, and
-    /// clearing it would make the bar collapse through an empty frame on the next open.</summary>
     internal static void Hide(this Wpf.Ui.Controls.InfoBar bar)
     {
         ArgumentNullException.ThrowIfNull(bar);
+        if (!bar.IsOpen)
+        {
+            return;
+        }
 
-        bar.IsOpen = false;
+        Motion.Leave(bar, Motion.Fast, () =>
+        {
+            bar.IsOpen = false;
+            // Opacity is left at 1 for the next Show, which sets it before opening anyway; a bar
+            // that is closed and transparent is one that a future direct IsOpen = true would show
+            // invisible.
+            bar.Opacity = 1;
+        });
     }
 }
