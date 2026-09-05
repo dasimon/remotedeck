@@ -300,7 +300,7 @@
                                                     <Storyboard>
                                                         <DoubleAnimation Storyboard.TargetName="Hover"
                                                                          Storyboard.TargetProperty="Opacity"
-                                                                         To="1" Duration="0:0:0.15" />
+                                                                         To="1" Duration="{StaticResource RdMotion}" />
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </Trigger.EnterActions>
@@ -309,7 +309,7 @@
                                                     <Storyboard>
                                                         <DoubleAnimation Storyboard.TargetName="Hover"
                                                                          Storyboard.TargetProperty="Opacity"
-                                                                         To="0" Duration="0:0:0.15" />
+                                                                         To="0" Duration="{StaticResource RdMotion}" />
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </Trigger.ExitActions>
