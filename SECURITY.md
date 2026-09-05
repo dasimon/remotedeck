@@ -32,6 +32,27 @@ encrypted secret blob, and 32 bytes of entropy.
 - Log files (`%APPDATA%\RemoteDeck\logs\`) record credentials by label and user
   name only, never by secret.
 
+## Secrets RemoteDeck deliberately does not hold
+
+Two things a user might reasonably expect to find in the vault are not there, and the
+reasoning is the same in both cases: Windows already holds them, and a second copy would
+be a second thing to lose.
+
+- **A web-account (Entra) token.** A connection with *Use web account* authenticates
+  through the Windows account broker; the token never passes through RemoteDeck. What
+  the connection may carry is a UPN — an account *name*, handed to the control as a hint.
+  A credential attached to such a connection is ignored on connect: no domain and no
+  password reach the control.
+- **A VPN profile's password.** RemoteDeck stores the profile's *name*, nothing else.
+  Raising a tunnel calls `RasDial` with the credential the user saved in the Windows
+  profile — and Windows does not hand that password out. `RasGetCredentials` returns a
+  *handle* to it (sixteen asterisks, per its documentation), which `RasDial` exchanges
+  for the real secret internally. The handle is all that ever exists in RemoteDeck's
+  memory; the buffer holding it is zeroed before and after use, and the probe log records
+  outcomes and RAS codes only. A profile with **no** saved credential is not dialled at
+  all, because dialling would mean asking for a password RemoteDeck has promised never to
+  want.
+
 ## Threat model — what this covers
 
 - **The database file taken on its own.** `connections.db` copied to another
@@ -56,6 +77,11 @@ These limits are stated rather than left implicit.
 - **The Remote Desktop control necessarily receives the plaintext password**, as
   any RDP client must, in order to authenticate to the remote host. Once handed
   over, the secret is under Microsoft's `mstscax` control, not ours.
+- **A VPN profile whose credential Windows has saved can be dialled by anything
+  running as you** — that is what saving it means, and it is true of `rasdial`, of the
+  network flyout, and of RemoteDeck alike. RemoteDeck adds no capability here: it asks
+  Windows to use a credential Windows already agreed to reuse, and only when the user
+  answers a dialog. It never dials on its own.
 
 ## Other notes
 
