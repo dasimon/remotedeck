@@ -64,6 +64,15 @@
     <sys:Double x:Key="RdControlHeight">28</sys:Double>
     <sys:Double x:Key="RdPaletteRowHeight">42</sys:Double>
 
+    <!-- Motion: three durations, a closed set like the radii and the heights. Fast for anything
+         leaving, default for anything arriving, slow is the ceiling — a surface moving as a
+         whole, and nothing may take longer: past that, the user is waiting for the interface.
+         Read by Controls.Motion, which is also the one place where Windows' "Animation effects"
+         setting turns all three to zero. A duration written anywhere else is a styling defect. -->
+    <Duration x:Key="RdMotionFast">0:0:0.08</Duration>
+    <Duration x:Key="RdMotion">0:0:0.15</Duration>
+    <Duration x:Key="RdMotionSlow">0:0:0.22</Duration>
+
     <!-- ============================================================================
          The state pill (controls:StatusTag). It lives here, and not in the pane, because
          its three colours are the three state tokens above: the mapping state -> colour
