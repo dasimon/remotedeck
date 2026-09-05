@@ -26,6 +26,7 @@
          backdrop, and only there. -->
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <controls:PaletteSymbolConverter x:Key="PaletteSymbol" />
 
         <!-- The grouped view of the results, same device as the connection pane: a
              CollectionViewSource declared in the resources of the element that uses it inherits that
@@ -182,7 +183,7 @@
                                          row's own left inset so the column of titles stays straight. -->
                                     <TextBlock Text="{Binding Name}"
                                                Margin="10,8,0,2"
-                                               FontSize="11" FontWeight="SemiBold"
+                                               FontSize="{StaticResource RdFontSm}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource RdTextMuted}" />
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
@@ -206,9 +207,12 @@
                                         VerticalAlignment="Center"
                                         CornerRadius="{StaticResource RdRadiusSm}"
                                         Background="{DynamicResource RdSurface2}">
+                                    <!-- The item names its own symbol; the converter falls back to
+                                         one per kind for the rows that do not. Five commands used
+                                         to share one glyph, which said nothing five times. -->
                                     <ui:SymbolIcon x:Name="KindIcon"
-                                                   Symbol="Desktop24"
-                                                   FontSize="14"
+                                                   Symbol="{Binding Item, Converter={StaticResource PaletteSymbol}}"
+                                                   FontSize="{StaticResource RdFont}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource RdTextMuted}" />
@@ -225,7 +229,7 @@
                                     <controls:HighlightTextBlock x:Name="Subtitle"
                                                                  Text="{Binding Item.Subtitle}"
                                                                  Ranges="{Binding SubtitleRanges}"
-                                                                 FontSize="11"
+                                                                 FontSize="{StaticResource RdFontSm}"
                                                                  Foreground="{DynamicResource RdTextMuted}"
                                                                  TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
@@ -233,28 +237,12 @@
                                 <!-- The shortcut is drawn as the key it is: a raised cap, whose
                                      thicker bottom edge is the whole illusion. Monospaced, so
                                      "Ctrl+W" and "Ctrl+N" stack to the same width down the list. -->
-                                <Border x:Name="KeyCap"
-                                        Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        Padding="6,1,6,0"
-                                        CornerRadius="{StaticResource RdRadiusSm}"
-                                        Background="{DynamicResource RdSurface2}"
-                                        BorderBrush="{DynamicResource RdBorderStrong}"
-                                        BorderThickness="1,1,1,2">
-                                    <TextBlock Text="{Binding Item.Shortcut}"
-                                               FontFamily="Cascadia Mono, Consolas, Courier New"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource RdTextMuted}" />
+                                <Border x:Name="KeyCap" Grid.Column="2" Style="{StaticResource RdKeyCap}">
+                                    <TextBlock Text="{Binding Item.Shortcut}" Style="{StaticResource RdKeyCapText}" />
                                 </Border>
                             </Grid>
 
                             <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding Item.Kind}" Value="Command">
-                                    <Setter TargetName="KindIcon" Property="Symbol" Value="Options24" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Item.Kind}" Value="Session">
-                                    <Setter TargetName="KindIcon" Property="Symbol" Value="TabDesktop24" />
-                                </DataTrigger>
                                 <!-- An entry without a subtitle would otherwise reserve an empty line. -->
                                 <DataTrigger Binding="{Binding Item.Subtitle}" Value="">
                                     <Setter TargetName="Subtitle" Property="Visibility" Value="Collapsed" />
@@ -286,7 +274,7 @@
                     BorderBrush="{DynamicResource RdBorder}"
                     Padding="12,6">
                 <TextBlock Text="{x:Static res:Strings.Palette_Footer}"
-                           FontSize="11"
+                           FontSize="{StaticResource RdFontSm}"
                            Foreground="{DynamicResource RdTextMuted}" />
             </Border>
         </Grid>

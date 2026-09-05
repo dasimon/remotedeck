@@ -31,7 +31,8 @@ public sealed record PaletteItem(
     string Subtitle,
     int Priority,
     string Shortcut = "",
-    string Group = "");
+    string Group = "",
+    string Icon = "");
 
 /// <summary>A palette entry kept by the filter, with its rank and the spans to highlight.</summary>
 public sealed record PaletteMatch(

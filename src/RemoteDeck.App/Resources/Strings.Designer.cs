@@ -595,6 +595,42 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to No session open.
+        /// </summary>
+        public static string Shell_EmptySessionsTitle {
+            get {
+                return ResourceManager.GetString("Shell_EmptySessionsTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to New connection.
+        /// </summary>
+        public static string Shell_EmptyNewHint {
+            get {
+                return ResourceManager.GetString("Shell_EmptyNewHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Command palette.
+        /// </summary>
+        public static string Shell_EmptyPaletteHint {
+            get {
+                return ResourceManager.GetString("Shell_EmptyPaletteHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+K.
+        /// </summary>
+        public static string Shell_ShortcutPalette {
+            get {
+                return ResourceManager.GetString("Shell_ShortcutPalette", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to {0} — {1} · {2}.
         /// </summary>
         public static string Shell_SessionLabel {
