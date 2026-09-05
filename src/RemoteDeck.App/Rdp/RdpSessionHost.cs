@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using MSTSCLib;
 using RemoteDeck.App.Interop;
 using RemoteDeck.App.Services;
@@ -14,6 +14,9 @@ internal sealed record RdpDisconnectInfo(int Reason, int ExtendedReason, string 
 /// </summary>
 internal sealed class RdpSessionHost : IDisposable
 {
+    /// <summary>Whether the R8 line — the control's own AuthenticationLevel — has been written this launch.</summary>
+    private static bool _shippedAuthenticationLevelLogged;
+
     private readonly RdpAxHost _host;
     private readonly IMsRdpClient10 _client;
     private readonly IMsTscAxEvents_Event _events;
@@ -157,12 +160,18 @@ internal sealed class RdpSessionHost : IDisposable
         advanced.ConnectToAdministerServer = settings.AdminSession; // IMsRdpClientAdvancedSettings6
         advanced.SmartSizing = settings.DisplayMode == DisplayMode.Scaled;
 
-        if (settings.AuthenticationLevel is int level)
+        // Always set, never inherited. Read once per launch before it is overridden: the value the
+        // control ships with is what a connection used to get when it said nothing, and the
+        // checklist records it — measured 0, "no authentication of the server", on 2026-09-05.
+        // 0 = connect and don't warn, 1 = do not connect if authentication fails,
+        // 2 = attempt authentication and prompt on failure (verified values, see plan constraints).
+        if (!_shippedAuthenticationLevelLogged)
         {
-            // 0 = connect and don't warn, 1 = do not connect if authentication fails,
-            // 2 = attempt authentication and prompt on failure (verified value, see plan constraints).
-            advanced.AuthenticationLevel = (uint)level;
+            _shippedAuthenticationLevelLogged = true;
+            ProbeLog.Write("R8", $"AuthenticationLevel as shipped by the control, before RemoteDeck sets it: {advanced.AuthenticationLevel}");
         }
+
+        advanced.AuthenticationLevel = (uint)ConnectionRules.EffectiveAuthenticationLevel(settings.AuthenticationLevel);
 
         // Windowed use: Windows key combos stay local unless full screen (documented value 2 = default).
         _client.SecuredSettings2.KeyboardHookMode = 2;

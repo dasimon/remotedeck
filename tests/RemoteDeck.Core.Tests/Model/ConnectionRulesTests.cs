@@ -5,6 +5,25 @@ namespace RemoteDeck.Core.Tests.Model;
 public sealed class ConnectionRulesTests
 {
     [Fact]
+    public void A_connection_that_says_nothing_about_server_authentication_gets_a_warning_not_silence()
+    {
+        // Measured 2026-09-05: left to itself the control's AuthenticationLevel is 0 — "no
+        // authentication of the server" — so a connection created with "Default" would accept a
+        // spoofed host without a word. mstsc's own default is 2: attempt, and prompt on failure.
+        Assert.Equal(2, ConnectionRules.EffectiveAuthenticationLevel(null));
+        Assert.Equal(ConnectionRules.DefaultAuthenticationLevel, ConnectionRules.EffectiveAuthenticationLevel(null));
+    }
+
+    [Fact]
+    public void An_explicit_server_authentication_level_is_kept_as_it_is()
+    {
+        // Including 0: a user who chose "no server authentication" in the editor chose it.
+        Assert.Equal(0, ConnectionRules.EffectiveAuthenticationLevel(0));
+        Assert.Equal(1, ConnectionRules.EffectiveAuthenticationLevel(1));
+        Assert.Equal(2, ConnectionRules.EffectiveAuthenticationLevel(2));
+    }
+
+    [Fact]
     public void Valid_connection_reports_no_error()
         => Assert.Empty(ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Dynamic, null, null));
 

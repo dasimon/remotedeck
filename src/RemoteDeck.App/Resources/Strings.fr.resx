@@ -594,7 +594,7 @@
     <value>(aucun)</value>
   </data>
   <data name="Editor_AuthDefault" xml:space="preserve">
-    <value>Par défaut</value>
+    <value>Par défaut — demander en cas d'échec</value>
   </data>
   <data name="Editor_AuthNoServerAuth" xml:space="preserve">
     <value>Aucune authentification serveur</value>
