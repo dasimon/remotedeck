@@ -1756,7 +1756,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        if (!VpnIsReady(connection))
+        if (!await VpnIsReadyAsync(connection))
         {
             return;
         }
@@ -1767,9 +1767,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>
     /// Checks the VPN profile a connection names, and offers to raise it when it is down.
     /// </summary>
-    /// <returns>True when the session may go ahead: the connection needs no VPN, or the one it needs
-    /// is up. False when the tunnel is down — whether or not the user chose to raise it, because
-    /// dialling is asynchronous and the session has to be started again once it is really up.</returns>
+    /// <returns>True when the session may go ahead: the connection needs no VPN, the one it needs is
+    /// up, or it was down and the dial the user agreed to brought it up. False otherwise — including
+    /// when the tunnel is still coming up, since a session opened on a promise fails a second later
+    /// with a cryptic RDP error.</returns>
     /// <remarks>
     /// <para>
     /// Only on this path — a connection the user asked for. Mounting a workspace deliberately does
@@ -1783,7 +1784,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// never be worse than no check at all.
     /// </para>
     /// </remarks>
-    private bool VpnIsReady(Connection connection)
+    private async Task<bool> VpnIsReadyAsync(Connection connection)
     {
         if (string.IsNullOrWhiteSpace(connection.VpnProfile))
         {
@@ -1820,19 +1821,43 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return false;
         }
 
-        // rasdial's own words when it refuses, rather than a message of ours guessing at the cause:
-        // 691 is a bad credential, 789 an IPsec negotiation that failed, 809 a NAT in the way, and
-        // none of that is something RemoteDeck could paraphrase usefully.
-        if (WindowsVpn.Dial(profile) is { } complaint)
-        {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
-                Text.Of(Strings.Shell_VpnDialFailedTitle, profile), complaint);
-            return false;
-        }
+        var result = await WindowsVpn.DialAsync(profile);
 
-        StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
-            Text.Of(Strings.Shell_VpnDialingTitle, profile), Strings.Shell_VpnDialingMessage);
-        return false;
+        switch (result.Outcome)
+        {
+            case VpnDialOutcome.Connected:
+                // The dial was synchronous and the profile is up: there is nothing left to wait for,
+                // and asking the user to press connect a second time would be ceremony.
+                return true;
+
+            case VpnDialOutcome.NoStoredCredential:
+                // RemoteDeck asks for no VPN secret and stores none. Windows is where that belongs,
+                // and this says so instead of failing with a code nobody can act on.
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+                    Text.Of(Strings.Shell_VpnDialFailedTitle, profile),
+                    Text.Of(Strings.Shell_VpnNoCredential, profile));
+                return false;
+
+            case VpnDialOutcome.EntryNotFound:
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
+                    Text.Of(Strings.Shell_VpnDialFailedTitle, profile),
+                    Text.Of(Strings.Shell_VpnUnknownProfile, profile));
+                return false;
+
+            case VpnDialOutcome.Failed:
+                // Windows's own words when it refuses, rather than a message of ours guessing at the
+                // cause: 691 is a bad credential, 789 an IPsec negotiation that failed, 809 a NAT in
+                // the way, and none of that is something RemoteDeck could paraphrase usefully.
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
+                    Text.Of(Strings.Shell_VpnDialFailedTitle, profile), result.Detail);
+                return false;
+
+            default:
+                // Raised but not visible yet, or still dialling: the tunnel is Windows's business now.
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    Text.Of(Strings.Shell_VpnDialingTitle, profile), Strings.Shell_VpnDialingMessage);
+                return false;
+        }
     }
 
     /// <summary>
