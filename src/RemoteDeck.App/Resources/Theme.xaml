@@ -15,7 +15,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-                    xmlns:controls="clr-namespace:RemoteDeck.App.Controls">
+                    xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
     <!-- Surfaces, from the window ground up to the selected row. -->
     <SolidColorBrush x:Key="RdSurface0" Color="{DynamicResource ApplicationBackgroundColor}" />
@@ -71,6 +72,12 @@
     <sys:Double x:Key="RdTabHeight">34</sys:Double>
     <sys:Double x:Key="RdControlHeight">28</sys:Double>
     <sys:Double x:Key="RdPaletteRowHeight">42</sys:Double>
+    <!-- One InfoBar with a title and a one-line message, open: measured 47 DIP on 2026-09-06 in a
+         stand-alone WPF-UI probe. The shell reserves this much for the notice row while a session
+         is open, so a message arriving or leaving never changes the session area's height — and
+         therefore never renegotiates the remote desktop's resolution. A two-line message still
+         grows the row; that is rare, and better than clipping what Windows had to say. -->
+    <sys:Double x:Key="RdNoticeHeight">47</sys:Double>
 
     <!-- Type: three sizes, a closed set like the rest. Sm for captions, pills and key caps, Md
          for hints and secondary lines, the default for body text and the icons that sit beside
@@ -98,6 +105,24 @@
         <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New" />
         <Setter Property="FontSize" Value="{StaticResource RdFontSm}" />
         <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+    </Style>
+
+    <!-- A field that failed validation. Derived from WPF-UI's own style so the template stays; the
+         InfoBar lists the reasons and this shows which field each one means. The attached
+         property is Controls.Mark.Invalid; the editors bind it, one line per field. -->
+    <Style TargetType="{x:Type ui:TextBox}" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+        <Style.Triggers>
+            <Trigger Property="controls:Mark.Invalid" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource RdBad}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style TargetType="{x:Type ui:NumberBox}" BasedOn="{StaticResource {x:Type ui:NumberBox}}">
+        <Style.Triggers>
+            <Trigger Property="controls:Mark.Invalid" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource RdBad}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Motion: three durations, a closed set like the radii and the heights. Fast for anything
