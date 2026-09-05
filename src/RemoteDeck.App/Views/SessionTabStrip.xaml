@@ -183,7 +183,8 @@
                                     <ui:Button Style="{StaticResource TabCloseStyle}"
                                                Icon="{ui:SymbolIcon Dismiss16}"
                                                Command="{Binding CloseCommand}"
-                                               ToolTip="{x:Static res:Strings.Session_CloseToolTip}" />
+                                               ToolTip="{x:Static res:Strings.Session_CloseToolTip}"
+                                               AutomationProperties.Name="{x:Static res:Strings.Session_CloseToolTip}" />
                                 </StackPanel>
                             </Grid>
                         </Border>

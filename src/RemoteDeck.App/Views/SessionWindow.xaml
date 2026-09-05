@@ -165,18 +165,21 @@
                                Style="{StaticResource CaptionButtonStyle}"
                                Icon="{ui:SymbolIcon Copy20}"
                                ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
+                               AutomationProperties.Name="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                                Click="OnCopyDiagnosticsClick" />
 
                     <ui:Button x:Name="ReattachButton" Grid.Column="7"
                                Style="{StaticResource CaptionButtonStyle}"
                                Icon="{ui:SymbolIcon TabDesktop20}"
                                ToolTip="{x:Static res:Strings.SessionWindow_Reattach}"
+                               AutomationProperties.Name="{x:Static res:Strings.SessionWindow_Reattach}"
                                Click="OnReattachClick" />
 
                     <ui:Button Grid.Column="8"
                                Style="{StaticResource CaptionButtonStyle}"
                                Icon="{ui:SymbolIcon FullScreenMaximize20}"
                                ToolTip="{x:Static res:Strings.SessionWindow_FullScreen}"
+                               AutomationProperties.Name="{x:Static res:Strings.SessionWindow_FullScreen}"
                                Click="OnFullScreenClick" />
 
                     <ui:Button Grid.Column="9"
@@ -184,17 +187,22 @@
                                Margin="2,0,4,0"
                                Icon="{ui:SymbolIcon Dismiss20}"
                                ToolTip="{x:Static res:Strings.SessionWindow_Close}"
+                               AutomationProperties.Name="{x:Static res:Strings.SessionWindow_Close}"
                                Click="OnCloseClick" />
                 </Grid>
             </Border>
 
-            <ui:InfoBar x:Name="StatusBar" Margin="8,0,8,6" IsOpen="False" IsClosable="True" />
+            <!-- The slot is reserved: a detached window always holds a session, and a notice must
+                 not resize the desktop under it (see RdNoticeHeight). -->
+            <Grid Margin="8,0,8,6" MinHeight="{StaticResource RdNoticeHeight}">
+                <ui:InfoBar x:Name="StatusBar" IsOpen="False" IsClosable="True" VerticalAlignment="Top" />
+            </Grid>
         </StackPanel>
 
         <!-- Named HostAreaBorder so the Decorator the shell writes into can be the public HostArea
              property; black for the same reason as the shell's session area — no theme text colour
              reads well against a remote desktop. -->
         <Border x:Name="HostAreaBorder" Grid.Row="1" Margin="8,0,8,8"
-                CornerRadius="{StaticResource RdRadius}" Background="#FF000000" />
+                CornerRadius="{StaticResource RdRadius}" Background="{DynamicResource RdSessionGround}" />
     </Grid>
 </ui:FluentWindow>

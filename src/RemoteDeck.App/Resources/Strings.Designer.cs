@@ -595,6 +595,42 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to No session open.
+        /// </summary>
+        public static string Shell_EmptySessionsTitle {
+            get {
+                return ResourceManager.GetString("Shell_EmptySessionsTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to New connection.
+        /// </summary>
+        public static string Shell_EmptyNewHint {
+            get {
+                return ResourceManager.GetString("Shell_EmptyNewHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Command palette.
+        /// </summary>
+        public static string Shell_EmptyPaletteHint {
+            get {
+                return ResourceManager.GetString("Shell_EmptyPaletteHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl+K.
+        /// </summary>
+        public static string Shell_ShortcutPalette {
+            get {
+                return ResourceManager.GetString("Shell_ShortcutPalette", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to {0} — {1} · {2}.
         /// </summary>
         public static string Shell_SessionLabel {
@@ -2580,6 +2616,113 @@ namespace RemoteDeck.App.Resources {
         public static string Shell_DeleteWorkspaceMessage {
             get {
                 return ResourceManager.GetString("Shell_DeleteWorkspaceMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Name is required..
+        /// </summary>
+        public static string Editor_ErrNameRequired {
+            get {
+                return ResourceManager.GetString("Editor_ErrNameRequired", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Name must be at most {0} characters..
+        /// </summary>
+        public static string Editor_ErrNameTooLong {
+            get {
+                return ResourceManager.GetString("Editor_ErrNameTooLong", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Host is required..
+        /// </summary>
+        public static string Editor_ErrHostRequired {
+            get {
+                return ResourceManager.GetString("Editor_ErrHostRequired", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Host must not contain spaces..
+        /// </summary>
+        public static string Editor_ErrHostWhitespace {
+            get {
+                return ResourceManager.GetString("Editor_ErrHostWhitespace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Port is required..
+        /// </summary>
+        public static string Editor_ErrPortRequired {
+            get {
+                return ResourceManager.GetString("Editor_ErrPortRequired", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Port must be between {0} and {1}..
+        /// </summary>
+        public static string Editor_ErrPortRange {
+            get {
+                return ResourceManager.GetString("Editor_ErrPortRange", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Width must be between {0} and {1}..
+        /// </summary>
+        public static string Editor_ErrWidthRange {
+            get {
+                return ResourceManager.GetString("Editor_ErrWidthRange", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Height must be between {0} and {1}..
+        /// </summary>
+        public static string Editor_ErrHeightRange {
+            get {
+                return ResourceManager.GetString("Editor_ErrHeightRange", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Label is required..
+        /// </summary>
+        public static string CredEditor_ErrLabelRequired {
+            get {
+                return ResourceManager.GetString("CredEditor_ErrLabelRequired", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Label must be at most {0} characters..
+        /// </summary>
+        public static string CredEditor_ErrLabelTooLong {
+            get {
+                return ResourceManager.GetString("CredEditor_ErrLabelTooLong", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to A credential with this label already exists..
+        /// </summary>
+        public static string CredEditor_ErrLabelTaken {
+            get {
+                return ResourceManager.GetString("CredEditor_ErrLabelTaken", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to User name is required..
+        /// </summary>
+        public static string CredEditor_ErrUserRequired {
+            get {
+                return ResourceManager.GetString("CredEditor_ErrUserRequired", resourceCulture);
             }
         }
     }
