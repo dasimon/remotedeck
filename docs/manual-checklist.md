@@ -781,8 +781,8 @@ editor). Held by tests: no literal colour in any view, every icon-only button na
       and `Ctrl+K` — drawn exactly like the palette's own, in both themes and both languages.
       Opening a session hides all of it; closing the last one brings it back.
 - [ ] `Ctrl+K`: each command row has its own icon — plus, import arrow, key, side panel, clock —
-      and *Close session*, *Reconnect*, *Detach* / *Reattach*, *Disconnect* and *Save workspace*
-      each theirs when a session makes them appear. Connections keep the desktop glyph, open tabs
+      and *Close session*, *Reconnect*, *Detach* / *Reattach* and *Save workspace* each theirs
+      when a session makes them appear. Connections keep the desktop glyph, open tabs
       the tab glyph.
 - [ ] The palette's key caps, the pane's row subtitles, the editor's hints and the group headings
       look exactly as they did: the same three sizes, now read from the sheet.
