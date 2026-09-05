@@ -145,7 +145,13 @@
                 <StackPanel x:Name="EmptySessions"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             IsHitTestVisible="False">
-                    <ui:SymbolIcon Symbol="Desktop48"
+                    <!-- Desktop24 scaled up, not Desktop48. Measured 2026-09-06: WPF-UI 4.3.0's
+                         SymbolExtensions.GetString splits a code point above U+FFFF byte-wise
+                         (Desktop48 = U+F083D comes out as U+083D U+000F, not a surrogate pair), so
+                         every such symbol draws nothing although the shipped font has the glyph.
+                         A symbol above U+FFFF is a blank square in this application until that is
+                         fixed upstream; the 24 px glyphs all sit in the base plane. -->
+                    <ui:SymbolIcon Symbol="Desktop24"
                                    FontSize="{StaticResource RdGlyphHero}"
                                    Foreground="{DynamicResource RdTextMuted}"
                                    HorizontalAlignment="Center" Margin="0,0,0,12" />
