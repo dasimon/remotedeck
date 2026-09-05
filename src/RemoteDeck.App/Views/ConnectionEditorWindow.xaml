@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+                 xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
                  Title="{x:Static res:Strings.Editor_Title}" Width="520" SizeToContent="Height"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round"
                  WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
@@ -38,13 +39,13 @@
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_Name}" VerticalAlignment="Center" />
-                <ui:TextBox Grid.Row="0" Grid.Column="1" x:Name="NameInput" Margin="0,3"
+                <ui:TextBox Grid.Row="0" Grid.Column="1" x:Name="NameInput" Margin="0,3" controls:Mark.Invalid="{Binding NameInvalid}"
                             Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_Host}" VerticalAlignment="Center" />
-                <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,3" PlaceholderText="{x:Static res:Strings.Editor_HostPlaceholder}"
+                <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,3" controls:Mark.Invalid="{Binding HostInvalid}" PlaceholderText="{x:Static res:Strings.Editor_HostPlaceholder}"
                             Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Grid.Row="2" Text="{x:Static res:Strings.Editor_Port}" VerticalAlignment="Center" />
-                <ui:NumberBox Grid.Row="2" Grid.Column="1" Margin="0,3" Width="120" HorizontalAlignment="Left"
+                <ui:NumberBox Grid.Row="2" Grid.Column="1" Margin="0,3" Width="120" HorizontalAlignment="Left" controls:Mark.Invalid="{Binding PortInvalid}"
                               Minimum="1" Maximum="65535" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden"
                               Value="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Grid.Row="3" Text="{x:Static res:Strings.Editor_Group}" VerticalAlignment="Center" />
@@ -103,11 +104,11 @@
                 <!-- Dynamic follows the window, so both boxes stay disabled until Scaled or Fixed. -->
                 <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,3" Orientation="Horizontal"
                             IsEnabled="{Binding IsFixedSizeEnabled}">
-                    <ui:NumberBox Width="110" PlaceholderText="{x:Static res:Strings.Editor_WidthPlaceholder}" Minimum="640" Maximum="8192" MaxDecimalPlaces="0"
+                    <ui:NumberBox controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_WidthPlaceholder}" Minimum="640" Maximum="8192" MaxDecimalPlaces="0"
                                   SpinButtonPlacementMode="Hidden"
                                   Value="{Binding FixedWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Text="×" Margin="8,0" VerticalAlignment="Center" />
-                    <ui:NumberBox Width="110" PlaceholderText="{x:Static res:Strings.Editor_HeightPlaceholder}" Minimum="480" Maximum="8192" MaxDecimalPlaces="0"
+                    <ui:NumberBox controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_HeightPlaceholder}" Minimum="480" Maximum="8192" MaxDecimalPlaces="0"
                                   SpinButtonPlacementMode="Hidden"
                                   Value="{Binding FixedHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>

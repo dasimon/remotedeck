@@ -33,4 +33,14 @@ public sealed class CredentialRulesTests
     [Fact]
     public void Existing_labels_are_compared_trimmed()
         => Assert.Single(CredentialRules.Validate("admin", "u", [" Admin "]));
+
+    // The rules return codes since 2026-09-06 -- what is wrong is Core's to say, the words are the
+    // application's. The two below hold the codes themselves; the tests above hold the counts.
+    [Fact]
+    public void Each_missing_field_is_named_by_its_code()
+        => Assert.Equal([CredentialError.LabelRequired, CredentialError.UserNameRequired], CredentialRules.Validate("  ", "", ["Other"]));
+
+    [Fact]
+    public void A_taken_label_is_reported_as_taken_not_as_missing()
+        => Assert.Equal([CredentialError.LabelTaken], CredentialRules.Validate("admin", "u", [" Admin "]));
 }

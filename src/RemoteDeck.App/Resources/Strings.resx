@@ -195,7 +195,7 @@
     <value>No connections yet — press Ctrl+N to add one.</value>
   </data>
   <data name="Pane_EmptyNoMatch" xml:space="preserve">
-    <value>No connection matches “{0}”.</value>
+    <value>No connection matches “{0}”. Ctrl+N creates one.</value>
   </data>
   <data name="Pane_StatusConnected" xml:space="preserve">
     <value>Connected</value>
@@ -910,5 +910,41 @@
   </data>
   <data name="Shell_DeleteWorkspaceMessage" xml:space="preserve">
     <value>The workspace is removed. The connections it lists are left untouched.</value>
+  </data>
+  <data name="Editor_ErrNameRequired" xml:space="preserve">
+    <value>Name is required.</value>
+  </data>
+  <data name="Editor_ErrNameTooLong" xml:space="preserve">
+    <value>Name must be at most {0} characters.</value>
+  </data>
+  <data name="Editor_ErrHostRequired" xml:space="preserve">
+    <value>Host is required.</value>
+  </data>
+  <data name="Editor_ErrHostWhitespace" xml:space="preserve">
+    <value>Host must not contain spaces.</value>
+  </data>
+  <data name="Editor_ErrPortRequired" xml:space="preserve">
+    <value>Port is required.</value>
+  </data>
+  <data name="Editor_ErrPortRange" xml:space="preserve">
+    <value>Port must be between {0} and {1}.</value>
+  </data>
+  <data name="Editor_ErrWidthRange" xml:space="preserve">
+    <value>Width must be between {0} and {1}.</value>
+  </data>
+  <data name="Editor_ErrHeightRange" xml:space="preserve">
+    <value>Height must be between {0} and {1}.</value>
+  </data>
+  <data name="CredEditor_ErrLabelRequired" xml:space="preserve">
+    <value>Label is required.</value>
+  </data>
+  <data name="CredEditor_ErrLabelTooLong" xml:space="preserve">
+    <value>Label must be at most {0} characters.</value>
+  </data>
+  <data name="CredEditor_ErrLabelTaken" xml:space="preserve">
+    <value>A credential with this label already exists.</value>
+  </data>
+  <data name="CredEditor_ErrUserRequired" xml:space="preserve">
+    <value>User name is required.</value>
   </data>
 </root>

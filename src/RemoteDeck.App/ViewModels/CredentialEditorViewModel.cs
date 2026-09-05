@@ -8,6 +8,10 @@ namespace RemoteDeck.App.ViewModels;
 public sealed partial class CredentialEditorViewModel : ObservableObject
 {
     [ObservableProperty] private string _label = "";
+
+    /// <summary>Set by <see cref="Validate"/>; paints the field's edge through <c>Mark.Invalid</c>.</summary>
+    [ObservableProperty] private bool _labelInvalid;
+    [ObservableProperty] private bool _userNameInvalid;
     [ObservableProperty] private string _userName = "";
     [ObservableProperty] private string _domain = "";
     [ObservableProperty] private string _errors = "";
@@ -27,7 +31,9 @@ public sealed partial class CredentialEditorViewModel : ObservableObject
     public bool Validate(IEnumerable<string> otherLabels)
     {
         var errors = CredentialRules.Validate(Label, UserName, otherLabels);
-        Errors = string.Join("\n", errors);
+        Errors = string.Join("\n", errors.Select(ValidationMessages.Of));
+        LabelInvalid = errors.Any(e => e is not CredentialError.UserNameRequired);
+        UserNameInvalid = errors.Contains(CredentialError.UserNameRequired);
         return errors.Count == 0;
     }
 }
