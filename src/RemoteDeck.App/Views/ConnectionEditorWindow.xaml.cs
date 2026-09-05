@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Controls;
 using RemoteDeck.App.Resources;
@@ -28,6 +29,11 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
     {
         InitializeComponent();
         SystemThemeWatcher.Watch(this);
+        // Once there is a handle, the monitor is known. SizeToContent still sizes the window to the
+        // form; this only caps it, and past the cap the form scrolls between the title bar and the
+        // buttons (see the Grid in the markup). Measured: ~990 px at 100 %, taller than a 768 px
+        // laptop screen, and Save was unreachable there.
+        SourceInitialized += (_, _) => MaxHeight = WorkAreaHeight() - 48;
         _repository = App.Current.Services.GetRequiredService<ConnectionRepository>();
         var credentials = App.Current.Services.GetRequiredService<CredentialRepository>().GetAll();
         _existing = existing;
@@ -71,5 +77,17 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
             ProbeLog.Write("connections", $"Save failed: {ex.GetType().Name}: {ex.Message}");
             ErrorBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Editor_CouldNotSaveTitle, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// The usable height of the monitor this window is on, in device-independent pixels — the
+    /// screen minus the taskbar. The monitor is the one the handle sits on, not the primary: the
+    /// editor opens centred on its owner, and the owner may be anywhere.
+    /// </summary>
+    private double WorkAreaHeight()
+    {
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var area = System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
+        return area.Height / VisualTreeHelper.GetDpi(this).DpiScaleY;
     }
 }

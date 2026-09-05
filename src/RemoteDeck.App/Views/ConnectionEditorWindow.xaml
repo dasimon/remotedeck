@@ -11,9 +11,21 @@
     </ui:FluentWindow.Resources>
     <!-- Every control styles itself inline: an explicit Style= would replace the implicit WPF-UI
          style each ui: control gets from ControlsDictionary, template included. -->
-    <StackPanel Margin="0,0,0,12">
-        <ui:TitleBar Title="{x:Static res:Strings.Editor_Title}" ShowMinimize="False" ShowMaximize="False" />
+    <!-- A Grid, not a StackPanel: the form is the one part allowed to scroll. Measured on
+         2026-09-06, this window is about 990 px tall at 100 %, with no scroll and no resize — on a
+         1366×768 laptop, or a 1080p one at 150 %, the Save button was simply off the screen with
+         no way to reach it. The code-behind caps MaxHeight to the monitor's work area; past it,
+         the title bar and the buttons stay where they are and the form scrolls between them. -->
+    <Grid Margin="0,0,0,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="{x:Static res:Strings.Editor_Title}" ShowMinimize="False" ShowMaximize="False" />
 
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="16,0,16,0">
             <TextBlock Text="{x:Static res:Strings.Editor_SectionGeneral}" FontWeight="SemiBold" Margin="0,8,0,2" />
             <Grid>
@@ -127,12 +139,13 @@
                         PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Margin="0,4,0,0" Opacity="0.7" FontSize="12" Text="{x:Static res:Strings.Common_RequiredHint}" />
         </StackPanel>
+        </ScrollViewer>
 
-        <ui:InfoBar x:Name="ErrorBar" Margin="16,8,16,0" Severity="Error" IsOpen="False" IsClosable="False" />
+        <ui:InfoBar Grid.Row="2" x:Name="ErrorBar" Margin="16,8,16,0" Severity="Error" IsOpen="False" IsClosable="False" />
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,12,16,0">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,12,16,0">
             <ui:Button Content="{x:Static res:Strings.Common_Cancel}" Margin="0,0,8,0" IsCancel="True" Click="OnCancel" />
             <ui:Button Content="{x:Static res:Strings.Common_Save}" Appearance="Primary" IsDefault="True" Click="OnSave" />
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </ui:FluentWindow>
