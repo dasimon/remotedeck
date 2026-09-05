@@ -111,6 +111,42 @@ being read. A user name found in a source is shown to you in the preview and is 
 written into the connection — create the credential yourself and pick it in the
 editor.
 
+### Signing in with a web account (Entra)
+
+Tick **Use web account** on a connection and the session authenticates against Entra ID
+instead of with a user name and password, the way `mstsc.exe` does. A credential
+attached to such a connection is ignored: no domain and no password reach the control.
+
+The optional **Account (UPN)** field beside it names *which* account. It is handed over
+as a hint and nothing more, and it earns its place when Windows has no account cached
+yet, or has several and one has to be chosen. Once Windows knows your account the
+sign-in is silent whether the field is filled or not — it is the Windows account broker,
+not RemoteDeck, that holds the token, and RemoteDeck never sees it.
+
+Importing a `.rdp` file with `enablerdsaadauth:i:1` fills the field from the UPN Remote
+Desktop Connection remembers for that host.
+
+### Connections behind a VPN
+
+A connection can name the Windows VPN profile it needs. Before opening the session
+RemoteDeck checks whether that tunnel is up, and if it is not it says so and offers to
+raise it — rather than letting the connection fail with a cryptic error about a host it
+cannot find. The profile field is a drop-down you can also type into: it lists the
+profiles the machine knows, and a name it does not offer still works.
+
+Saying yes raises the tunnel **silently** — no console window, nothing to dismiss — and
+the session opens by itself once it is really up. RemoteDeck never dials on its own: a
+connection attempt is not consent to change your machine's network state.
+
+**It stores no VPN secret and never will.** It dials with the credential you saved in
+the Windows profile itself. Windows does not hand that password out — it returns a
+handle to it, and the handle is all RemoteDeck ever holds. A profile with nothing saved
+is therefore not dialled at all: connect it once from Windows with *Remember my sign-in
+info* ticked, and RemoteDeck can raise it from then on.
+
+Opening a **workspace** deliberately skips the check. Its sessions open in series, and
+stopping that series on a question would turn one dialog into six.
+
 ### Sessions
 
 Each connection you open gets its **own tab**, and every session stays live in the
@@ -349,6 +385,13 @@ any number of connections. The password is encrypted with Windows DPAPI in
 save, and stored as a blob in `%APPDATA%\RemoteDeck\connections.db`. It never
 exists as a managed string: it is lent to the Remote Desktop control as a native
 `BSTR` for the duration of one call, then zeroed.
+
+Two secrets RemoteDeck deliberately does **not** keep. A web-account session's token
+belongs to the Windows account broker — RemoteDeck passes a UPN as a hint and nothing
+else. A VPN profile's password belongs to the Windows profile — when RemoteDeck raises a
+tunnel it dials with the *handle* Windows returns in place of that password, sixteen
+asterisks exchanged for the real secret inside Windows. Neither ever reaches
+`connections.db`, and neither is ever asked for.
 
 ## Security
 

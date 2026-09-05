@@ -6,6 +6,9 @@
                  Title="{x:Static res:Strings.Editor_Title}" Width="520" SizeToContent="Height"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round"
                  WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </ui:FluentWindow.Resources>
     <!-- Every control styles itself inline: an explicit Style= would replace the implicit WPF-UI
          style each ui: control gets from ControlsDictionary, template included. -->
     <StackPanel Margin="0,0,0,12">
@@ -49,6 +52,7 @@
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_Credential}" VerticalAlignment="Center" />
                 <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label"
@@ -58,6 +62,17 @@
                           ItemsSource="{Binding AuthenticationLevels}" SelectedItem="{Binding SelectedAuthenticationLevel}" />
                 <CheckBox Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Content="{x:Static res:Strings.Editor_UseWebAccount}"
                           IsChecked="{Binding UseWebAccount}" />
+                <!-- The account hint of a web-account connection: what mstsc keeps as UsernameHint for
+                     the server. An identity, not a secret — no password is ever attached to it. Only
+                     meaningful under the box above, so it shows only then. -->
+                <TextBlock Grid.Row="3" Text="{x:Static res:Strings.Editor_WebAccountUpn}" VerticalAlignment="Center"
+                           Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
+                <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,3" PlaceholderText="{x:Static res:Strings.Editor_WebAccountUpnPlaceholder}"
+                            Text="{Binding WebAccountUpn, UpdateSourceTrigger=PropertyChanged}"
+                            Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                           Text="{x:Static res:Strings.Editor_WebAccountUpnHint}"
+                           Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
 
             <TextBlock Text="{x:Static res:Strings.Editor_SectionDisplay}" FontWeight="SemiBold" Margin="0,12,0,2" />
@@ -96,6 +111,17 @@
 
             <TextBlock Text="{x:Static res:Strings.Editor_SectionAdvanced}" FontWeight="SemiBold" Margin="0,12,0,2" />
             <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_AdminSession}" IsChecked="{Binding AdminSession}" />
+            <TextBlock Margin="0,8,0,2" Text="{x:Static res:Strings.Editor_VpnProfile}" />
+            <!-- Editable on purpose: the list is a convenience, not a contract. RemoteDeck reads the
+                 RAS phonebook to fill it, and that file's location has never been verified on a
+                 machine that has one — so a profile it fails to discover must still be reachable by
+                 typing, exactly as before the list existed. -->
+            <ComboBox Margin="0,0,0,2"
+                      IsEditable="True"
+                      ItemsSource="{Binding AvailableVpnProfiles}"
+                      Text="{Binding VpnProfile, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                       Text="{x:Static res:Strings.Editor_VpnProfileHint}" />
             <ui:TextBox Margin="0,6,0,0" Height="72" AcceptsReturn="True" TextWrapping="Wrap"
                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
                         PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />

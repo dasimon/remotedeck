@@ -48,6 +48,28 @@ public sealed class RdpFileImporterTests
     }
 
     [Fact]
+    public void A_web_account_file_carries_its_username_as_the_account_hint()
+    {
+        // mstsc keeps the UPN as a per-server hint and hands it to the control so the broker can
+        // find the account silently. A file that pairs enablerdsaadauth with a username is that hint.
+        var c = RdpFileImporter.Parse("win02.rdp", ["full address:s:fdc-win02", "enablerdsaadauth:i:1", "username:s:user@contoso.com"]);
+
+        Assert.NotNull(c);
+        Assert.Equal("user@contoso.com", c.WebAccountUpn);
+    }
+
+    [Fact]
+    public void A_username_without_web_account_is_not_an_account_hint()
+    {
+        // Without enablerdsaadauth the name belongs to a credential, which import never creates.
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "username:s:jdoe"]);
+
+        Assert.NotNull(c);
+        Assert.Equal("jdoe", c.UserName);
+        Assert.Null(c.WebAccountUpn);
+    }
+
+    [Fact]
     public void Host_and_port_are_split_on_a_single_colon()
     {
         var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv:3390"]);

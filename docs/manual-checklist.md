@@ -603,6 +603,103 @@ itself is WPF and cannot be; these boxes are its only verification.
       convention tests; the gesture hint reading* Suppr *rather than* Del *is part of that.*
 - [x] Light and dark theme: the menu follows the theme like the rest of the chrome.
 
+## VPN pre-flight
+
+The decision (`VpnRequirement`) has ten automated tests. What no test can reach is whether
+Windows names the dial-up interface after the phonebook entry — the assumption the whole
+feature rests on. **Verify that box first: if it fails, the rest is meaningless.**
+
+- [x] **The assumption.** With the VPN up, run:
+      `[System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | ? { $_.OperationalStatus -eq 'Up' -and $_.NetworkInterfaceType -in 'Ppp','Tunnel' } | ft Name, Description, NetworkInterfaceType`
+      The profile's name must appear under **Name** or **Description**. If nothing is listed,
+      this approach cannot work and the enumeration has to move to `RasEnumConnections`.
+      *Observed 2026-09-04 on the reference home machine: `VPN FDC` appears under both*
+      *Name and Description, `NetworkInterfaceType` = `Ppp`. The approach holds.*
+- [x] **The RAS reads.** Measured 2026-09-05 against the real `VPN FDC`, read-only, nothing
+      dialled — these are what the dial code is built on, and none of them was assumed:
+      `RasGetCredentials` with mask `0x7` returns the user name and the sixteen-asterisk password
+      handle; with `0xF` it returns **success and nothing at all**, because `RASCM_DefaultCreds` on
+      a per-user entry poisons the answer. The returned `dwMask` merely echoes the request, so only
+      the string says whether a password exists. RAS's own default phone book answers **621**, which
+      is why the explicit `.pbk` paths are tried first. `RASDIALPARAMSW` accepts `dwSize` **2120 and
+      2112** and refuses 2100, 2116, 2124 and 2128 — so the newest layout is *not* the right one,
+      and the size is negotiated rather than guessed.
+- [ ] A connection with **no** VPN profile connects exactly as before — no check, no delay.
+- [ ] A connection naming a profile that is **up** connects with no interruption at all.
+- [ ] A connection naming a profile that is **down** asks, before connecting, whether to raise it.
+- [ ] Declining leaves the session unopened and says so in the InfoBar. Nothing is dialled.
+- [x] **Accepting raises the tunnel with no window at all**, and the session opens by itself once
+      it is up. One click. No console flashes, nothing has to be dismissed.
+      *Observed 2026-09-05 on the reference client, tunnel down beforehand: `VPN FDC` came up*
+      *silently and the session opened by itself. The saved-credential handle is accepted by the*
+      *server — the RAS 628 was the missing credential, as diagnosed.*
+- [ ] The dial uses the credential **saved in the profile**. RemoteDeck asks for nothing and stores
+      nothing: check `probe-l0.log` for `RASDIALPARAMS dwSize … accepted` and a `RasDial … returned
+      0`, and that no password appears anywhere in it.
+- [ ] A profile whose credential is **not** saved (untick "Remember my sign-in info" in Windows,
+      or use a second profile) is **not dialled**: the InfoBar says there is no saved credential and
+      sends you to Windows. Nothing is asked for.
+- [ ] A dial that Windows refuses shows **Windows's own words** — the RAS message, in the interface
+      language, not a paraphrase of ours.
+- [ ] The tunnel stays up after RemoteDeck is closed. `RasHangUp` is deliberately never called.
+- [ ] The profile name is matched **case-insensitively and trimmed**: typing `vpn fdc` for a
+      profile named `VPN FDC` works.
+- [ ] Naming a profile that does not exist at all behaves like one that is down — asks, then says
+      no Windows phone book knows it. Nothing is dialled.
+- [ ] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
+      the user-initiated path only, by design.
+- [ ] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
+      machine knows — check `VPN FDC` is offered without typing it.
+- [ ] A profile the list does **not** offer can still be typed by hand and works: the list is a
+      convenience, never a constraint.
+- [ ] The field survives a round trip through the editor, and clearing it really clears it.
+- [ ] English and French: the field, its hint and the five messages are translated.
+
+**Out of scope, deliberately: EAP.** `RasDial`'s documentation asks for `RasGetEapUserIdentity`
+first, and the reference profile is PAP/CHAP/MSCHAPv2. An EAP profile will fail with a clear RAS
+code rather than silently — writing an untestable branch would be worse than saying so here.
+
+## Web account (Entra) sign-in without a prompt
+
+**What actually makes the sign-in silent: the Windows WAM account cache, not RemoteDeck.**
+A web-account connection was asking for the full Microsoft sign-in on every connect, while
+`mstsc.exe` on the same client reconnected silently. Investigation on 2026-09-04 settled it:
+
+- The token path is **not** private to `mstsc.exe`. `mstscax.dll` itself carries the WAM
+  calls (`WebAuthenticationCoreManager`, `GetTokenSilentlyAsync`, `FindAccountAsync`) and the
+  Remote Desktop app id `a4a365df-50f1-4397-bc59-1a1564b8bb9c`, and those modules load inside
+  RemoteDeck's own process. So a third-party ActiveX host is not structurally shut out.
+- The silence came from the **broker's account cache**. Once a `.tbacct` for the account
+  exists under `%LOCALAPPDATA%\Packages\Microsoft.AAD.BrokerPlugin_cw5n1h2txyewy\AC\TokenBroker\Accounts`,
+  `mstscax` acquires the RDS AAD token silently — for **any** build. Proven by running the
+  shipped v0.3.0 (whose `RdpSessionHost`/`app.manifest` are byte-identical to this branch) on
+  a fresh database with no UPN: it connected without a prompt. The reference client is not
+  Entra-joined and has no PRT (`WamDefaultSet: YES`); the cache alone carries it.
+- So this branch's UPN field is **not** the fix. It is `mstsc` parity: the `.rdp` mstsc
+  exports has no `username` line, but the client keeps the UPN per server under
+  `HKCU\Software\Microsoft\Terminal Server Client\Servers\<host>\UsernameHint` and hands it
+  to the control as an account hint. It matters when the broker cache is **cold** (a fresh
+  machine, a cleared cache) or when several accounts are cached and one must be named. When
+  the cache is warm it changes nothing.
+
+`EnableRdsAadAuth` is documented under `IMsRdpExtendedSettings::Property` and is the only
+Entra property there; no undocumented property or token-injection interface is needed.
+
+- [ ] With a **warm** broker cache, a web-account connection reconnects with no prompt even
+      with the UPN **empty** — the cache, not the field, is doing the work.
+- [ ] The UPN field appears only while **Use web account** is checked, in English and French,
+      with its hint; unchecking the box hides it and the value it held is still saved.
+- [ ] The UPN is **trimmed** on save and a blank one reads back as empty.
+- [ ] Importing a folder of `.rdp` files: a file with `enablerdsaadauth:i:1` and no
+      `username` line gets the UPN Remote Desktop Connection remembers for that host, and
+      the preview no longer warns that the identity is left behind. A file **without**
+      `enablerdsaadauth` keeps its user name out of the connection, as before.
+- [ ] A credential attached to a web-account connection is ignored on connect: no domain,
+      no password reaches the control; only the UPN goes, as the account hint.
+- [ ] Upgrading a database from V3 keeps every row; the new column reads null everywhere.
+- [ ] To reproduce the original "prompt every time", start from an **empty** broker cache,
+      not by changing RemoteDeck.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
