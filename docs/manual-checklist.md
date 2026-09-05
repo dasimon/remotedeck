@@ -605,6 +605,8 @@ itself is WPF and cannot be; these boxes are its only verification.
 
 ## VPN pre-flight
 
+*Every open box below was ticked on 2026-09-06 on David's word, after the 0.4.1-rc.5 build.*
+
 The decision (`VpnRequirement`) has ten automated tests. What no test can reach is whether
 Windows names the dial-up interface after the phonebook entry — the assumption the whole
 feature rests on. **Verify that box first: if it fails, the rest is meaningless.**
@@ -624,42 +626,44 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
       is why the explicit `.pbk` paths are tried first. `RASDIALPARAMSW` accepts `dwSize` **2120 and
       2112** and refuses 2100, 2116, 2124 and 2128 — so the newest layout is *not* the right one,
       and the size is negotiated rather than guessed.
-- [ ] A connection with **no** VPN profile connects exactly as before — no check, no delay.
-- [ ] A connection naming a profile that is **up** connects with no interruption at all.
-- [ ] A connection naming a profile that is **down** asks, before connecting, whether to raise it.
-- [ ] Declining leaves the session unopened and says so in the InfoBar. Nothing is dialled.
+- [x] A connection with **no** VPN profile connects exactly as before — no check, no delay.
+- [x] A connection naming a profile that is **up** connects with no interruption at all.
+- [x] A connection naming a profile that is **down** asks, before connecting, whether to raise it.
+- [x] Declining leaves the session unopened and says so in the InfoBar. Nothing is dialled.
 - [x] **Accepting raises the tunnel with no window at all**, and the session opens by itself once
       it is up. One click. No console flashes, nothing has to be dismissed.
       *Observed 2026-09-05 on the reference client, tunnel down beforehand: `VPN FDC` came up*
       *silently and the session opened by itself. The saved-credential handle is accepted by the*
       *server — the RAS 628 was the missing credential, as diagnosed.*
-- [ ] The dial uses the credential **saved in the profile**. RemoteDeck asks for nothing and stores
+- [x] The dial uses the credential **saved in the profile**. RemoteDeck asks for nothing and stores
       nothing: check `probe-l0.log` for `RASDIALPARAMS dwSize … accepted` and a `RasDial … returned
       0`, and that no password appears anywhere in it.
-- [ ] A profile whose credential is **not** saved (untick "Remember my sign-in info" in Windows,
+- [x] A profile whose credential is **not** saved (untick "Remember my sign-in info" in Windows,
       or use a second profile) is **not dialled**: the InfoBar says there is no saved credential and
       sends you to Windows. Nothing is asked for.
-- [ ] A dial that Windows refuses shows **Windows's own words** — the RAS message, in the interface
+- [x] A dial that Windows refuses shows **Windows's own words** — the RAS message, in the interface
       language, not a paraphrase of ours.
-- [ ] The tunnel stays up after RemoteDeck is closed. `RasHangUp` is deliberately never called.
-- [ ] The profile name is matched **case-insensitively and trimmed**: typing `vpn fdc` for a
+- [x] The tunnel stays up after RemoteDeck is closed. `RasHangUp` is deliberately never called.
+- [x] The profile name is matched **case-insensitively and trimmed**: typing `vpn fdc` for a
       profile named `VPN FDC` works.
-- [ ] Naming a profile that does not exist at all behaves like one that is down — asks, then says
+- [x] Naming a profile that does not exist at all behaves like one that is down — asks, then says
       no Windows phone book knows it. Nothing is dialled.
-- [ ] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
+- [x] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
-- [ ] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
+- [x] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
       machine knows — check `VPN FDC` is offered without typing it.
-- [ ] A profile the list does **not** offer can still be typed by hand and works: the list is a
+- [x] A profile the list does **not** offer can still be typed by hand and works: the list is a
       convenience, never a constraint.
-- [ ] The field survives a round trip through the editor, and clearing it really clears it.
-- [ ] English and French: the field, its hint and the five messages are translated.
+- [x] The field survives a round trip through the editor, and clearing it really clears it.
+- [x] English and French: the field, its hint and the five messages are translated.
 
 **Out of scope, deliberately: EAP.** `RasDial`'s documentation asks for `RasGetEapUserIdentity`
 first, and the reference profile is PAP/CHAP/MSCHAPv2. An EAP profile will fail with a clear RAS
 code rather than silently — writing an untestable branch would be worse than saying so here.
 
 ## Web account (Entra) sign-in without a prompt
+
+*Every open box below was ticked on 2026-09-06 on David's word, after the 0.4.1-rc.5 build.*
 
 **What actually makes the sign-in silent: the Windows WAM account cache, not RemoteDeck.**
 A web-account connection was asking for the full Microsoft sign-in on every connect, while
@@ -685,22 +689,24 @@ A web-account connection was asking for the full Microsoft sign-in on every conn
 `EnableRdsAadAuth` is documented under `IMsRdpExtendedSettings::Property` and is the only
 Entra property there; no undocumented property or token-injection interface is needed.
 
-- [ ] With a **warm** broker cache, a web-account connection reconnects with no prompt even
+- [x] With a **warm** broker cache, a web-account connection reconnects with no prompt even
       with the UPN **empty** — the cache, not the field, is doing the work.
-- [ ] The UPN field appears only while **Use web account** is checked, in English and French,
+- [x] The UPN field appears only while **Use web account** is checked, in English and French,
       with its hint; unchecking the box hides it and the value it held is still saved.
-- [ ] The UPN is **trimmed** on save and a blank one reads back as empty.
-- [ ] Importing a folder of `.rdp` files: a file with `enablerdsaadauth:i:1` and no
+- [x] The UPN is **trimmed** on save and a blank one reads back as empty.
+- [x] Importing a folder of `.rdp` files: a file with `enablerdsaadauth:i:1` and no
       `username` line gets the UPN Remote Desktop Connection remembers for that host, and
       the preview no longer warns that the identity is left behind. A file **without**
       `enablerdsaadauth` keeps its user name out of the connection, as before.
-- [ ] A credential attached to a web-account connection is ignored on connect: no domain,
+- [x] A credential attached to a web-account connection is ignored on connect: no domain,
       no password reaches the control; only the UPN goes, as the account hint.
-- [ ] Upgrading a database from V3 keeps every row; the new column reads null everywhere.
-- [ ] To reproduce the original "prompt every time", start from an **empty** broker cache,
+- [x] Upgrading a database from V3 keeps every row; the new column reads null everywhere.
+- [x] To reproduce the original "prompt every time", start from an **empty** broker cache,
       not by changing RemoteDeck.
 
 ## Hardening — server authentication, crash log, hook re-arm, log rolling
+
+*Every open box below was ticked on 2026-09-06 on David's word, after the 0.4.1-rc.5 build; the `[R8]` value was not reported back.*
 
 Five changes from the 2026-09-05 full pass (`docs/plans/2026-09-05-full-pass-review.md`). The
 one that matters most is the first: it changes what a spoofed server gets.
@@ -709,24 +715,24 @@ one that matters most is the first: it changes what a spoofed server gets.
       `AuthenticationLevel = 0` — no authentication of the server.
       *Observed 2026-09-05 on the reference client, `MsTscAx.MsTscAx` and `MsRDP.MsRDP.9` via*
       *IDispatch, unsited. Confirm on the real coclass with the next box.*
-- [ ] After the first connection of a launch, `probe-l0.log` holds one `[R8] AuthenticationLevel
+- [x] After the first connection of a launch, `probe-l0.log` holds one `[R8] AuthenticationLevel
       as shipped by the control, before RemoteDeck sets it: N` line. Record N here: ___
-- [ ] A connection whose authentication is **Default — prompt if failed**, against a host whose
+- [x] A connection whose authentication is **Default — prompt if failed**, against a host whose
       certificate is not trusted (a self-signed one), shows the control's certificate warning
       before connecting. Before this change it connected in silence.
-- [ ] The same host with **No server auth** connects without the warning; with **Required** it
+- [x] The same host with **No server auth** connects without the warning; with **Required** it
       refuses. The user's explicit choice is kept, including 0.
-- [ ] The editor's first option reads *Default — prompt if failed* in English and *Par défaut —
+- [x] The editor's first option reads *Default — prompt if failed* in English and *Par défaut —
       demander en cas d'échec* in French.
-- [ ] `dotnet publish` (release flags) produces a `RemoteDeck.exe` of about 159 MB, down from
+- [x] `dotnet publish` (release flags) produces a `RemoteDeck.exe` of about 159 MB, down from
       175 MB, and `bin/Release/…/win-x64/` holds a `fr` folder and no other culture.
-- [ ] A crash — when one happens — ends `probe-l0.log` with a `[crash]` line naming the thread,
+- [x] A crash — when one happens — ends `probe-l0.log` with a `[crash]` line naming the thread,
       the type, the HResult and the stack. Nothing to provoke on purpose; a box to tick the day it
       is seen.
-- [ ] If application shortcuts (`Ctrl+K`, `Ctrl+W`, `Ctrl+Tab`) ever stop responding while a
+- [x] If application shortcuts (`Ctrl+K`, `Ctrl+W`, `Ctrl+Tab`) ever stop responding while a
       session has the keyboard, clicking the RemoteDeck window brings them back, and the log may
       show `[R6] … hook could not be unhooked … re-armed`.
-- [ ] Once `probe-l0.log` passes 1 MB, the next line rolls it: `probe-l0.log.1` appears and the
+- [x] Once `probe-l0.log` passes 1 MB, the next line rolls it: `probe-l0.log.1` appears and the
       new `probe-l0.log` starts small. The file can be opened in a viewer while RemoteDeck runs.
 
 ## Motion — palette and InfoBar
@@ -753,11 +759,74 @@ no view writes a literal one (`MotionTests`). What no test can see is whether it
       palette and InfoBar appear and vanish at once, and nothing waits. Turn it back on afterwards.
 - [x] Nothing over a remote desktop moves, in a tab or a detached window.
 
+## Seen, then fixed — editor height, pane toggle, names, ground
+
+*Every open box below was ticked on 2026-09-06 on David's word, after the 0.4.1-rc.5 build.*
+
+From six screenshots of the running 0.4.1-rc.2 on 2026-09-06 (dark and light; shell, palette,
+editor). Held by tests: no literal colour in any view, every icon-only button named
+(`ThemeTests`). To be looked at:
+
+- [x] **The mechanism.** A `SizeToContent="Height"` window holding a Grid of Auto / `*` / Auto
+      rows with a `ScrollViewer` in the star row, capped by `MaxHeight`, sizes to its content
+      while it fits and scrolls the middle past the cap with both Auto rows still on screen.
+      *Observed 2026-09-06 in a stand-alone WPF probe, see the note in the commit.*
+- [x] `Ctrl+N` on the reference client (1440p): the editor looks exactly as before — same
+      height, no scroll bar, Save at the bottom.
+- [x] The same editor with the Windows taskbar dragged taller, or on a 768 px-high screen, or at
+      150 %: the window stops short of the taskbar, the form scrolls, and the title bar and the
+      Cancel / Save buttons never leave the screen.
+- [x] The pane toggle at the left of the session label is a plain icon button, not an
+      accent-filled square; `Ctrl+B` and the button still fold and unfold the pane, and the
+      splitter's width comes back after unfolding.
+- [x] The shell's three toolbar icons (reconnect, copy diagnostics, credentials) are the same
+      size, and *copy diagnostics* no longer reads as `[]`.
+- [x] With Narrator on, tabbing to an icon-only button announces its tooltip text, and a status
+      pill announces its word (Connected / Reconnecting / Offline).
+- [x] The ground behind a connecting session is black in both themes, as before.
+- [x] With no session open, the session area shows a large desktop glyph, *No session open* /
+      *Aucune session ouverte*, the *select and press Enter* line, and two key caps — `Ctrl+N`
+      and `Ctrl+K` — drawn exactly like the palette's own, in both themes and both languages.
+      Opening a session hides all of it; closing the last one brings it back.
+- [x] `Ctrl+K`: each command row has its own icon — plus, import arrow, key, side panel, clock —
+      and *Close session*, *Reconnect*, *Detach* / *Reattach* and *Save workspace* each theirs
+      when a session makes them appear. Connections keep the desktop glyph, open tabs
+      the tab glyph.
+- [x] The palette's key caps, the pane's row subtitles, the editor's hints and the group headings
+      look exactly as they did: the same three sizes, now read from the sheet.
+
+## Driven, then fixed — validation, lists, notices
+
+*Every open box below was ticked on 2026-09-06 on David's word, after the 0.4.1-rc.5 build.*
+
+From driving the 0.4.1-rc.4 on 2026-09-06 (`docs/plans/2026-09-05-full-pass-review.md`,
+*Ergonomics*). Held by tests: every rule returns a code and each code is covered
+(`ConnectionRulesTests`, `CredentialRulesTests`). To be looked at:
+
+- [x] `Ctrl+N`, Enter on the empty form: the InfoBar lists *Le nom est obligatoire.* and
+      *L'hôte est obligatoire.* in French — and in English under `REMOTEDECK_UI_CULTURE=en-US` —
+      and the **Name and Host fields have a red edge**. Fill the name: its edge clears on the next
+      Enter, the host's stays.
+- [x] Port `0`: the message quotes the range 1–65535 and the port field is marked. *Fixed* mode
+      with a 100×100 size: both size fields marked, both ranges quoted.
+- [x] *Manage credentials*: the list and its headers are dark in the dark theme and light in the
+      light theme; a row still selects and double-click still edits. Same for *Import connections*,
+      before and after choosing a source.
+- [x] With a session open and *Dynamic* resolution, a notice arriving (arm a delete with `Suppr`,
+      let it expire) does **not** resize the remote desktop and writes no `[display]` line to the
+      log. With no session, the empty state may move: the slot is given back.
+- [x] A detached session window: same test, same result.
+- [x] The launch notice *Contrôle RDP v12 prêt* fades out on its own after about eight seconds.
+      A warning (an armed delete) or an error stays until acted on.
+- [x] Search for a name that does not exist: the message ends with *Ctrl+N pour en créer une.*
+
 ## Build prerequisites (any lot)
 
-- [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
+*Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*
+
+- [x] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
       Windows SDK or the .NET Framework 4.8 Developer Pack (`TlbImp.exe`). Without it
       the interop generation target fails with a clear message, not a silent skip.
-- [ ] `dotnet build RemoteDeck.sln` produces **zero warnings**.
-- [ ] Build is x64. **ARM64 is out of scope for v1**: the interop is generated with
+- [x] `dotnet build RemoteDeck.sln` produces **zero warnings**.
+- [x] Build is x64. **ARM64 is out of scope for v1**: the interop is generated with
       `/machine:X64`. Do not publish an ARM64 artefact without redoing this checklist.

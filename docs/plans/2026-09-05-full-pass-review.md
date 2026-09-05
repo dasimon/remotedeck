@@ -167,3 +167,62 @@ Interest = risk removed × inverse of cost.
 | 9 | O2 R2R / compression | Measure three cold starts first | medium |
 | 10 | O3 list rebuild | Only when the list grows | small |
 | 11 | S5 manifest | Hygiene | trivial |
+
+## Ergonomics — the application driven, 2026-09-06
+
+The 0.4.1-rc.4 build launched and driven by keyboard and mouse, fourteen screenshots: first
+screen, palette open and filtered, credentials, import, editor empty and with validation errors,
+search with no match, row selected, both context menus, delete armed and expired, pane folded.
+Sessions, tabs, detaching and full screen were not exercised — they need a server — and are
+reviewed from the README's promises only.
+
+### What holds
+Every shortcut in the README's table did what the table says. `Delete` arms, says so in the
+InfoBar with the connection's name, and the arming expires on its own after five seconds. The
+row menu carries the four actions with their keys; the empty-pane menu carries the two that need
+no row. Search with no match says so, with the query quoted. `Ctrl+B` folds and unfolds, and the
+empty state re-centres. Escape closes the editor; Enter saves and, on an empty form, lists every
+reason at once instead of the first.
+
+### What does not — defects
+- **E1 — Validation messages are English in a French interface.** `Vérifiez le formulaire —
+  Name is required. Host is required.` `ConnectionRules.Validate` and `CredentialRules.Validate`
+  return eight English sentences from `Core`, and the view models show them as they are. Core
+  should return codes; the App owns the words. Medium: two rule classes, their tests, keys ×2.
+- **E2 — Two windows have white lists in the dark theme.** *Manage credentials* and *Import
+  connections* use a plain WPF `ListView` with a `GridView`, which WPF-UI does not restyle: a
+  white rectangle with white headers in a dark window, and an empty white void in the import
+  window before a source is chosen. Small-medium: tokens on background, header and rows, in both.
+- **E3 — Every InfoBar resizes the remote desktop.** The shell's right column is Auto / Auto /
+  Auto / `*`: the InfoBar's row is above the session area, so a message appearing or leaving
+  changes the session area's height — measured, the empty state moved 15 px when the delete arming
+  expired — and `RdpSession` follows its host's `SizeChanged` with a 300 ms debounce into a
+  dynamic-resolution renegotiation. Every status message during a session costs a resize. The
+  InfoBar cannot overlay the session (airspace: nothing WPF draws over a `WindowsFormsHost`), so
+  the answer is either a reserved row height while a session is open or notices in the tab strip.
+  A design decision; medium.
+- **E4 — The empty state's glyph did not draw.** `Desktop48` is in the enum and drew nothing;
+  found by this pass, on the lot that introduced it. Three probes to the cause: rendering
+  off-screen was inconclusive (every symbol gave the same 296 pixels — a fallback box), the font
+  folder was first looked for at the wrong path, and then the glyph map of the two TTFs inside
+  `Wpf.Ui.dll` answered *present* for U+F083D while `SymbolExtensions.GetString(Desktop48)` returned
+  `U+083D U+000F` — the code point above U+FFFF split byte-wise instead of a surrogate pair. A
+  WPF-UI 4.3.0 defect: every symbol above the base plane is blank. Fixed here with `Desktop24`
+  scaled to the hero size, and the reason written beside it in the markup.
+
+*Fixed the same day, on the `visual` branch, and seen again by driving the 0.4.1-rc.5: E1 (codes in
+Core, words in the App, both languages), E2 (WPF-UI's own list and grid), E3 (the notice row keeps
+one notice's height while a session is open), E4 (the glyph). Of the four below, E5, E6 and E8 are
+fixed there too; E7 is watched, not fixed.*
+
+### What could be better — taste, in order
+- **E5 — The *ready* InfoBar never leaves.** *Contrôle RDP v12 prêt — choisissez une connexion…*
+  stays until closed, on every launch, and now says what the empty state already says beneath it.
+  Informational notices should retire on their own after a few seconds; warnings and errors stay.
+- **E6 — Invalid fields are not marked.** The InfoBar lists the errors; the fields themselves stay
+  neutral. A red edge on the field named would close the loop.
+- **E7 — Fuzzy search is generous.** `iden` matched *Manage credentials* first, correctly, and
+  three other rows through scattered letters (`d…e…s`). Harmless with a dozen items; with two
+  hundred connections a four-letter query will fill the palette with noise. Watch, do not fix yet.
+- **E8 — The search's no-match message names no way out.** The README promises "the empty state
+  names the shortcuts"; the pane's says only that nothing matched. A `Ctrl+N` there would help.

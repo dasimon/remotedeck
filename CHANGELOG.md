@@ -2,63 +2,14 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.4.0 — 2026-09-06
 
-### Hardening
-
-Five small changes from a full read of the application, each with the measurement that
-motivated it. The full findings, including what was found to be right, are in
-`docs/plans/2026-09-05-full-pass-review.md`.
-
-- **A connection that says nothing about server authentication now gets a warning, not
-  silence.** Measured 2026-09-05: left to itself, the Remote Desktop control's
-  `AuthenticationLevel` is **0** — "no authentication of the server" — so every connection created
-  with the editor's "Default" would have accepted a spoofed host without a word. RemoteDeck now
-  sets the level on every connection, and its default is 2, "attempt authentication and prompt on
-  failure" — what `mstsc.exe` itself writes into every `.rdp` it saves. An explicit 0 chosen in the
-  editor stays 0. The editor's option now reads *Default — prompt if failed* so it says what it
-  does, and the control's own value is written to the log once per launch (`[R8]`) so the checklist
-  can record it on the real control rather than on a probe.
-- **The executable is 16 MB smaller.** RemoteDeck speaks English and French, and shipped the
-  satellite assemblies of thirteen languages — 18 MB of `*.resources.dll` from its packages, bundled
-  into the single file and mapped at every start. `SatelliteResourceLanguages` now names the two.
-  Measured: 175.2 MB → 159.0 MB, the same build.
-- **A crash now leaves a line in the log.** There was no unhandled-exception handler anywhere:
-  an exception escaping any event handler, or any `async void` after its first `await` — which is
-  every handler that connects a session — ended the process with nothing written. The three
-  sources (UI thread, other threads, faulted tasks nobody awaited) are now logged as `[crash]`,
-  type, HResult, message and stack. Nothing is marked handled: an application that swallows what
-  it did not expect keeps running in a state nobody designed.
-- **Application shortcuts no longer die silently after a stall.** Windows removes a low-level
-  keyboard hook that overruns its 300 ms budget and tells nobody — no message, no error, no API to
-  ask. One GC pause or one slow disk write, and every `Ctrl+K`, `Ctrl+W` and `Ctrl+Tab` was gone
-  for the rest of the session. The hook is now re-armed every time the shell is activated, which
-  turns a permanent failure into one that lasts until the next click; when the unhook reports the
-  handle was already gone, the log says so (`[R6]`).
-### Motion
-
-- **The palette and the InfoBar arrive and leave; they no longer pop.** `Ctrl+K` fades in and
-  settles up by six pixels over 150 ms, easing out; Escape, Enter or a click elsewhere fade it out
-  over 80 ms, easing in — from every exit, so it never vanishes in one frame. The InfoBar slides in
-  from just above with the same arrival and fades on hide; a message replacing one already on
-  screen swaps its text in place, so a reconnect's status updates never flicker. Nothing over the
-  remote desktop moves, deliberately: a `WindowsFormsHost` sits there, and a desktop that
-  "slides" would be a lie about latency.
-- **Three durations, and no others.** `RdMotionFast` (80 ms, leaving), `RdMotion` (150 ms,
-  arriving) and `RdMotionSlow` (220 ms, the ceiling) join the theme sheet as a closed set, like the
-  radii and the heights. The three row-hover fades that already existed — connection list, palette
-  rows, session tabs — wrote `0:0:0.15` as a literal; they now name the token. A convention test
-  reads the sheet and every view: a literal duration anywhere, a token above the ceiling, or a
-  fourth token fails the build's tests, and each guard was proved by breaking it.
-- **Windows' "Animation effects" setting is honoured.** Off, every duration is zero: the end state
-  is applied at once and nothing waits. One class, `Controls.Motion`, owns the two gestures and the
-  switch, so no view has to know.
-- **The probe log is bounded and cheaper to write.** It grew without limit — 586 KB and 1,245
-  lines on the reference client — and each line opened and closed the file, usually on the UI
-  thread. One writer now stays open, flushed per line and shared for reading, and the file rolls
-  to `probe-l0.log.1` past 1 MB, so the disk holds two at most.
-
-## 0.4.0 — 2026-09-05
+A connection can wait for its VPN, and one click raises the tunnel without a window. A web-account
+connection can name its Entra account. Then a full read of the application — security, performance,
+what it looks like and how it handles — and what that read changed: a server-authentication default
+that was silence, a crash that left no trace, an executable 16 MB heavier than it needed to be, a
+palette and an InfoBar that popped, an editor taller than a laptop screen, validation in the wrong
+language, and a notice that resized the remote desktop every time it appeared.
 
 ### A connection can wait for its VPN
 
@@ -138,6 +89,123 @@ motivated it. The full findings, including what was found to be right, are in
   plumbing between the SDK and the platform, not something this repository configures wrongly.
   `global.json` declares the MTP runner anyway, so a later SDK that fixes the integration makes
   `dotnet test` work again with no change here.
+
+### Hardening
+
+Five small changes from a full read of the application, each with the measurement that
+motivated it. The full findings, including what was found to be right, are in
+`docs/plans/2026-09-05-full-pass-review.md`.
+
+- **A connection that says nothing about server authentication now gets a warning, not
+  silence.** Measured 2026-09-05: left to itself, the Remote Desktop control's
+  `AuthenticationLevel` is **0** — "no authentication of the server" — so every connection created
+  with the editor's "Default" would have accepted a spoofed host without a word. RemoteDeck now
+  sets the level on every connection, and its default is 2, "attempt authentication and prompt on
+  failure" — what `mstsc.exe` itself writes into every `.rdp` it saves. An explicit 0 chosen in the
+  editor stays 0. The editor's option now reads *Default — prompt if failed* so it says what it
+  does, and the control's own value is written to the log once per launch (`[R8]`) so the checklist
+  can record it on the real control rather than on a probe.
+- **The executable is 16 MB smaller.** RemoteDeck speaks English and French, and shipped the
+  satellite assemblies of thirteen languages — 18 MB of `*.resources.dll` from its packages, bundled
+  into the single file and mapped at every start. `SatelliteResourceLanguages` now names the two.
+  Measured: 175.2 MB → 159.0 MB, the same build.
+- **A crash now leaves a line in the log.** There was no unhandled-exception handler anywhere:
+  an exception escaping any event handler, or any `async void` after its first `await` — which is
+  every handler that connects a session — ended the process with nothing written. The three
+  sources (UI thread, other threads, faulted tasks nobody awaited) are now logged as `[crash]`,
+  type, HResult, message and stack. Nothing is marked handled: an application that swallows what
+  it did not expect keeps running in a state nobody designed.
+- **Application shortcuts no longer die silently after a stall.** Windows removes a low-level
+  keyboard hook that overruns its 300 ms budget and tells nobody — no message, no error, no API to
+  ask. One GC pause or one slow disk write, and every `Ctrl+K`, `Ctrl+W` and `Ctrl+Tab` was gone
+  for the rest of the session. The hook is now re-armed every time the shell is activated, which
+  turns a permanent failure into one that lasts until the next click; when the unhook reports the
+  handle was already gone, the log says so (`[R6]`).
+### Seen, then fixed
+
+Six screenshots of the running application — shell, palette, editor, in both themes — and the
+changes they asked for. The two that are defects rather than taste come first.
+
+- **The connection editor fits the screen it opens on.** It was about 990 px tall at 100 %, could
+  neither resize nor scroll, and on a 1366×768 laptop — or a 1080p one at 150 % — the Save button
+  was simply off the screen with no way to reach it. Its height is now capped to the monitor's
+  work area, and past the cap the form scrolls between the title bar and the buttons, which stay
+  where they are.
+- **The pane toggle is no longer the loudest thing on the screen.** It was a checked
+  `ToggleButton`, which WPF-UI paints in the accent — the only accent fill in view, louder than
+  *New* and than the session itself, for a control whose whole job is to fold a side pane. It is a
+  plain icon button now; the pane shows its own state.
+- **Every icon-only button has a name a screen reader can say.** Twelve of them — reconnect,
+  diagnostics, credentials, detach, reattach, full screen, close a tab — carried a tooltip a
+  sighted user could read and nothing for anyone else: WPF does not fall back to the tooltip, so
+  each was announced as "button". They now carry the same text as their tooltip, and the state
+  pill reads its own word. A convention test keeps it so.
+- **The ground behind a remote desktop is a token.** The last two literal colours in any view,
+  `#FF000000` for the area a session paints into, are now `RdSessionGround` — the one colour the
+  sheet names as not being the theme's, because it is not ours. A convention test refuses the next
+  literal.
+- The shell's toolbar icons are all 24 px now, where two were 20 — the *copy diagnostics* glyph
+  read as a pair of brackets at that size.
+- **The first screen says what to do.** With no session open, the area a remote desktop will fill
+  showed one grey sentence in the middle of most of the window. It now shows a glyph, a title, the
+  one thing to do, and the two keys that do it — `Ctrl+N` and `Ctrl+K` — drawn as keys, with the
+  palette's own key cap, so the two surfaces speak with one voice.
+- **Every palette command has its own icon.** Five commands shared one glyph, which said nothing
+  five times. Each names its symbol now — a plus for *New connection*, a key for *Manage
+  credentials*, a clock for *Reopen the last session at startup*, and so on — and a name the icon
+  font does not have falls back to the generic glyph rather than failing the palette.
+- **Type is three sizes, named.** Fourteen literal `FontSize` values in the views said the same
+  three numbers fourteen times; they are `RdFontSm`, `RdFontMd` and `RdFont` in the sheet now, a
+  closed set like the radii, the heights and the durations, and a convention test refuses the
+  fifteenth literal and the fourth size alike.
+
+### Driven, then fixed
+
+The application launched and driven by keyboard and mouse through fourteen steps, and what that
+found. Every shortcut in the README's table did what the table says; these are the rest.
+
+- **Validation speaks the interface's language.** *Vérifiez le formulaire — Name is required.
+  Host is required.* The rules in `Core` returned English sentences and the editors showed them as
+  they were. They return codes now, and the application owns the words, in both languages; the
+  limits a message quotes come from the same constants the rule enforces.
+- **The field that failed is marked.** The InfoBar lists the reasons; the field named gets a red
+  edge. Both, deliberately: a list alone sends the eye hunting, an edge alone says nothing about why.
+- **Two windows no longer show white lists in the dark theme.** *Manage credentials* and *Import
+  connections* used a plain WPF list with a `GridView`, which WPF-UI does not restyle: a white
+  rectangle with white headers in a dark window. They use WPF-UI's own list and grid now.
+- **A notice no longer resizes the remote desktop.** The InfoBar's row sat above the session area
+  and collapsed when empty, so every message arriving or leaving changed the area's height — and
+  the control renegotiated its resolution each time, every reconnect countdown tick included.
+  While a session is open, the row keeps one notice's height (47 px, measured); with no session, it
+  gives it back. A detached window reserves it always. A message that wraps to two lines still
+  grows the row — rare, and better than clipping what Windows had to say.
+- **Notices that only tell retire on their own.** An informational or success message leaves after
+  eight seconds; warnings and errors stay, since they ask for something. The launch notice used to
+  sit on screen for the whole session, saying what the first screen now says beneath it.
+- The search's *no match* message says how to create the connection it could not find.
+
+### Motion
+
+- **The palette and the InfoBar arrive and leave; they no longer pop.** `Ctrl+K` fades in and
+  settles up by six pixels over 150 ms, easing out; Escape, Enter or a click elsewhere fade it out
+  over 80 ms, easing in — from every exit, so it never vanishes in one frame. The InfoBar slides in
+  from just above with the same arrival and fades on hide; a message replacing one already on
+  screen swaps its text in place, so a reconnect's status updates never flicker. Nothing over the
+  remote desktop moves, deliberately: a `WindowsFormsHost` sits there, and a desktop that
+  "slides" would be a lie about latency.
+- **Three durations, and no others.** `RdMotionFast` (80 ms, leaving), `RdMotion` (150 ms,
+  arriving) and `RdMotionSlow` (220 ms, the ceiling) join the theme sheet as a closed set, like the
+  radii and the heights. The three row-hover fades that already existed — connection list, palette
+  rows, session tabs — wrote `0:0:0.15` as a literal; they now name the token. A convention test
+  reads the sheet and every view: a literal duration anywhere, a token above the ceiling, or a
+  fourth token fails the build's tests, and each guard was proved by breaking it.
+- **Windows' "Animation effects" setting is honoured.** Off, every duration is zero: the end state
+  is applied at once and nothing waits. One class, `Controls.Motion`, owns the two gestures and the
+  switch, so no view has to know.
+- **The probe log is bounded and cheaper to write.** It grew without limit — 586 KB and 1,245
+  lines on the reference client — and each line opened and closed the file, usually on the UI
+  thread. One writer now stays open, flushed per line and shared for reading, and the file rolls
+  to `probe-l0.log.1` past 1 MB, so the disk holds two at most.
 
 ## 0.3.0 — 2026-09-03
 

@@ -66,7 +66,10 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <!-- The notice row. Its MinHeight is set by UpdateSessionsArea: a session's worth
+                     of RdNoticeHeight while one is open, so an InfoBar arriving or leaving never
+                     resizes the remote desktop underneath; nothing while the area is empty. -->
+                <RowDefinition x:Name="NoticeRow" Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -84,14 +87,16 @@
 
                 <!-- U+E700 = GlobalNavButton (Segoe Fluent Icons, Segoe MDL2 Assets on Win10):
                      the hamburger that folds the pane. Checked means "pane shown". -->
-                <ToggleButton x:Name="PaneToggle" Grid.Column="0"
-                              Width="36" Height="32" Padding="0" Margin="0,0,8,0"
-                              IsChecked="True"
-                              Content="&#xE700;"
-                              FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                              FontSize="14"
-                              ToolTip="{x:Static res:Strings.Shell_PaneToggleToolTip}"
-                              Click="OnPaneToggleClick" />
+                <!-- A plain button, not a ToggleButton: checked, WPF-UI paints a toggle in the
+                     accent, and the fold of a side pane was the loudest thing on the screen — the
+                     only accent fill in view, louder than New and than the session. The pane
+                     itself shows its state; the hamburger only ever means "fold or unfold". -->
+                <ui:Button x:Name="PaneToggle" Grid.Column="0"
+                           Width="36" Height="32" Padding="0" Margin="0,0,8,0"
+                           Icon="{ui:SymbolIcon Navigation24}"
+                           ToolTip="{x:Static res:Strings.Shell_PaneToggleToolTip}"
+                           AutomationProperties.Name="{x:Static res:Strings.Shell_PaneToggleToolTip}"
+                           Click="OnPaneToggleClick" />
 
                 <TextBlock x:Name="SessionLabel" Grid.Column="1"
                            VerticalAlignment="Center"
@@ -100,7 +105,7 @@
 
                 <ui:Button x:Name="ReconnectButton" Grid.Column="2" Margin="8,0,0,0"
                            Content="{x:Static res:Strings.Shell_Reconnect}"
-                           Icon="{ui:SymbolIcon ArrowClockwise20}"
+                           Icon="{ui:SymbolIcon ArrowClockwise24}"
                            Visibility="Collapsed"
                            ToolTip="{x:Static res:Strings.Shell_ReconnectToolTip}"
                            Click="OnReconnectClick" />
@@ -112,14 +117,16 @@
                            Click="OnCancelRetryClick" />
 
                 <ui:Button x:Name="DiagnosticsButton" Grid.Column="4" Margin="8,0,0,0"
-                           Icon="{ui:SymbolIcon Copy20}"
+                           Icon="{ui:SymbolIcon Copy24}"
                            IsEnabled="False"
                            ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
+                           AutomationProperties.Name="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                            Click="OnCopyDiagnosticsClick" />
 
                 <ui:Button Grid.Column="5" Margin="8,0,0,0"
                            Icon="{ui:SymbolIcon Key24}"
                            ToolTip="{x:Static res:Strings.Shell_CredentialsToolTip}"
+                           AutomationProperties.Name="{x:Static res:Strings.Shell_CredentialsToolTip}"
                            Click="OnManageCredentials" />
 
                 <ui:Button x:Name="DisconnectButton" Grid.Column="6" Margin="8,0,0,0"
@@ -135,16 +142,46 @@
             <Grid Grid.Row="3" Margin="0,0,12,12">
                 <!-- Sibling of the session area rather than a child of it: the backdrop behind a
                      remote desktop is black, which no theme text colour reads well against. -->
-                <TextBlock x:Name="EmptySessions"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           TextAlignment="Center" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="{x:Static res:Strings.Shell_EmptySessions}" />
+                <!-- The first thing a new user sees is this, over most of the window. A glyph, a
+                     title, the one thing to do, and the two keys that do it, drawn as keys with
+                     the palette's own cap, so the two surfaces speak with one voice. -->
+                <StackPanel x:Name="EmptySessions"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsHitTestVisible="False">
+                    <!-- Desktop24 scaled up, not Desktop48. Measured 2026-09-06: WPF-UI 4.3.0's
+                         SymbolExtensions.GetString splits a code point above U+FFFF byte-wise
+                         (Desktop48 = U+F083D comes out as U+083D U+000F, not a surrogate pair), so
+                         every such symbol draws nothing although the shipped font has the glyph.
+                         A symbol above U+FFFF is a blank square in this application until that is
+                         fixed upstream; the 24 px glyphs all sit in the base plane. -->
+                    <ui:SymbolIcon Symbol="Desktop24"
+                                   FontSize="{StaticResource RdGlyphHero}"
+                                   Foreground="{DynamicResource RdTextMuted}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,12" />
+                    <TextBlock Text="{x:Static res:Strings.Shell_EmptySessionsTitle}"
+                               FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource RdText}" />
+                    <TextBlock Text="{x:Static res:Strings.Shell_EmptySessions}"
+                               HorizontalAlignment="Center" Margin="0,4,0,16"
+                               Foreground="{DynamicResource RdTextMuted}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Border Style="{StaticResource RdKeyCap}">
+                            <TextBlock Style="{StaticResource RdKeyCapText}" Text="{x:Static res:Strings.Palette_ShortcutNewConnection}" />
+                        </Border>
+                        <TextBlock Text="{x:Static res:Strings.Shell_EmptyNewHint}" Margin="8,0,20,0"
+                                   VerticalAlignment="Center" Foreground="{DynamicResource RdTextMuted}" />
+                        <Border Style="{StaticResource RdKeyCap}">
+                            <TextBlock Style="{StaticResource RdKeyCapText}" Text="{x:Static res:Strings.Shell_ShortcutPalette}" />
+                        </Border>
+                        <TextBlock Text="{x:Static res:Strings.Shell_EmptyPaletteHint}" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" Foreground="{DynamicResource RdTextMuted}" />
+                    </StackPanel>
+                </StackPanel>
 
                 <!-- One child per open session, added by SessionsViewModel; the active one is
                      Visible and the others Hidden. Collapsed when there is no tab at all, so the
                      black rectangle does not sit over the message above. -->
-                <Border x:Name="SessionsBorder" CornerRadius="6" Background="#FF000000" Visibility="Collapsed">
+                <Border x:Name="SessionsBorder" CornerRadius="{StaticResource RdRadius}" Background="{DynamicResource RdSessionGround}" Visibility="Collapsed">
                     <Grid x:Name="SessionsArea" />
                 </Border>
             </Grid>

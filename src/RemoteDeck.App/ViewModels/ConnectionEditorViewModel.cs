@@ -54,6 +54,12 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     ];
 
     [ObservableProperty] private string _name = "";
+
+    /// <summary>Set by <see cref="Validate"/>; each one paints its field's edge through <c>Mark.Invalid</c>.</summary>
+    [ObservableProperty] private bool _nameInvalid;
+    [ObservableProperty] private bool _hostInvalid;
+    [ObservableProperty] private bool _portInvalid;
+    [ObservableProperty] private bool _sizeInvalid;
     [ObservableProperty] private string _host = "";
     [ObservableProperty] private double? _port = DefaultPort;
     [ObservableProperty] private string _groupName = "";
@@ -128,7 +134,13 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     public bool Validate()
     {
         var errors = ConnectionRules.Validate(Name, Host, PortNumber, DisplayMode, FixedWidthNumber, FixedHeightNumber);
-        Errors = string.Join("\n", errors);
+        Errors = string.Join("\n", errors.Select(ValidationMessages.Of));
+        // The InfoBar lists the reasons; the fields show which. Both, deliberately: a list alone
+        // sends the eye hunting, an edge alone says nothing about why.
+        NameInvalid = errors.Any(e => e is ConnectionError.NameRequired or ConnectionError.NameTooLong);
+        HostInvalid = errors.Any(e => e is ConnectionError.HostRequired or ConnectionError.HostHasWhitespace);
+        PortInvalid = errors.Any(e => e is ConnectionError.PortRequired or ConnectionError.PortOutOfRange);
+        SizeInvalid = errors.Any(e => e is ConnectionError.FixedWidthOutOfRange or ConnectionError.FixedHeightOutOfRange);
         return errors.Count == 0;
     }
 

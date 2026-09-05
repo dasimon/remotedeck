@@ -48,7 +48,7 @@ public sealed class ConnectionRulesTests
     {
         var errors = ConnectionRules.Validate("Web01", "web01.corp", null, DisplayMode.Dynamic, null, null);
 
-        Assert.Equal(["Port is required."], errors);
+        Assert.Equal([ConnectionError.PortRequired], errors);
     }
 
     [Fact]

@@ -195,7 +195,7 @@
     <value>Aucune connexion pour l'instant — appuyez sur Ctrl+N pour en ajouter une.</value>
   </data>
   <data name="Pane_EmptyNoMatch" xml:space="preserve">
-    <value>Aucune connexion ne correspond à « {0} ».</value>
+    <value>Aucune connexion ne correspond à « {0} ». Ctrl+N pour en créer une.</value>
   </data>
   <data name="Pane_StatusConnected" xml:space="preserve">
     <value>Connecté</value>
@@ -232,6 +232,18 @@
   </data>
   <data name="Shell_EmptySessions" xml:space="preserve">
     <value>Sélectionnez une connexion et appuyez sur Entrée</value>
+  </data>
+  <data name="Shell_EmptySessionsTitle" xml:space="preserve">
+    <value>Aucune session ouverte</value>
+  </data>
+  <data name="Shell_EmptyNewHint" xml:space="preserve">
+    <value>Nouvelle connexion</value>
+  </data>
+  <data name="Shell_EmptyPaletteHint" xml:space="preserve">
+    <value>Palette de commandes</value>
+  </data>
+  <data name="Shell_ShortcutPalette" xml:space="preserve">
+    <value>Ctrl+K</value>
   </data>
   <data name="Shell_SessionLabel" xml:space="preserve">
     <value>{0} — {1} · {2}</value>
@@ -898,5 +910,41 @@
   </data>
   <data name="Shell_DeleteWorkspaceMessage" xml:space="preserve">
     <value>L'espace est supprimé. Les connexions qu'il liste ne sont pas touchées.</value>
+  </data>
+  <data name="Editor_ErrNameRequired" xml:space="preserve">
+    <value>Le nom est obligatoire.</value>
+  </data>
+  <data name="Editor_ErrNameTooLong" xml:space="preserve">
+    <value>Le nom ne doit pas dépasser {0} caractères.</value>
+  </data>
+  <data name="Editor_ErrHostRequired" xml:space="preserve">
+    <value>L'hôte est obligatoire.</value>
+  </data>
+  <data name="Editor_ErrHostWhitespace" xml:space="preserve">
+    <value>L'hôte ne doit pas contenir d'espace.</value>
+  </data>
+  <data name="Editor_ErrPortRequired" xml:space="preserve">
+    <value>Le port est obligatoire.</value>
+  </data>
+  <data name="Editor_ErrPortRange" xml:space="preserve">
+    <value>Le port doit être compris entre {0} et {1}.</value>
+  </data>
+  <data name="Editor_ErrWidthRange" xml:space="preserve">
+    <value>La largeur doit être comprise entre {0} et {1}.</value>
+  </data>
+  <data name="Editor_ErrHeightRange" xml:space="preserve">
+    <value>La hauteur doit être comprise entre {0} et {1}.</value>
+  </data>
+  <data name="CredEditor_ErrLabelRequired" xml:space="preserve">
+    <value>Le libellé est obligatoire.</value>
+  </data>
+  <data name="CredEditor_ErrLabelTooLong" xml:space="preserve">
+    <value>Le libellé ne doit pas dépasser {0} caractères.</value>
+  </data>
+  <data name="CredEditor_ErrLabelTaken" xml:space="preserve">
+    <value>Un identifiant porte déjà ce libellé.</value>
+  </data>
+  <data name="CredEditor_ErrUserRequired" xml:space="preserve">
+    <value>Le nom d'utilisateur est obligatoire.</value>
   </data>
 </root>

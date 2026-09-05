@@ -1,6 +1,21 @@
 namespace RemoteDeck.Core.Model;
 
-/// <summary>Validation rules for the connection editor. Pure; messages are UI-ready English.</summary>
+/// <summary>
+/// What is wrong with a connection, as a code. The words are the application's: until 2026-09-06
+/// these rules returned English sentences, and a French interface showed them as they were.
+/// </summary>
+public enum ConnectionError
+{
+    NameRequired,
+    NameTooLong,
+    HostRequired,
+    HostHasWhitespace,
+    PortRequired,
+    PortOutOfRange,
+    FixedWidthOutOfRange,
+    FixedHeightOutOfRange,
+}
+
 public static class ConnectionRules
 {
     public const int MaxNameLength = 80;
@@ -26,33 +41,35 @@ public static class ConnectionRules
     /// </summary>
     public static int EffectiveAuthenticationLevel(int? stored) => stored ?? DefaultAuthenticationLevel;
 
-    private const int MinPort = 1;
-    private const int MaxPort = 65535;
-    private const int MinFixedWidth = 640;
-    private const int MinFixedHeight = 480;
-    private const int MaxFixedSide = 8192;
+    // Public: the application quotes them in its messages, so the number on screen is the number
+    // enforced, from the same constant.
+    public const int MinPort = 1;
+    public const int MaxPort = 65535;
+    public const int MinFixedWidth = 640;
+    public const int MinFixedHeight = 480;
+    public const int MaxFixedSide = 8192;
 
     /// <param name="port">The port, or <c>null</c> when the box is empty — reported as missing, not out of range.</param>
-    public static IReadOnlyList<string> Validate(string? name, string? host, int? port, DisplayMode mode, int? fixedWidth, int? fixedHeight)
+    public static IReadOnlyList<ConnectionError> Validate(string? name, string? host, int? port, DisplayMode mode, int? fixedWidth, int? fixedHeight)
     {
-        var errors = new List<string>();
+        var errors = new List<ConnectionError>();
 
         var trimmedName = name?.Trim() ?? "";
-        if (trimmedName.Length == 0) errors.Add("Name is required.");
-        else if (trimmedName.Length > MaxNameLength) errors.Add($"Name must be at most {MaxNameLength} characters.");
+        if (trimmedName.Length == 0) errors.Add(ConnectionError.NameRequired);
+        else if (trimmedName.Length > MaxNameLength) errors.Add(ConnectionError.NameTooLong);
 
         var trimmedHost = host?.Trim() ?? "";
-        if (trimmedHost.Length == 0) errors.Add("Host is required.");
-        else if (trimmedHost.Any(char.IsWhiteSpace)) errors.Add("Host must not contain spaces.");
+        if (trimmedHost.Length == 0) errors.Add(ConnectionError.HostRequired);
+        else if (trimmedHost.Any(char.IsWhiteSpace)) errors.Add(ConnectionError.HostHasWhitespace);
 
-        if (port is null) errors.Add("Port is required.");
-        else if (port is < MinPort or > MaxPort) errors.Add($"Port must be between {MinPort} and {MaxPort}.");
+        if (port is null) errors.Add(ConnectionError.PortRequired);
+        else if (port is < MinPort or > MaxPort) errors.Add(ConnectionError.PortOutOfRange);
 
         // Dynamic follows the window, so the fixed size is irrelevant — and must not block saving.
         if (mode != DisplayMode.Dynamic)
         {
-            if (fixedWidth is not (>= MinFixedWidth and <= MaxFixedSide)) errors.Add($"Width must be between {MinFixedWidth} and {MaxFixedSide}.");
-            if (fixedHeight is not (>= MinFixedHeight and <= MaxFixedSide)) errors.Add($"Height must be between {MinFixedHeight} and {MaxFixedSide}.");
+            if (fixedWidth is not (>= MinFixedWidth and <= MaxFixedSide)) errors.Add(ConnectionError.FixedWidthOutOfRange);
+            if (fixedHeight is not (>= MinFixedHeight and <= MaxFixedSide)) errors.Add(ConnectionError.FixedHeightOutOfRange);
         }
 
         return errors.AsReadOnly();
