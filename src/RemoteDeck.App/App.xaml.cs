@@ -29,6 +29,7 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        LogCrashes();
 
         // Detached session windows are deliberately owner-less — an owned window is always painted
         // above its owner and minimises with it, which is the opposite of a session torn onto a
@@ -69,6 +70,41 @@ public partial class App : System.Windows.Application
         }
         services.AddSingleton<ICredentialVault, DpapiCredentialVault>();
         Services = services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// Makes sure a crash leaves a line in the probe log before the process dies. Nothing here
+    /// marks an exception as handled: an application that swallows what it did not expect keeps
+    /// running in a state nobody designed, and a crash with evidence is a bug that gets fixed.
+    /// </summary>
+    /// <remarks>
+    /// Until this existed there was no handler at all, so an exception escaping any event handler
+    /// — or any <c>async void</c> after its first <c>await</c>, which is what every UI event
+    /// handler that connects a session is — ended the process with nothing in the log. The three
+    /// sources are distinct: the WPF dispatcher for the UI thread, the AppDomain for every other
+    /// thread, and the task scheduler for a faulted task nobody awaited (which no longer crashes
+    /// the process, and would otherwise vanish entirely).
+    /// </remarks>
+    private void LogCrashes()
+    {
+        DispatcherUnhandledException += (_, args) => Record("UI thread", args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => Record("background thread", args.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, args) => Record("unobserved task", args.Exception);
+
+        static void Record(string where, Exception? ex)
+        {
+            try
+            {
+                ProbeLog.Write("crash", ex is null
+                    ? $"{where}: unhandled non-exception object"
+                    : $"{where}: {ex.GetType().FullName} 0x{ex.HResult:X8} {ex.Message}{Environment.NewLine}{ex}");
+            }
+            catch
+            {
+                // The logger itself failed while the process is already going down; there is
+                // nowhere left to report to, and throwing here would only replace the real error.
+            }
+        }
     }
 
     /// <summary>Where the design tokens live. Also the key this handler matches on.</summary>
