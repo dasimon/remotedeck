@@ -733,24 +733,25 @@ one that matters most is the first: it changes what a spoofed server gets.
 
 What a test can hold is held: the sheet defines exactly three durations, none above 220 ms, and
 no view writes a literal one (`MotionTests`). What no test can see is whether it *reads* right.
+*Every box below: tried on the reference client with the 0.4.1-rc.2 build, reported 2026-09-06.*
 
 - [x] **The mechanism.** A `Duration` resource named by `{StaticResource RdMotion}` inside a
       control-template storyboard resolves and runs.
       *Observed 2026-09-05 in a stand-alone WPF probe: the animation received 00:00:00.15 and the*
       *target reached opacity 1; `SystemParameters.ClientAreaAnimation` read `True`.*
-- [ ] `Ctrl+K`: the palette's content fades in and settles upward — a movement, not a slide — over
+- [x] `Ctrl+K`: the palette's content fades in and settles upward — a movement, not a slide — over
       what feels like a blink. The acrylic backdrop itself is simply there; only the content moves.
-- [ ] Escape, Enter on a row, and a click outside all fade the palette out, shorter than it came
+- [x] Escape, Enter on a row, and a click outside all fade the palette out, shorter than it came
       in. It never disappears in one frame from any of the three.
-- [ ] A second Enter during the fade-out does not change what the first one chose.
-- [ ] An InfoBar message on an empty bar slides in from just above with a fade. A message replacing
+- [x] A second Enter during the fade-out does not change what the first one chose.
+- [x] An InfoBar message on an empty bar slides in from just above with a fade. A message replacing
       one already shown swaps its text with no motion at all (watch a reconnect's countdown).
-- [ ] Hiding the InfoBar fades it out; its own close button, where enabled, closes it at once.
-- [ ] Row hover in the connection list, on palette rows and on session tabs looks exactly as it did
+- [x] Hiding the InfoBar fades it out; its own close button, where enabled, closes it at once.
+- [x] Row hover in the connection list, on palette rows and on session tabs looks exactly as it did
       before: the same 150 ms fade, now read from the sheet.
-- [ ] **Windows › Accessibility › Visual effects › Animation effects off**, RemoteDeck restarted:
+- [x] **Windows › Accessibility › Visual effects › Animation effects off**, RemoteDeck restarted:
       palette and InfoBar appear and vanish at once, and nothing waits. Turn it back on afterwards.
-- [ ] Nothing over a remote desktop moves, in a tab or a detached window.
+- [x] Nothing over a remote desktop moves, in a tab or a detached window.
 
 ## Build prerequisites (any lot)
 
