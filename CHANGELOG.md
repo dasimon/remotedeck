@@ -73,6 +73,31 @@ changes they asked for. The two that are defects rather than taste come first.
   closed set like the radii, the heights and the durations, and a convention test refuses the
   fifteenth literal and the fourth size alike.
 
+### Driven, then fixed
+
+The application launched and driven by keyboard and mouse through fourteen steps, and what that
+found. Every shortcut in the README's table did what the table says; these are the rest.
+
+- **Validation speaks the interface's language.** *Vérifiez le formulaire — Name is required.
+  Host is required.* The rules in `Core` returned English sentences and the editors showed them as
+  they were. They return codes now, and the application owns the words, in both languages; the
+  limits a message quotes come from the same constants the rule enforces.
+- **The field that failed is marked.** The InfoBar lists the reasons; the field named gets a red
+  edge. Both, deliberately: a list alone sends the eye hunting, an edge alone says nothing about why.
+- **Two windows no longer show white lists in the dark theme.** *Manage credentials* and *Import
+  connections* used a plain WPF list with a `GridView`, which WPF-UI does not restyle: a white
+  rectangle with white headers in a dark window. They use WPF-UI's own list and grid now.
+- **A notice no longer resizes the remote desktop.** The InfoBar's row sat above the session area
+  and collapsed when empty, so every message arriving or leaving changed the area's height — and
+  the control renegotiated its resolution each time, every reconnect countdown tick included.
+  While a session is open, the row keeps one notice's height (47 px, measured); with no session, it
+  gives it back. A detached window reserves it always. A message that wraps to two lines still
+  grows the row — rare, and better than clipping what Windows had to say.
+- **Notices that only tell retire on their own.** An informational or success message leaves after
+  eight seconds; warnings and errors stay, since they ask for something. The launch notice used to
+  sit on screen for the whole session, saying what the first screen now says beneath it.
+- The search's *no match* message says how to create the connection it could not find.
+
 ### Motion
 
 - **The palette and the InfoBar arrive and leave; they no longer pop.** `Ctrl+K` fades in and
