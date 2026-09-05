@@ -753,6 +753,30 @@ no view writes a literal one (`MotionTests`). What no test can see is whether it
       palette and InfoBar appear and vanish at once, and nothing waits. Turn it back on afterwards.
 - [x] Nothing over a remote desktop moves, in a tab or a detached window.
 
+## Seen, then fixed — editor height, pane toggle, names, ground
+
+From six screenshots of the running 0.4.1-rc.2 on 2026-09-06 (dark and light; shell, palette,
+editor). Held by tests: no literal colour in any view, every icon-only button named
+(`ThemeTests`). To be looked at:
+
+- [x] **The mechanism.** A `SizeToContent="Height"` window holding a Grid of Auto / `*` / Auto
+      rows with a `ScrollViewer` in the star row, capped by `MaxHeight`, sizes to its content
+      while it fits and scrolls the middle past the cap with both Auto rows still on screen.
+      *Observed 2026-09-06 in a stand-alone WPF probe, see the note in the commit.*
+- [ ] `Ctrl+N` on the reference client (1440p): the editor looks exactly as before — same
+      height, no scroll bar, Save at the bottom.
+- [ ] The same editor with the Windows taskbar dragged taller, or on a 768 px-high screen, or at
+      150 %: the window stops short of the taskbar, the form scrolls, and the title bar and the
+      Cancel / Save buttons never leave the screen.
+- [ ] The pane toggle at the left of the session label is a plain icon button, not an
+      accent-filled square; `Ctrl+B` and the button still fold and unfold the pane, and the
+      splitter's width comes back after unfolding.
+- [ ] The shell's three toolbar icons (reconnect, copy diagnostics, credentials) are the same
+      size, and *copy diagnostics* no longer reads as `[]`.
+- [ ] With Narrator on, tabbing to an icon-only button announces its tooltip text, and a status
+      pill announces its word (Connected / Reconnecting / Offline).
+- [ ] The ground behind a connecting session is black in both themes, as before.
+
 ## Build prerequisites (any lot)
 
 - [ ] A clean clone builds with `dotnet build RemoteDeck.sln` on a machine that has the
