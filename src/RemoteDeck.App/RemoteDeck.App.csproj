@@ -26,6 +26,11 @@
          published 0.1.0 and 0.2.0 binaries did. The property belongs here rather than in the
          release workflow so that any publish, from anywhere, produces the one file it promises. -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- RemoteDeck speaks English and French. Without this, every package's satellite assemblies
+         ride along: measured on 2026-09-05, thirteen cultures (cs, de, es, fr, it, ja, ko, pl,
+         pt-BR, ru, tr, zh-Hans, zh-Hant), 18 MB of *.resources.dll bundled into the single file
+         and mapped at every start, for languages no string of ours is translated into. -->
+    <SatelliteResourceLanguages>en;fr</SatelliteResourceLanguages>
     <!-- WFO0003 tells WinForms apps to declare DPI awareness via ApplicationHighDpiMode /
          ApplicationConfiguration.Initialize(). That path only runs through the WinForms
          bootstrap, which this WPF-entry-point app never executes: UseWindowsForms is on
