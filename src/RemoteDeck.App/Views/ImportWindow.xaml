@@ -45,31 +45,31 @@
             <TextBlock Grid.Row="0" Margin="0,0,0,6" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
                        ToolTip="{Binding Summary}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
-            <ListView Grid.Row="1" x:Name="List" ItemsSource="{Binding Rows}" SelectionMode="Single">
-                <ListView.ItemContainerStyle>
+            <ui:ListView Grid.Row="1" x:Name="List" ItemsSource="{Binding Rows}" SelectionMode="Single">
+                <ui:ListView.ItemContainerStyle>
                     <!-- Partial style: WPF still applies the theme style underneath, so only the tooltip
                          is changed here. It carries what has no column — the full source path, the
                          duplicate a row matches, and everything the reader had to drop. -->
-                    <Style TargetType="ListViewItem">
+                    <Style TargetType="{x:Type ui:ListViewItem}" BasedOn="{StaticResource {x:Type ui:ListViewItem}}">
                         <Setter Property="ToolTip" Value="{Binding ToolTipText}" />
                     </Style>
-                </ListView.ItemContainerStyle>
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Width="36">
-                            <GridViewColumn.CellTemplate>
+                </ui:ListView.ItemContainerStyle>
+                <ui:ListView.View>
+                    <ui:GridView>
+                        <ui:GridViewColumn Width="36">
+                            <ui:GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" />
                                 </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="{x:Static res:Strings.Import_ColumnName}" Width="200" DisplayMemberBinding="{Binding Name}" />
-                        <GridViewColumn Header="{x:Static res:Strings.Import_ColumnAddress}" Width="200" DisplayMemberBinding="{Binding Address}" />
-                        <GridViewColumn Header="{x:Static res:Strings.Import_ColumnSource}" Width="180" DisplayMemberBinding="{Binding Source}" />
-                        <GridViewColumn Header="{x:Static res:Strings.Import_ColumnStatus}" Width="180" DisplayMemberBinding="{Binding Status}" />
-                    </GridView>
-                </ListView.View>
-            </ListView>
+                            </ui:GridViewColumn.CellTemplate>
+                        </ui:GridViewColumn>
+                        <ui:GridViewColumn Header="{x:Static res:Strings.Import_ColumnName}" Width="200" DisplayMemberBinding="{Binding Name}" />
+                        <ui:GridViewColumn Header="{x:Static res:Strings.Import_ColumnAddress}" Width="200" DisplayMemberBinding="{Binding Address}" />
+                        <ui:GridViewColumn Header="{x:Static res:Strings.Import_ColumnSource}" Width="180" DisplayMemberBinding="{Binding Source}" />
+                        <ui:GridViewColumn Header="{x:Static res:Strings.Import_ColumnStatus}" Width="180" DisplayMemberBinding="{Binding Status}" />
+                    </ui:GridView>
+                </ui:ListView.View>
+            </ui:ListView>
         </Grid>
 
         <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="16,12,16,16">
