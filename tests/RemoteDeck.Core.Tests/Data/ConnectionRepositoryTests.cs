@@ -181,6 +181,89 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void VpnProfile_roundtrips_and_is_normalised()
+    {
+        var x = Make("Behind a tunnel");
+        x.VpnProfile = "  VPN FDC  ";
+        _repo.Insert(x);
+
+        // Trimmed on the way in: the name is typed by hand, and a trailing space would otherwise
+        // travel all the way to the comparison against the live profiles.
+        Assert.Equal("VPN FDC", _repo.Get(x.Id)!.VpnProfile);
+    }
+
+    [Fact]
+    public void A_blank_VpnProfile_is_stored_as_null()
+    {
+        // "No VPN required" has one representation, not three. Otherwise the check would have to
+        // know that "", "   " and null all mean the same thing.
+        foreach (var blank in new string?[] { null, "", "   " })
+        {
+            var x = Make($"Blank {blank?.Length ?? -1}");
+            x.VpnProfile = blank;
+            _repo.Insert(x);
+            Assert.Null(_repo.Get(x.Id)!.VpnProfile);
+        }
+    }
+
+    [Fact]
+    public void Update_carries_the_VpnProfile()
+    {
+        var x = Make("Moved behind a tunnel");
+        _repo.Insert(x);
+        Assert.Null(_repo.Get(x.Id)!.VpnProfile);
+
+        x.VpnProfile = "VPN FDC";
+        _repo.Update(x);
+        Assert.Equal("VPN FDC", _repo.Get(x.Id)!.VpnProfile);
+
+        x.VpnProfile = null;
+        _repo.Update(x);
+        Assert.Null(_repo.Get(x.Id)!.VpnProfile);
+    }
+
+    [Fact]
+    public void WebAccountUpn_roundtrips_and_is_normalised()
+    {
+        var x = Make("Entra host");
+        x.UseWebAccount = true;
+        x.WebAccountUpn = "  david.simon@financieredelacite.com  ";
+        _repo.Insert(x);
+
+        // Trimmed on the way in, like VpnProfile: the value is typed by hand and goes straight to
+        // the control as the account hint.
+        Assert.Equal("david.simon@financieredelacite.com", _repo.Get(x.Id)!.WebAccountUpn);
+    }
+
+    [Fact]
+    public void A_blank_WebAccountUpn_is_stored_as_null()
+    {
+        foreach (var blank in new string?[] { null, "", "   " })
+        {
+            var x = Make($"Blank {blank?.Length ?? -1}");
+            x.WebAccountUpn = blank;
+            _repo.Insert(x);
+            Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+        }
+    }
+
+    [Fact]
+    public void Update_carries_the_WebAccountUpn()
+    {
+        var x = Make("Later an Entra host");
+        _repo.Insert(x);
+        Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+
+        x.WebAccountUpn = "user@contoso.com";
+        _repo.Update(x);
+        Assert.Equal("user@contoso.com", _repo.Get(x.Id)!.WebAccountUpn);
+
+        x.WebAccountUpn = null;
+        _repo.Update(x);
+        Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+    }
+
+    [Fact]
     public void SetFavorite_flips_the_flag_both_ways()
     {
         var x = Make("Star");

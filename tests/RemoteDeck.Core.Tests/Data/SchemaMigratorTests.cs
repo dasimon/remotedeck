@@ -126,6 +126,38 @@ public sealed class SchemaMigratorTests
     }
 
     [Fact]
+    public void V3_adds_VpnProfile_to_an_existing_populated_database()
+    {
+        // The ALTER runs over rows that already exist, so the column has to arrive nullable and
+        // leave every one of them saying "no VPN required".
+        using var tmp = new TempDatabase();
+        tmp.Db.EnsureCreated();
+        using var c = tmp.Db.Open();
+        c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'fdcsql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+
+        using var r = c.Cmd("SELECT VpnProfile FROM Connection").ExecuteReader();
+
+        Assert.True(r.Read());
+        Assert.True(r.IsDBNull(0));
+    }
+
+    [Fact]
+    public void V4_adds_WebAccountUpn_to_an_existing_populated_database()
+    {
+        // Same shape as V3: nullable, added with ALTER, and every existing row keeps meaning
+        // "no account hint", which is what the control got from them until now.
+        using var tmp = new TempDatabase();
+        tmp.Db.EnsureCreated();
+        using var c = tmp.Db.Open();
+        c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('WIN02', 'fdc-win02', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+
+        using var r = c.Cmd("SELECT WebAccountUpn FROM Connection").ExecuteReader();
+
+        Assert.True(r.Read());
+        Assert.True(r.IsDBNull(0));
+    }
+
+    [Fact]
     public void Deleting_a_connection_cascades_to_its_workspace_items()
     {
         using var tmp = new TempDatabase();

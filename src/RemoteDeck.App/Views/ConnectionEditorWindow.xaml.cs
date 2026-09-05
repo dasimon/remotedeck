@@ -31,7 +31,7 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         _repository = App.Current.Services.GetRequiredService<ConnectionRepository>();
         var credentials = App.Current.Services.GetRequiredService<CredentialRepository>().GetAll();
         _existing = existing;
-        _viewModel = ConnectionEditorViewModel.From(existing, credentials, KnownGroups());
+        _viewModel = ConnectionEditorViewModel.From(existing, credentials, KnownGroups(), Services.WindowsVpn.KnownProfiles());
         DataContext = _viewModel;
         Loaded += (_, _) => NameInput.Focus();
     }

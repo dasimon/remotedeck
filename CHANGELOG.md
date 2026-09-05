@@ -4,6 +4,64 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### A connection can wait for its VPN
+
+- **A connection can name the Windows VPN profile it needs.** Before opening the session,
+  RemoteDeck checks whether that tunnel is up; if it is not, it says so and offers to raise it
+  rather than letting the connection fail with a cryptic RDP error about a host it cannot find.
+- **The tunnel goes up silently, and one click connects.** Saying yes to the question raises the
+  profile through the RAS API — no console window, nothing to dismiss — and because the dial is
+  synchronous, the session opens as soon as the tunnel is really up instead of asking you to press
+  connect a second time.
+- **No VPN credential is stored, and none ever will be.** RemoteDeck keeps the profile's *name*.
+  Windows never hands out a saved VPN password: it returns a *handle* to it — sixteen asterisks —
+  which the dial exchanges for the real secret inside Windows. Sixteen asterisks is all RemoteDeck
+  ever holds. A second secret store beside the DPAPI vault, for tunnels usually behind MFA anyway,
+  would buy nothing and cost the one thing this application is careful about.
+- A profile with **nothing saved** is not dialled at all: RemoteDeck says so and points at Windows,
+  rather than asking for a password it has promised never to want. The first attempt at this used
+  `rasdial`, which dials with no credential — and `RASDIALPARAMS` documents what that means: RAS
+  offers the current Windows logon account to the VPN server, which on the reference profile dropped
+  the call with RAS 628 while the network flyout connected silently.
+- It **never dials on its own**. A connection attempt is not consent to change the machine's
+  network state, and a tunnel that comes up by itself is a tunnel nobody knows is up.
+- The check is on the path the user asked for. Mounting a **workspace** deliberately skips it:
+  those sessions open in series, and stopping that series on a question would turn one dialog
+  into six.
+- A failure to read the VPN state is **not** read as "the tunnel is down" — that would offer to
+  raise one that may already be up. It is logged and the session proceeds, so a broken check is
+  never worse than no check.
+- Schema V3 adds the column nullable: every existing connection means "no VPN required", which is
+  true of all of them.
+
+### A web-account connection can name its account
+
+- **A connection that signs in with a web account can carry the Entra account (UPN) it signs in
+  with.** The field appears in the editor only while *Use web account* is ticked, is trimmed on
+  save, and is handed to the control as an account hint — no domain, no password. This is what
+  `mstsc.exe` does: the `.rdp` it exports has no `username` line, but the client remembers the UPN
+  per server under `HKCU\Software\Microsoft\Terminal Server Client\Servers\<host>\UsernameHint` and
+  hands it over the same way.
+- **Importing brings the identity along.** A `.rdp` file with `enablerdsaadauth:i:1` and no
+  `username` line picks up the UPN Remote Desktop Connection remembers for that host, and the
+  preview no longer warns that the identity is being left behind. A file *without*
+  `enablerdsaadauth` keeps its user name out of the connection, exactly as before.
+- A credential attached to a web-account connection is **ignored on connect**: only the UPN goes.
+- Schema V4 adds the column nullable, so every existing connection reads back as having no hint —
+  which is what they had.
+- **This is not what makes the sign-in silent, and it is worth saying so plainly.** A web-account
+  connection was asking for the full Microsoft sign-in on every connect while `mstsc.exe` on the
+  same client reconnected without a word. The cause turned out to be the Windows WAM broker's
+  account cache, not RemoteDeck: once the broker holds an account, `mstscax` acquires the token
+  silently for *any* host — proven by running the shipped v0.3.0, whose authentication code is
+  byte-identical to this one, on a fresh database with no UPN at all. It connected without a
+  prompt. The token path is not private to `mstsc.exe` either: `mstscax.dll` carries the WAM calls
+  itself and runs them inside RemoteDeck's own process.
+- So the UPN earns its place where the broker cache is **cold** — a fresh machine, a cleared cache —
+  or where several accounts are cached and one has to be named. With a warm cache it changes
+  nothing, and the way to reproduce the original "prompt every time" is to empty the broker cache,
+  not to change RemoteDeck.
+
 ### xUnit v3
 
 - **The test project moved from xUnit 2.9.3 to xUnit v3**, which NuGet marks the older package

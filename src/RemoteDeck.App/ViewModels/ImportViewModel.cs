@@ -65,7 +65,8 @@ public sealed partial class ImportRow : ObservableObject
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(Candidate.UserName)) return null;
+            // Under a web account the name is carried, as the account hint: nothing is left behind.
+            if (Candidate.UseWebAccount || string.IsNullOrWhiteSpace(Candidate.UserName)) return null;
 
             var user = string.IsNullOrWhiteSpace(Candidate.Domain)
                 ? Candidate.UserName
@@ -175,7 +176,10 @@ public sealed partial class ImportViewModel : ObservableObject
                 }
             }
 
-            return (RdpFileImporter.ParseFolder(folder, ReadLines, found), found.Count, failed);
+            // A web-account file carries no username line; the UPN is the hint mstsc keeps for the
+            // server, so it is read from there and only where the file left the name empty.
+            var parsed = RdpFileImporter.ParseFolder(folder, ReadLines, found);
+            return (MstscRegistryImporter.WithUserNameHints(parsed, ReadRememberedServers()), found.Count, failed);
         }).ConfigureAwait(true);
 
         var parts = new List<string>
@@ -372,6 +376,8 @@ public sealed partial class ImportViewModel : ObservableObject
         RedirectPrinters = candidate.RedirectPrinters,
         RedirectAudio = candidate.RedirectAudio,
         UseWebAccount = candidate.UseWebAccount,
+        // The one name import does carry: under a web account it is an account hint, not a credential.
+        WebAccountUpn = candidate.WebAccountUpn,
         AuthenticationLevel = candidate.AuthenticationLevel,
     };
 
