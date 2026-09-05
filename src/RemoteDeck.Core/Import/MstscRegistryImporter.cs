@@ -40,4 +40,32 @@ public static class MstscRegistryImporter
 
         return candidates.AsReadOnly();
     }
+
+    /// <summary>
+    /// Fills the user name of every web-account candidate that has none with the <c>UsernameHint</c>
+    /// Remote Desktop Connection remembers for the same host (compared without case). The
+    /// <c>.rdp</c> mstsc exports carries no <c>username</c> line for such a connection; the UPN lives
+    /// in that hint, and it is what the control needs to find the account without a prompt. Other
+    /// candidates are returned untouched: their hint would be a credential's name.
+    /// </summary>
+    public static IReadOnlyList<ImportCandidate> WithUserNameHints(
+        IEnumerable<ImportCandidate> candidates, IEnumerable<(string Host, string? UserName)> entries)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var hints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (host, userName) in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(userName))
+                hints.TryAdd(host.Trim(), userName.Trim());
+        }
+
+        return candidates
+            .Select(c => c.UseWebAccount && c.UserName is null && hints.TryGetValue(c.Host, out var hint)
+                ? c with { UserName = hint }
+                : c)
+            .ToList()
+            .AsReadOnly();
+    }
 }

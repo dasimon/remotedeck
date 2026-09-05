@@ -128,6 +128,39 @@
   <data name="Shell_RestoredNothing" xml:space="preserve">
     <value>Rien n'était ouvert à la dernière fermeture de RemoteDeck, donc rien n'a été rouvert.</value>
   </data>
+  <data name="Editor_VpnProfile" xml:space="preserve">
+    <value>Profil VPN Windows</value>
+  </data>
+  <data name="Editor_VpnProfilePlaceholder" xml:space="preserve">
+    <value>aucun</value>
+  </data>
+  <data name="Editor_VpnProfileHint" xml:space="preserve">
+    <value>Vérifié avant la connexion. Si le tunnel est baissé, RemoteDeck le signale et propose de le monter — c'est Windows qui fournit les identifiants, RemoteDeck n'en stocke aucun.</value>
+  </data>
+  <data name="Shell_VpnDownTitle" xml:space="preserve">
+    <value>{0} n'est pas connecté</value>
+  </data>
+  <data name="Shell_VpnDownMessage" xml:space="preserve">
+    <value>« {0} » a besoin du profil VPN « {1} », qui n'est pas monté.</value>
+  </data>
+  <data name="Shell_VpnConnect" xml:space="preserve">
+    <value>Connecter le VPN</value>
+  </data>
+  <data name="Shell_VpnDialFailedTitle" xml:space="preserve">
+    <value>Impossible de monter « {0} »</value>
+  </data>
+  <data name="Shell_VpnDialingTitle" xml:space="preserve">
+    <value>Montage de {0}</value>
+  </data>
+  <data name="Shell_VpnDialingMessage" xml:space="preserve">
+    <value>Windows établit le tunnel. Reconnecte une fois qu'il est monté.</value>
+  </data>
+  <data name="Shell_VpnNoCredential" xml:space="preserve">
+    <value>Le profil VPN « {0} » n'a aucun identifiant enregistré. Connecte-le une fois depuis Windows en cochant « Mémoriser mes informations », puis réessaie — RemoteDeck ne demande ni ne stocke de mot de passe VPN.</value>
+  </data>
+  <data name="Shell_VpnUnknownProfile" xml:space="preserve">
+    <value>Aucun annuaire téléphonique Windows ne connaît de profil VPN nommé « {0} ».</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connecter</value>
   </data>
@@ -502,6 +535,15 @@
   </data>
   <data name="Editor_UseWebAccount" xml:space="preserve">
     <value>Utiliser un compte web (expérimental)</value>
+  </data>
+  <data name="Editor_WebAccountUpn" xml:space="preserve">
+    <value>Compte (UPN)</value>
+  </data>
+  <data name="Editor_WebAccountUpnPlaceholder" xml:space="preserve">
+    <value>utilisateur@contoso.com</value>
+  </data>
+  <data name="Editor_WebAccountUpnHint" xml:space="preserve">
+    <value>Le compte déjà connu de Windows, pour une connexion sans nouvelle demande. Vide : l'identification est demandée à chaque fois.</value>
   </data>
   <data name="Editor_SectionDisplay" xml:space="preserve">
     <value>Affichage</value>

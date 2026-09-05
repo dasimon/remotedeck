@@ -75,7 +75,20 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private bool _redirectAudio;
     [ObservableProperty] private bool _adminSession;
     [ObservableProperty] private bool _useWebAccount;
+    /// <summary>The Entra account (UPN) of a web-account connection, or blank to let the control
+    /// ask. Stored trimmed, and blank is normalised to null by the repository.</summary>
+    [ObservableProperty] private string _webAccountUpn = "";
     [ObservableProperty] private AuthenticationLevelOption? _selectedAuthenticationLevel = AllAuthenticationLevels[0];
+    /// <summary>The Windows VPN profile this connection needs, or blank for none. Stored trimmed,
+    /// and blank is normalised to null by the repository.</summary>
+    [ObservableProperty] private string _vpnProfile = "";
+
+    /// <summary>
+    /// What the profile box offers. Suggestions only — the box stays typeable, so a profile this
+    /// could not discover is still reachable, and an empty list costs nothing.
+    /// </summary>
+    public IReadOnlyList<string> AvailableVpnProfiles { get; init; } = [];
+
     [ObservableProperty] private string _notes = "";
     [ObservableProperty] private string _errors = "";
 
@@ -140,12 +153,16 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         connection.RedirectAudio = RedirectAudio;
         connection.AdminSession = AdminSession;
         connection.UseWebAccount = UseWebAccount;
+        connection.WebAccountUpn = WebAccountUpn;
         connection.AuthenticationLevel = SelectedAuthenticationLevel?.Value;
         connection.Notes = Notes ?? "";
+        connection.VpnProfile = VpnProfile;
     }
 
     /// <summary>Builds the form for an existing connection, or a blank one when <paramref name="connection"/> is null.</summary>
-    public static ConnectionEditorViewModel From(Connection? connection, IEnumerable<Credential> credentials, IEnumerable<string> groups)
+    /// <param name="vpnProfiles">What the VPN box offers. Suggestions only, and an empty list is a
+    /// perfectly good answer — the box is typeable.</param>
+    public static ConnectionEditorViewModel From(Connection? connection, IEnumerable<Credential> credentials, IEnumerable<string> groups, IEnumerable<string>? vpnProfiles = null)
     {
         ArgumentNullException.ThrowIfNull(credentials);
         ArgumentNullException.ThrowIfNull(groups);
@@ -154,6 +171,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         var viewModel = new ConnectionEditorViewModel
         {
             Credentials = choices,
+            AvailableVpnProfiles = [.. vpnProfiles ?? []],
             KnownGroups = [.. groups],
             Name = connection?.Name ?? "",
             Host = connection?.Host ?? "",
@@ -169,7 +187,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
             RedirectAudio = connection?.RedirectAudio ?? false,
             AdminSession = connection?.AdminSession ?? false,
             UseWebAccount = connection?.UseWebAccount ?? false,
+            WebAccountUpn = connection?.WebAccountUpn ?? "",
             Notes = connection?.Notes ?? "",
+            VpnProfile = connection?.VpnProfile ?? "",
         };
 
         // A credential deleted since the connection was saved simply falls back to "(none)".

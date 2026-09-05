@@ -49,6 +49,13 @@ public sealed record ImportCandidate
     /// <summary>Entra ID (web account) authentication.</summary>
     public bool UseWebAccount { get; init; }
 
+    /// <summary>
+    /// The account hint a web-account connection is imported with: the source's user name, but only
+    /// under <see cref="UseWebAccount"/>. Any other user name belongs to a credential, which import
+    /// never creates, so it stays out of the connection.
+    /// </summary>
+    public string? WebAccountUpn => UseWebAccount ? UserName : null;
+
     /// <summary>Server authentication level 0, 1 or 2; null when the source left it unspecified.</summary>
     public int? AuthenticationLevel { get; init; }
 

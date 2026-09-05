@@ -19,8 +19,21 @@ public sealed class Connection
     public bool RedirectAudio { get; set; }
     public bool AdminSession { get; set; }
     public bool UseWebAccount { get; set; }
+    /// <summary>
+    /// The Entra account (UPN) a <see cref="UseWebAccount"/> connection signs in with, or <c>null</c>
+    /// to let the control ask. An account hint, not a credential: it is what mstsc keeps as
+    /// <c>UsernameHint</c> for the server, and what lets the broker find the account without a prompt.
+    /// </summary>
+    public string? WebAccountUpn { get; set; }
     public int? AuthenticationLevel { get; set; }
     public string? AcceptedCertThumbprint { get; set; }
+    /// <summary>
+    /// The Windows VPN profile this connection needs, or <c>null</c> when it needs none. Matched
+    /// loosely against the profiles that are up — see <c>VpnRequirement</c>. RemoteDeck stores the
+    /// name only: the credentials stay in the Windows profile, where the user put them.
+    /// </summary>
+    public string? VpnProfile { get; set; }
+
     public string Notes { get; set; } = "";
     public DateTime? LastConnectedUtc { get; set; }
     public DateTime CreatedUtc { get; set; }

@@ -128,6 +128,39 @@
   <data name="Shell_RestoredNothing" xml:space="preserve">
     <value>Nothing was open when RemoteDeck last closed, so nothing was reopened.</value>
   </data>
+  <data name="Editor_VpnProfile" xml:space="preserve">
+    <value>Windows VPN profile</value>
+  </data>
+  <data name="Editor_VpnProfilePlaceholder" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="Editor_VpnProfileHint" xml:space="preserve">
+    <value>Checked before connecting. If the tunnel is down, RemoteDeck says so and offers to raise it — Windows supplies the credentials, RemoteDeck stores none.</value>
+  </data>
+  <data name="Shell_VpnDownTitle" xml:space="preserve">
+    <value>{0} is not connected</value>
+  </data>
+  <data name="Shell_VpnDownMessage" xml:space="preserve">
+    <value>“{0}” needs the VPN profile “{1}”, which is not up.</value>
+  </data>
+  <data name="Shell_VpnConnect" xml:space="preserve">
+    <value>Connect the VPN</value>
+  </data>
+  <data name="Shell_VpnDialFailedTitle" xml:space="preserve">
+    <value>Could not raise “{0}”</value>
+  </data>
+  <data name="Shell_VpnDialingTitle" xml:space="preserve">
+    <value>Raising {0}</value>
+  </data>
+  <data name="Shell_VpnDialingMessage" xml:space="preserve">
+    <value>Windows is dialling the tunnel. Connect again once it is up.</value>
+  </data>
+  <data name="Shell_VpnNoCredential" xml:space="preserve">
+    <value>The VPN profile “{0}” has no saved credential. Connect it once from Windows with “Remember my sign-in info” ticked, then try again — RemoteDeck neither asks for nor stores a VPN password.</value>
+  </data>
+  <data name="Shell_VpnUnknownProfile" xml:space="preserve">
+    <value>No Windows phone book knows a VPN profile named “{0}”.</value>
+  </data>
   <data name="Pane_MenuConnect" xml:space="preserve">
     <value>Connect</value>
   </data>
@@ -502,6 +535,15 @@
   </data>
   <data name="Editor_UseWebAccount" xml:space="preserve">
     <value>Use web account (experimental)</value>
+  </data>
+  <data name="Editor_WebAccountUpn" xml:space="preserve">
+    <value>Account (UPN)</value>
+  </data>
+  <data name="Editor_WebAccountUpnPlaceholder" xml:space="preserve">
+    <value>user@contoso.com</value>
+  </data>
+  <data name="Editor_WebAccountUpnHint" xml:space="preserve">
+    <value>The account Windows already knows, so the sign-in can be silent. Leave empty to be asked each time.</value>
   </data>
   <data name="Editor_SectionDisplay" xml:space="preserve">
     <value>Display</value>
