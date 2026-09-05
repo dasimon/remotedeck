@@ -35,6 +35,32 @@ motivated it. The full findings, including what was found to be right, are in
   for the rest of the session. The hook is now re-armed every time the shell is activated, which
   turns a permanent failure into one that lasts until the next click; when the unhook reports the
   handle was already gone, the log says so (`[R6]`).
+### Seen, then fixed
+
+Six screenshots of the running application — shell, palette, editor, in both themes — and the
+changes they asked for. The two that are defects rather than taste come first.
+
+- **The connection editor fits the screen it opens on.** It was about 990 px tall at 100 %, could
+  neither resize nor scroll, and on a 1366×768 laptop — or a 1080p one at 150 % — the Save button
+  was simply off the screen with no way to reach it. Its height is now capped to the monitor's
+  work area, and past the cap the form scrolls between the title bar and the buttons, which stay
+  where they are.
+- **The pane toggle is no longer the loudest thing on the screen.** It was a checked
+  `ToggleButton`, which WPF-UI paints in the accent — the only accent fill in view, louder than
+  *New* and than the session itself, for a control whose whole job is to fold a side pane. It is a
+  plain icon button now; the pane shows its own state.
+- **Every icon-only button has a name a screen reader can say.** Twelve of them — reconnect,
+  diagnostics, credentials, detach, reattach, full screen, close a tab — carried a tooltip a
+  sighted user could read and nothing for anyone else: WPF does not fall back to the tooltip, so
+  each was announced as "button". They now carry the same text as their tooltip, and the state
+  pill reads its own word. A convention test keeps it so.
+- **The ground behind a remote desktop is a token.** The last two literal colours in any view,
+  `#FF000000` for the area a session paints into, are now `RdSessionGround` — the one colour the
+  sheet names as not being the theme's, because it is not ours. A convention test refuses the next
+  literal.
+- The shell's toolbar icons are all 24 px now, where two were 20 — the *copy diagnostics* glyph
+  read as a pair of brackets at that size.
+
 ### Motion
 
 - **The palette and the InfoBar arrive and leave; they no longer pop.** `Ctrl+K` fades in and
