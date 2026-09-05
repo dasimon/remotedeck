@@ -29,8 +29,23 @@ encrypted secret blob, and 32 bytes of entropy.
   `ICredentialVault` exposes no member that accepts or returns a `string` for a
   secret — the API is `Seal(Credential, nint)` and `UseSecret(Credential, Action<nint>)`.
   Source: `src/RemoteDeck.Core/Security/`.
-- Log files (`%APPDATA%\RemoteDeck\logs\`) record credentials by label and user
-  name only, never by secret.
+- Log files (`%APPDATA%\RemoteDeck\logs\`) never hold a secret. They do hold connection
+  names, host names, user names and UPNs, and RDP error codes with their text — the things a
+  support conversation needs. The file rolls to `probe-l0.log.1` past 1 MB, so at most two exist.
+
+## Server identity
+
+The Remote Desktop control verifies the server's certificate according to its
+`AuthenticationLevel`, and **left to itself that level is 0** — no authentication of the server,
+measured on 2026-09-05. RemoteDeck therefore sets it on every connection: 2 by default, "attempt
+authentication and prompt on failure", the same as `mstsc.exe`; 1, "required", or 0, "none", only
+when the user chose so in the editor. NLA (CredSSP) is always on.
+
+What this is not: certificate pinning. The `AcceptedCertThumbprint` column in the database is a
+leftover of an intent the interop cannot honour — the generated assembly exposes no member that
+hands out the server certificate (the `[R5]` probe at every launch records that), so nothing reads
+or writes the column. The control's own warning dialog is the only server-identity check, and a
+user who clicks through it has accepted the server for that session.
 
 ## Secrets RemoteDeck deliberately does not hold
 
