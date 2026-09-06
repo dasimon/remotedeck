@@ -13,7 +13,7 @@ namespace RemoteDeck.Core.Tests.Sessions;
 public sealed class VpnRequirementTests
 {
     private static readonly IReadOnlySet<string> Connected =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "VPN FDC", "Autre" };
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "VPN Contoso", "Autre" };
 
     [Fact]
     public void A_connection_that_asks_for_nothing_is_never_held_up()
@@ -26,7 +26,7 @@ public sealed class VpnRequirementTests
     [Fact]
     public void A_profile_that_is_up_lets_the_session_through()
     {
-        Assert.Equal(VpnState.Connected, VpnRequirement.Check("VPN FDC", Connected));
+        Assert.Equal(VpnState.Connected, VpnRequirement.Check("VPN Contoso", Connected));
     }
 
     [Fact]
@@ -34,8 +34,8 @@ public sealed class VpnRequirementTests
     {
         // The profile name is typed by hand in the editor; Windows shows it with the casing its
         // creator chose, and nobody should have to match it exactly.
-        Assert.Equal(VpnState.Connected, VpnRequirement.Check("vpn fdc", Connected));
-        Assert.Equal(VpnState.Connected, VpnRequirement.Check("  VPN FDC  ", Connected));
+        Assert.Equal(VpnState.Connected, VpnRequirement.Check("vpn contoso", Connected));
+        Assert.Equal(VpnState.Connected, VpnRequirement.Check("  VPN Contoso  ", Connected));
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class VpnRequirementTests
     [Fact]
     public void Nothing_connected_at_all_still_answers()
     {
-        Assert.Equal(VpnState.NotConnected, VpnRequirement.Check("VPN FDC", new HashSet<string>()));
+        Assert.Equal(VpnState.NotConnected, VpnRequirement.Check("VPN Contoso", new HashSet<string>()));
     }
 
     [Fact]
@@ -56,6 +56,6 @@ public sealed class VpnRequirementTests
         // "No set" is not "nothing is connected": a caller that failed to enumerate must not be
         // silently told the tunnel is down, because the shell would then offer to raise one that is
         // already up.
-        Assert.Throws<ArgumentNullException>(() => VpnRequirement.Check("VPN FDC", null!));
+        Assert.Throws<ArgumentNullException>(() => VpnRequirement.Check("VPN Contoso", null!));
     }
 }

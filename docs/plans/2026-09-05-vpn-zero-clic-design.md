@@ -5,7 +5,7 @@
 ## The problem, and what was actually wrong
 
 `WindowsVpn.Dial` runs `rasdial "<profile>"` with no credential, because RemoteDeck stores no VPN
-secret. On the reference client that fails with RAS error 628 on `VPN FDC`, while the Windows
+secret. On the reference client that fails with RAS error 628 on the profile in use, while the Windows
 network flyout raises the same profile silently. `rasphone -d` works but opens a window.
 
 The cause is documented, not mysterious. `RASDIALPARAMS` says that when `szUserName` **and**
@@ -29,7 +29,7 @@ with stored credentials. That route is a dead end.
 
 ## What was measured before any code was written
 
-Read-only probes against the real `VPN FDC` profile, 2026-09-05. No secret was displayed, nothing
+Read-only probes against the real profile in use, 2026-09-05. No secret was displayed, nothing
 was written, nothing was dialled.
 
 | Question | Answer |

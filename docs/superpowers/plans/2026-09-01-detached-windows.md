@@ -20,7 +20,7 @@
 - Aucune session sans propriétaire : un rattachement qui échoue laisse la session dans sa fenêtre avec un message dans l'`InfoBar`.
 - Le hook clavier route vers la **fenêtre active** de l'application. Dans une fenêtre détachée : `Ctrl+W` ferme la session, `F11` bascule le plein écran, `Ctrl+K` ouvre la palette, `Ctrl+Shift+D` rattache ; `Ctrl+Tab` et `Ctrl+B` ne sont pas interceptés. La règle du lot 5 (ne pas manger les frappes des champs de saisie, sur le chemin du hook **et** des `KeyBinding`) reste inchangée.
 - Jamais de `MessageBox`. Code, commentaires, UI et commits en **anglais** ; toute chaîne visible passe par `Strings.resx` **et** `Strings.fr.resx` (parité obligatoire, 198 clés aujourd'hui).
-- `git add` par fichier, jamais `-A`/`.`. Commits : `git -c user.name="David Simon" -c user.email="david.simon@financieredelacite.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- `git add` par fichier, jamais `-A`/`.`. Commits : `git -c user.name="David Simon" -c user.email="202696506+dasimon135@users.noreply.github.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 - TDD dans `RemoteDeck.Core`. `RemoteDeck.App` n'a pas de projet de tests : les tâches App se vérifient par build, lancement et check-list humaine.
 
 ---

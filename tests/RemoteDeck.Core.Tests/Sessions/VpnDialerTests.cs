@@ -13,7 +13,7 @@ namespace RemoteDeck.Core.Tests.Sessions;
 /// </summary>
 public sealed class VpnDialerTests
 {
-    private const string Entry = "VPN FDC";
+    private const string Entry = "VPN Contoso";
     private const string UserPhonebook = @"C:\Users\someone\AppData\Roaming\...\rasphone.pbk";
     private const string AllUsersPhonebook = @"C:\ProgramData\...\rasphone.pbk";
 
@@ -109,7 +109,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        new VpnDialer(ras).Dial("  VPN FDC  ");
+        new VpnDialer(ras).Dial("  VPN Contoso  ");
 
         Assert.Equal(Entry, ras.Dialled.Single().Entry);
     }
@@ -242,7 +242,7 @@ public sealed class VpnDialerTests
     public void A_dial_that_brings_the_profile_up_is_a_success()
     {
         var ras = ReadyToDial();
-        ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "vpn fdc" };
+        ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "vpn contoso" };
 
         var result = new VpnDialer(ras).Dial(Entry);
 

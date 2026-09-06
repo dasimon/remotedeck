@@ -22,7 +22,7 @@
 - Le chemin du secret ne change pas : `vault.UseSecret(credential, bstr => session.PutPassword(bstr))`. Aucun `string` de mot de passe.
 - Le `PasswordBox` natif reste natif ; seul son style est repris (§7.1).
 - Tout ce que le lot 0 a laissé « probe » dans `ShellWindow` (barre de saisie, `ManualEntry`, `REMOTEDECK_PROBE_*`) disparaît. `ProbeLog` reste (journal de diagnostic).
-- Warning-free ; code/UI/commits en anglais ; `git add` par fichier, jamais `-A`/`.` ; jamais `.superpowers/`, `docs/PROJET.md`, `bin/`, `obj/`. Commits : `git -c user.name="David Simon" -c user.email="david.simon@financieredelacite.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- Warning-free ; code/UI/commits en anglais ; `git add` par fichier, jamais `-A`/`.` ; jamais `.superpowers/`, `docs/PROJET.md`, `bin/`, `obj/`. Commits : `git -c user.name="David Simon" -c user.email="202696506+dasimon135@users.noreply.github.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 
 ---
 

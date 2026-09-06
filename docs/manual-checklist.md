@@ -615,9 +615,9 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
       `[System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | ? { $_.OperationalStatus -eq 'Up' -and $_.NetworkInterfaceType -in 'Ppp','Tunnel' } | ft Name, Description, NetworkInterfaceType`
       The profile's name must appear under **Name** or **Description**. If nothing is listed,
       this approach cannot work and the enumeration has to move to `RasEnumConnections`.
-      *Observed 2026-09-04 on the reference home machine: `VPN FDC` appears under both*
+      *Observed 2026-09-04 on the reference home machine: the reference VPN profile appears under both*
       *Name and Description, `NetworkInterfaceType` = `Ppp`. The approach holds.*
-- [x] **The RAS reads.** Measured 2026-09-05 against the real `VPN FDC`, read-only, nothing
+- [x] **The RAS reads.** Measured 2026-09-05 against the real reference VPN profile, read-only, nothing
       dialled — these are what the dial code is built on, and none of them was assumed:
       `RasGetCredentials` with mask `0x7` returns the user name and the sixteen-asterisk password
       handle; with `0xF` it returns **success and nothing at all**, because `RASCM_DefaultCreds` on
@@ -632,7 +632,7 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
 - [x] Declining leaves the session unopened and says so in the InfoBar. Nothing is dialled.
 - [x] **Accepting raises the tunnel with no window at all**, and the session opens by itself once
       it is up. One click. No console flashes, nothing has to be dismissed.
-      *Observed 2026-09-05 on the reference client, tunnel down beforehand: `VPN FDC` came up*
+      *Observed 2026-09-05 on the reference client, tunnel down beforehand: the profile came up*
       *silently and the session opened by itself. The saved-credential handle is accepted by the*
       *server — the RAS 628 was the missing credential, as diagnosed.*
 - [x] The dial uses the credential **saved in the profile**. RemoteDeck asks for nothing and stores
@@ -644,14 +644,14 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
 - [x] A dial that Windows refuses shows **Windows's own words** — the RAS message, in the interface
       language, not a paraphrase of ours.
 - [x] The tunnel stays up after RemoteDeck is closed. `RasHangUp` is deliberately never called.
-- [x] The profile name is matched **case-insensitively and trimmed**: typing `vpn fdc` for a
-      profile named `VPN FDC` works.
+- [x] The profile name is matched **case-insensitively and trimmed**: typing the name in the
+      wrong case works.
 - [x] Naming a profile that does not exist at all behaves like one that is down — asks, then says
       no Windows phone book knows it. Nothing is dialled.
 - [x] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
 - [x] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
-      machine knows — check `VPN FDC` is offered without typing it.
+      machine knows — check your own profile is offered without typing it.
 - [x] A profile the list does **not** offer can still be typed by hand and works: the list is a
       convenience, never a constraint.
 - [x] The field survives a round trip through the editor, and clearing it really clears it.

@@ -83,7 +83,7 @@ Ajouter ces trois tests à la fin de la classe `SchemaMigratorTests` dans `tests
                   LastConnectedUtc TEXT NULL, CreatedUtc TEXT NOT NULL);
                 """).ExecuteNonQuery();
             c.Cmd("INSERT INTO SchemaVersion(Version, AppliedUtc) VALUES (1, '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
-            c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'fdcsql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+            c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'contososql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
         }
 
         tmp.Db.EnsureCreated();
@@ -100,7 +100,7 @@ Ajouter ces trois tests à la fin de la classe `SchemaMigratorTests` dans `tests
         using var tmp = new TempDatabase();
         tmp.Db.EnsureCreated();
         using var c = tmp.Db.Open();
-        c.Cmd("INSERT INTO Connection(Id, Name, Host, CreatedUtc) VALUES (7, 'SQL', 'fdcsql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+        c.Cmd("INSERT INTO Connection(Id, Name, Host, CreatedUtc) VALUES (7, 'SQL', 'contososql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
         c.Cmd("INSERT INTO Workspace(Id, Name, AutoConnect, CreatedUtc) VALUES (1, 'PROD', 1, '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
         c.Cmd("INSERT INTO WorkspaceItem(WorkspaceId, ConnectionId, Ordinal) VALUES (1, 7, 0)").ExecuteNonQuery();
 
@@ -200,8 +200,8 @@ public sealed class WorkspaceRepositoryTests
         var tmp = new TempDatabase();
         tmp.Db.EnsureCreated();
         var connections = new ConnectionRepository(tmp.Db);
-        long a = connections.Insert(new Connection { Name = "SQL", Host = "fdcsql00001" });
-        long b = connections.Insert(new Connection { Name = "APP", Host = "fdcapp00003" });
+        long a = connections.Insert(new Connection { Name = "SQL", Host = "contososql00001" });
+        long b = connections.Insert(new Connection { Name = "APP", Host = "contosoapp00003" });
         return (tmp, new WorkspaceRepository(tmp.Db), a, b);
     }
 

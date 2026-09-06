@@ -12,8 +12,8 @@ public sealed class WorkspaceRepositoryTests
         var tmp = new TempDatabase();
         tmp.Db.EnsureCreated();
         var connections = new ConnectionRepository(tmp.Db);
-        long a = connections.Insert(new Connection { Name = "SQL", Host = "fdcsql00001" });
-        long b = connections.Insert(new Connection { Name = "APP", Host = "fdcapp00003" });
+        long a = connections.Insert(new Connection { Name = "SQL", Host = "contososql00001" });
+        long b = connections.Insert(new Connection { Name = "APP", Host = "contosoapp00003" });
         return (tmp, new WorkspaceRepository(tmp.Db), a, b);
     }
 
