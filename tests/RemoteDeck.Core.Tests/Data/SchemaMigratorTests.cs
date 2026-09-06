@@ -114,7 +114,7 @@ public sealed class SchemaMigratorTests
                   LastConnectedUtc TEXT NULL, CreatedUtc TEXT NOT NULL);
                 """).ExecuteNonQuery();
             c.Cmd("INSERT INTO SchemaVersion(Version, AppliedUtc) VALUES (1, '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
-            c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'contoso-sql01', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+            c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'contososql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
         }
 
         tmp.Db.EnsureCreated();
@@ -133,7 +133,7 @@ public sealed class SchemaMigratorTests
         using var tmp = new TempDatabase();
         tmp.Db.EnsureCreated();
         using var c = tmp.Db.Open();
-        c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'contoso-sql01', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+        c.Cmd("INSERT INTO Connection(Name, Host, CreatedUtc) VALUES ('SQL', 'contososql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
 
         using var r = c.Cmd("SELECT VpnProfile FROM Connection").ExecuteReader();
 
@@ -163,7 +163,7 @@ public sealed class SchemaMigratorTests
         using var tmp = new TempDatabase();
         tmp.Db.EnsureCreated();
         using var c = tmp.Db.Open();
-        c.Cmd("INSERT INTO Connection(Id, Name, Host, CreatedUtc) VALUES (7, 'SQL', 'contoso-sql01', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+        c.Cmd("INSERT INTO Connection(Id, Name, Host, CreatedUtc) VALUES (7, 'SQL', 'contososql00001', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
         c.Cmd("INSERT INTO Workspace(Id, Name, AutoConnect, CreatedUtc) VALUES (1, 'PROD', 1, '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
         c.Cmd("INSERT INTO WorkspaceItem(WorkspaceId, ConnectionId, Ordinal) VALUES (1, 7, 0)").ExecuteNonQuery();
 

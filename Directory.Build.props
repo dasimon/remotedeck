@@ -6,6 +6,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <Authors>David Simon</Authors>
-    <Copyright>Copyright (c) 2026 David Simon — Financière de la Cité. MIT License.</Copyright>
+    <Copyright>Copyright (c) 2026 David Simon. MIT License.</Copyright>
   </PropertyGroup>
 </Project>
