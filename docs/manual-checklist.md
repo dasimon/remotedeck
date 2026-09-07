@@ -826,19 +826,21 @@ Held by tests: the decision itself (`ReconnectGateTests`, eight cases — no VPN
 down at the first and the last attempt, a code that was never retryable, the schedule running out).
 What no test can reach is the tunnel actually dropping under a live session.
 
+*Every box below: tried on the reference client with the 0.4.1-rc.6 build, reported 2026-09-07.*
+
 - [x] Open a session on a connection that names a VPN profile, then **drop the tunnel from Windows**
       while it is connected. RemoteDeck must stop at the **first** drop — no countdown, no five
       attempts — and the InfoBar must name the profile: *Le profil VPN « X » n'est plus monté.*
       *Verified 2026-09-06 on the reference client with the 0.4.1-rc.6 build.*
-- [ ] The log carries one line: `… and the VPN profile '…' is not up; retries stopped`.
-- [ ] Press **Reconnecter**: the same question as a first connection appears, raising the tunnel
+- [x] The log carries one line: `… and the VPN profile '…' is not up; retries stopped`.
+- [x] Press **Reconnecter**: the same question as a first connection appears, raising the tunnel
       brings the session back.
-- [ ] Same from a **detached** window, with its own Reconnect button.
-- [ ] Drop the tunnel **during a countdown** (unplug the network to start one, then drop the VPN):
+- [x] Same from a **detached** window, with its own Reconnect button.
+- [x] Drop the tunnel **during a countdown** (unplug the network to start one, then drop the VPN):
       the countdown stops at its next tick rather than spending the attempt.
-- [ ] A connection with **no** VPN profile still retries exactly as before: five attempts,
+- [x] A connection with **no** VPN profile still retries exactly as before: five attempts,
       2 / 5 / 10 / 30 / 60 seconds.
-- [ ] A drop that is **not** a network code (a server-side end) still fails as before, without
+- [x] A drop that is **not** a network code (a server-side end) still fails as before, without
       blaming the tunnel.
 
 ## Build prerequisites (any lot)
