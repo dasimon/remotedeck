@@ -52,7 +52,7 @@ public sealed class RdpFileImporterTests
     {
         // mstsc keeps the UPN as a per-server hint and hands it to the control so the broker can
         // find the account silently. A file that pairs enablerdsaadauth with a username is that hint.
-        var c = RdpFileImporter.Parse("win02.rdp", ["full address:s:fdc-win02", "enablerdsaadauth:i:1", "username:s:user@contoso.com"]);
+        var c = RdpFileImporter.Parse("win02.rdp", ["full address:s:contoso-win02", "enablerdsaadauth:i:1", "username:s:user@contoso.com"]);
 
         Assert.NotNull(c);
         Assert.Equal("user@contoso.com", c.WebAccountUpn);

@@ -26,11 +26,11 @@ public sealed class MstscRegistryImporterTests
         // server. Matching is by host, without regard to case, and only fills what is empty.
         ImportCandidate[] candidates =
         [
-            new() { Name = "win02", Host = "fdc-win02", UseWebAccount = true, Source = "win02.rdp" },
-            new() { Name = "win03", Host = "fdc-win03", UseWebAccount = true, UserName = "already@contoso.com", Source = "win03.rdp" },
-            new() { Name = "sql", Host = "fdcsql00001", UseWebAccount = false, Source = "sql.rdp" },
+            new() { Name = "win02", Host = "contoso-win02", UseWebAccount = true, Source = "win02.rdp" },
+            new() { Name = "win03", Host = "contoso-win03", UseWebAccount = true, UserName = "already@contoso.com", Source = "win03.rdp" },
+            new() { Name = "sql", Host = "contososql00001", UseWebAccount = false, Source = "sql.rdp" },
         ];
-        (string Host, string? UserName)[] hints = [("FDC-WIN02", "user@contoso.com"), ("fdc-win03", "other@contoso.com"), ("fdcsql00001", "admin")];
+        (string Host, string? UserName)[] hints = [("CONTOSO-WIN02", "user@contoso.com"), ("contoso-win03", "other@contoso.com"), ("contososql00001", "admin")];
 
         var filled = MstscRegistryImporter.WithUserNameHints(candidates, hints);
 

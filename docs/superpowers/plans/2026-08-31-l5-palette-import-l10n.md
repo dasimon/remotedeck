@@ -18,7 +18,7 @@
 - Palette : fenêtre `FluentWindow` possédée (`Owner` = shell, `CenterOwner`, `ShowInTaskbar=false`, `WindowStyle=None`, `Topmost=false`) — jamais un overlay WPF au-dessus de la zone RDP (§7.3 airspace).
 - Hook clavier (§7.3 réserve 1) : quand le focus clavier WPF est sur un champ de saisie (`TextBoxBase`, `PasswordBox`, `ComboBox { IsEditable = true }`), **`Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W` et `Ctrl+B` ne sont plus interceptés** ; `Ctrl+K` **reste** intercepté (c'est le seul point d'entrée de la palette et il n'a aucune sémantique dans un champ WPF). Aucune E/S synchrone ajoutée dans le callback : la décision reste locale (lecture de `Keyboard.FocusedElement`, appel géré, pas de fichier).
 - Localisation (§9) : toutes les chaînes d'UI passent par `Strings.resx` (anglais neutre) + `Strings.fr.resx`. Les lignes de `ProbeLog` restent **en anglais, non localisées**. `NeutralResourcesLanguage("en")` sur l'assembly ; la culture suit `CultureInfo.CurrentUICulture` (donc Windows), sans réglage utilisateur en v1.
-- Jamais de `MessageBox` ; anglais dans le code, les commentaires et les commits ; warning-free ; `git add` par fichier ; commits `git -c user.name="David Simon" -c user.email="david.simon@financieredelacite.com"` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- Jamais de `MessageBox` ; anglais dans le code, les commentaires et les commits ; warning-free ; `git add` par fichier ; commits `git -c user.name="David Simon" -c user.email="202696506+dasimon135@users.noreply.github.com"` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 
 ---
 

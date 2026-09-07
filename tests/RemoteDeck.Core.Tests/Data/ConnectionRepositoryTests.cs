@@ -184,12 +184,12 @@ public sealed class ConnectionRepositoryTests : IDisposable
     public void VpnProfile_roundtrips_and_is_normalised()
     {
         var x = Make("Behind a tunnel");
-        x.VpnProfile = "  VPN FDC  ";
+        x.VpnProfile = "  VPN Contoso  ";
         _repo.Insert(x);
 
         // Trimmed on the way in: the name is typed by hand, and a trailing space would otherwise
         // travel all the way to the comparison against the live profiles.
-        Assert.Equal("VPN FDC", _repo.Get(x.Id)!.VpnProfile);
+        Assert.Equal("VPN Contoso", _repo.Get(x.Id)!.VpnProfile);
     }
 
     [Fact]
@@ -213,9 +213,9 @@ public sealed class ConnectionRepositoryTests : IDisposable
         _repo.Insert(x);
         Assert.Null(_repo.Get(x.Id)!.VpnProfile);
 
-        x.VpnProfile = "VPN FDC";
+        x.VpnProfile = "VPN Contoso";
         _repo.Update(x);
-        Assert.Equal("VPN FDC", _repo.Get(x.Id)!.VpnProfile);
+        Assert.Equal("VPN Contoso", _repo.Get(x.Id)!.VpnProfile);
 
         x.VpnProfile = null;
         _repo.Update(x);
@@ -227,12 +227,12 @@ public sealed class ConnectionRepositoryTests : IDisposable
     {
         var x = Make("Entra host");
         x.UseWebAccount = true;
-        x.WebAccountUpn = "  david.simon@financieredelacite.com  ";
+        x.WebAccountUpn = "  user@contoso.com  ";
         _repo.Insert(x);
 
         // Trimmed on the way in, like VpnProfile: the value is typed by hand and goes straight to
         // the control as the account hint.
-        Assert.Equal("david.simon@financieredelacite.com", _repo.Get(x.Id)!.WebAccountUpn);
+        Assert.Equal("user@contoso.com", _repo.Get(x.Id)!.WebAccountUpn);
     }
 
     [Fact]

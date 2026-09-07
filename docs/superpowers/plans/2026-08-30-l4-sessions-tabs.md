@@ -22,7 +22,7 @@
 - Résolution dynamique (D6) : `SizeChanged` de la zone → debounce **300 ms** → `UpdateDisplay` ; échec (HRESULT non S_OK ou exception) → repli `SmartSizing = true` pour cette session, journalisé une fois. Uniquement pour `DisplayMode.Dynamic`.
 - Fermeture : `Ctrl+W` et croix d'onglet → `CloseAsync` (protocole §6.5) ; fermeture de la fenêtre → `CloseAsync` de **chaque** onglet (séquentiel, 5 s chacun, plafond global 15 s puis `Disconnect()` forcé), fenêtre gardée interactive avec InfoBar « Closing N sessions… ».
 - Aucune E/S synchrone dans le callback du hook LL (`Ctrl+W` = VK 0x57 s'ajoute à `Decide`).
-- Jamais de `MessageBox` ; anglais ; warning-free ; `git add` par fichier ; commits `git -c user.name="David Simon" -c user.email="david.simon@financieredelacite.com"` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- Jamais de `MessageBox` ; anglais ; warning-free ; `git add` par fichier ; commits `git -c user.name="David Simon" -c user.email="202696506+dasimon135@users.noreply.github.com"` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 
 ---
 

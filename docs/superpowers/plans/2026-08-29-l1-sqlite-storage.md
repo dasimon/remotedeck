@@ -19,7 +19,7 @@
 - `PRAGMA foreign_keys = ON` à **chaque** connexion ouverte (SQLite le désactive par défaut — sans lui `ON DELETE SET NULL` est inerte).
 - Une base dont `SchemaVersion` > version connue → `SchemaTooNewException` (message explicite), jamais de tentative d'écriture.
 - Aucun secret en clair : `Credential.SecretBlob`/`Entropy` sont des `byte[]` opaques pour ce lot (le coffre DPAPI arrive au lot 2) ; aucun log de leur contenu.
-- Warning-free (`TreatWarningsAsErrors`). Code/commentaires/commits en **anglais**. `git add` **par fichier**, jamais `-A`/`.` ; jamais `.superpowers/`, `docs/PROJET.md`, `bin/`, `obj/`. Commits : `git -c user.name="David Simon" -c user.email="david.simon@financieredelacite.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- Warning-free (`TreatWarningsAsErrors`). Code/commentaires/commits en **anglais**. `git add` **par fichier**, jamais `-A`/`.` ; jamais `.superpowers/`, `docs/PROJET.md`, `bin/`, `obj/`. Commits : `git -c user.name="David Simon" -c user.email="202696506+dasimon135@users.noreply.github.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 - TDD pour tout ce qui est dans Core : test d'abord (RED), implémentation (GREEN).
 - Les tests écrivent dans un fichier temporaire par test et le suppriment (`Pooling=False` dans la chaîne de connexion — sinon Windows garde le handle et la suppression échoue).
 

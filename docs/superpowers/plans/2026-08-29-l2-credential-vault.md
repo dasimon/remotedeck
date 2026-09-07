@@ -18,7 +18,7 @@
 - Aucun log d'un secret, d'un blob ou d'une entropie — seulement `Label`/`UserName`/longueurs.
 - Jamais de `MessageBox` : erreurs et confirmations **dans la fenêtre** (InfoBar, bouton de confirmation en deux temps).
 - Les fenêtres secondaires sont des `FluentWindow` avec `Owner` = fenêtre principale (§7.3, airspace) ; `WindowStartupLocation.CenterOwner`.
-- UI et code en **anglais** ; commits en anglais ; `git add` par fichier, jamais `-A`/`.` ; jamais `.superpowers/`, `docs/PROJET.md`, `bin/`, `obj/`. Commits : `git -c user.name="David Simon" -c user.email="david.simon@financieredelacite.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- UI et code en **anglais** ; commits en anglais ; `git add` par fichier, jamais `-A`/`.` ; jamais `.superpowers/`, `docs/PROJET.md`, `bin/`, `obj/`. Commits : `git -c user.name="David Simon" -c user.email="202696506+dasimon135@users.noreply.github.com" commit -m "..."` + trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 - TDD dans Core. Warning-free.
 - Baseline : `main` @ b834a80, 33 tests verts.
 
@@ -868,7 +868,7 @@ if (!settings.UseWebAccount)
 
 - [ ] **Step 3: Build, lancer, vérifier (sans connexion) : la combo liste « Type credentials manually » + les identifiants ; *Credentials…* ouvre la fenêtre ; créer un identifiant de test (`label=test`, user `x`, mot de passe `y`), il apparaît dans la combo ; le supprimer (deux clics). Log : lignes `[vault] Credential 'test' created (secret sealed)` puis `deleted`. WM_CLOSE exit 0.**
 
-Le scénario **humain** : créer l'identifiant réel de FDC-VM-WIN07 (anonymisé dans tout document), le sélectionner, *Connect* → `Logged on` + `[vault] Password supplied from credential '…'`.
+Le scénario **humain** : créer l'identifiant réel de CONTOSO-VM-WIN07 (anonymisé dans tout document), le sélectionner, *Connect* → `Logged on` + `[vault] Password supplied from credential '…'`.
 
 - [ ] **Step 4: Commit**
 
