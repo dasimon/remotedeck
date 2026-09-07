@@ -2,6 +2,25 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### A session that loses its tunnel says so
+
+- **A dropped session no longer retries against a tunnel that is down.** When a connection names a
+  VPN profile, the most likely cause of a network drop is the tunnel itself — and the retry
+  schedule spent 2 + 5 + 10 + 30 + 60 seconds on five attempts against a host it could not reach,
+  to arrive at a message about RDP rather than about the VPN. The session now stops at the first
+  drop and names the profile, which is the one thing the user can act on.
+- **The tunnel is checked again during the countdown.** A retry can be a minute away, and the VPN
+  can go down inside that minute.
+- **Both Reconnect buttons pass the same gate as the first connection** — the shell's and a
+  detached window's. A reconnection is a connection; until now neither ever looked at the tunnel,
+  and the detached window had no such check at all.
+- It still **never dials on its own**: the retry loop only reports, and it is the click on
+  *Reconnect* that offers to raise the profile. A failure to read the VPN state is deliberately not
+  read as "the tunnel is down", so a broken check can never stop a reconnection that would have
+  worked.
+
 ## 0.4.0 — 2026-09-06
 
 A connection can wait for its VPN, and one click raises the tunnel without a window. A web-account

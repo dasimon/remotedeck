@@ -1787,81 +1787,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// never be worse than no check at all.
     /// </para>
     /// </remarks>
-    private async Task<bool> VpnIsReadyAsync(Connection connection)
-    {
-        if (string.IsNullOrWhiteSpace(connection.VpnProfile))
-        {
-            return true;
-        }
-
-        VpnState state;
-        try
-        {
-            state = VpnRequirement.Check(connection.VpnProfile, WindowsVpn.ConnectedProfiles());
-        }
-        catch (Exception ex)
-        {
-            ProbeLog.Write("vpn", $"Could not read the VPN state: {ex.GetType().Name}: {ex.Message}; connecting anyway");
-            return true;
-        }
-
-        if (state != VpnState.NotConnected)
-        {
-            return true;
-        }
-
-        var profile = connection.VpnProfile.Trim();
-        var answer = System.Windows.MessageBox.Show(this,
-            Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile),
-            Text.Of(Strings.Shell_VpnDownTitle, profile),
-            MessageBoxButton.OKCancel, MessageBoxImage.Warning);
-
-        if (answer != MessageBoxResult.OK)
-        {
-            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
-                Text.Of(Strings.Shell_VpnDownTitle, profile),
-                Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile));
-            return false;
-        }
-
-        var result = await WindowsVpn.DialAsync(profile);
-
-        switch (result.Outcome)
-        {
-            case VpnDialOutcome.Connected:
-                // The dial was synchronous and the profile is up: there is nothing left to wait for,
-                // and asking the user to press connect a second time would be ceremony.
-                return true;
-
-            case VpnDialOutcome.NoStoredCredential:
-                // RemoteDeck asks for no VPN secret and stores none. Windows is where that belongs,
-                // and this says so instead of failing with a code nobody can act on.
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
-                    Text.Of(Strings.Shell_VpnDialFailedTitle, profile),
-                    Text.Of(Strings.Shell_VpnNoCredential, profile));
-                return false;
-
-            case VpnDialOutcome.EntryNotFound:
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
-                    Text.Of(Strings.Shell_VpnDialFailedTitle, profile),
-                    Text.Of(Strings.Shell_VpnUnknownProfile, profile));
-                return false;
-
-            case VpnDialOutcome.Failed:
-                // Windows's own words when it refuses, rather than a message of ours guessing at the
-                // cause: 691 is a bad credential, 789 an IPsec negotiation that failed, 809 a NAT in
-                // the way, and none of that is something RemoteDeck could paraphrase usefully.
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error,
-                    Text.Of(Strings.Shell_VpnDialFailedTitle, profile), result.Detail);
-                return false;
-
-            default:
-                // Raised but not visible yet, or still dialling: the tunnel is Windows's business now.
-                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
-                    Text.Of(Strings.Shell_VpnDialingTitle, profile), Strings.Shell_VpnDialingMessage);
-                return false;
-        }
-    }
+    private Task<bool> VpnIsReadyAsync(Connection connection) =>
+        VpnGate.EnsureReadyAsync(this, connection, (severity, title, message) => StatusBar.Show(severity, title, message));
 
     /// <summary>
     /// Opens a tab for <paramref name="connection"/> and, when <paramref name="start"/>, starts the
@@ -1882,7 +1809,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _connecting = true;
         try
         {
-            var session = new RdpSession(connection, _version, host => SupplyAndConnectAsync(connection, host));
+            var session = new RdpSession(connection, _version, host => SupplyAndConnectAsync(connection, host),
+                () => VpnGate.State(connection));
             _sessions.Open(session);
             UpdateSessionsArea();
 
@@ -2011,6 +1939,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         try
         {
+            // The same gate the first connection passes: a reconnection is a connection, and the
+            // most likely reason this one dropped is the tunnel it needs.
+            if (!await VpnIsReadyAsync(tab.Session.Connection))
+            {
+                return;
+            }
+
             await tab.Session.ReconnectNowAsync();
         }
         catch (Exception ex)
