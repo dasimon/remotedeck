@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using RemoteDeck.App.Interop;
+using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
 using RemoteDeck.Core.Diagnostics;
 using RemoteDeck.Core.Model;
@@ -84,6 +85,12 @@ internal sealed class RdpSession : IDisposable
 
     private readonly RdpControlVersion _version;
     private readonly Func<RdpSessionHost, Task> _supplyAndConnect;
+
+    /// <summary>
+    /// The state of the profile this connection needs, asked afresh at every decision. A session
+    /// with no profile answers <see cref="VpnState.NotRequired"/> and nothing below changes for it.
+    /// </summary>
+    private readonly Func<VpnState> _vpnState;
     private readonly Dispatcher _dispatcher;
     private readonly DispatcherTimer _retryTimer;
     private readonly DispatcherTimer _resizeTimer;
@@ -120,7 +127,11 @@ internal sealed class RdpSession : IDisposable
     /// attempt and for every retry. Throwing out of it fails the attempt (state
     /// <see cref="SessionState.Failed"/>, message kept in <see cref="LastWindowsDescription"/>).
     /// </param>
-    public RdpSession(Connection connection, RdpControlVersion version, Func<RdpSessionHost, Task> supplyAndConnect)
+    /// <param name="vpnState">Reads the state of the profile <paramref name="connection"/> names.
+    /// Omitted, every drop is treated as needing no tunnel — which is what it was before the retry
+    /// loop knew about VPNs at all.</param>
+    public RdpSession(Connection connection, RdpControlVersion version, Func<RdpSessionHost, Task> supplyAndConnect,
+        Func<VpnState>? vpnState = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(version);
@@ -129,6 +140,7 @@ internal sealed class RdpSession : IDisposable
         Connection = connection;
         _version = version;
         _supplyAndConnect = supplyAndConnect;
+        _vpnState = vpnState ?? (() => VpnState.NotRequired);
         _dispatcher = Dispatcher.CurrentDispatcher;
 
         _ax = new RdpAxHost(version);
@@ -505,14 +517,20 @@ internal sealed class RdpSession : IDisposable
             return;
         }
 
-        if (ReconnectPolicy.ShouldReconnect(info.Reason)
-            && Attempt < ReconnectPolicy.MaxAttempts
-            && ReconnectPolicy.DelayFor(Attempt + 1) is { } delay)
+        var decision = ReconnectGate.Decide(info.Reason, Attempt, _vpnState());
+
+        if (decision.Verdict == ReconnectVerdict.VpnDown)
+        {
+            StopForVpn(info.Reason, description.Title);
+            return;
+        }
+
+        if (decision.Verdict == ReconnectVerdict.Retry)
         {
             Attempt++;
-            _retryDueUtc = DateTime.UtcNow + delay;
-            NextRetryIn = delay;
-            ProbeLog.Write("session", $"'{Connection.Name}': dropped (code {info.Reason} — {description.Title}); attempt {Attempt}/{ReconnectPolicy.MaxAttempts} in {delay.TotalSeconds:F0} s");
+            _retryDueUtc = DateTime.UtcNow + decision.Delay;
+            NextRetryIn = decision.Delay;
+            ProbeLog.Write("session", $"'{Connection.Name}': dropped (code {info.Reason} — {description.Title}); attempt {Attempt}/{ReconnectPolicy.MaxAttempts} in {decision.Delay.TotalSeconds:F0} s");
             SetState(SessionState.Interrupted);
             _retryTimer.Start();
             return;
@@ -536,8 +554,30 @@ internal sealed class RdpSession : IDisposable
 
         StopCountdown();
 
+        // Asked again here, not only at the drop: a countdown can run for a minute, and the tunnel
+        // can go down inside it. An attempt that cannot reach its host is worth less than saying so.
+        if (_vpnState() == VpnState.NotConnected)
+        {
+            StopForVpn(LastDisconnect?.Reason ?? 0, LastDisconnect?.Title ?? "");
+            return;
+        }
+
         // Fire and forget: RunAttemptAsync swallows everything and reports through the state.
         _ = RunAttemptAsync(SessionState.Reconnecting);
+    }
+
+    /// <summary>
+    /// Ends the retries because the tunnel this connection needs is not up. The disconnect code
+    /// stays what it was — that is what actually happened — and the sentence beside it names the
+    /// profile, which is the only part the user can act on. Nothing is dialled: the Reconnect
+    /// button goes through <c>VpnGate</c>, which asks first.
+    /// </summary>
+    private void StopForVpn(int reason, string title)
+    {
+        StopCountdown();
+        LastWindowsDescription = Text.Of(Strings.Session_VpnDropped, Connection.VpnProfile?.Trim() ?? "");
+        ProbeLog.Write("session", $"'{Connection.Name}': dropped (code {reason} — {title}) and the VPN profile '{Connection.VpnProfile}' is not up; retries stopped");
+        SetState(SessionState.Failed);
     }
 
     private void StopCountdown()
