@@ -227,12 +227,12 @@ public sealed class ConnectionRepositoryTests : IDisposable
     {
         var x = Make("Entra host");
         x.UseWebAccount = true;
-        x.WebAccountUpn = "  202696506+dasimon135@users.noreply.github.com  ";
+        x.WebAccountUpn = "  user@contoso.com  ";
         _repo.Insert(x);
 
         // Trimmed on the way in, like VpnProfile: the value is typed by hand and goes straight to
         // the control as the account hint.
-        Assert.Equal("202696506+dasimon135@users.noreply.github.com", _repo.Get(x.Id)!.WebAccountUpn);
+        Assert.Equal("user@contoso.com", _repo.Get(x.Id)!.WebAccountUpn);
     }
 
     [Fact]

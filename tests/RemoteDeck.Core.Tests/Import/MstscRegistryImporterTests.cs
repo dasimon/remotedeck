@@ -28,9 +28,9 @@ public sealed class MstscRegistryImporterTests
         [
             new() { Name = "win02", Host = "contoso-win02", UseWebAccount = true, Source = "win02.rdp" },
             new() { Name = "win03", Host = "contoso-win03", UseWebAccount = true, UserName = "already@contoso.com", Source = "win03.rdp" },
-            new() { Name = "sql", Host = "contoso-sql01", UseWebAccount = false, Source = "sql.rdp" },
+            new() { Name = "sql", Host = "contososql00001", UseWebAccount = false, Source = "sql.rdp" },
         ];
-        (string Host, string? UserName)[] hints = [("contoso-win02", "user@contoso.com"), ("contoso-win03", "other@contoso.com"), ("contoso-sql01", "admin")];
+        (string Host, string? UserName)[] hints = [("CONTOSO-WIN02", "user@contoso.com"), ("contoso-win03", "other@contoso.com"), ("contososql00001", "admin")];
 
         var filled = MstscRegistryImporter.WithUserNameHints(candidates, hints);
 
