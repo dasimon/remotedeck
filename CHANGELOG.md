@@ -2,7 +2,11 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.4.1 — 2026-09-07
+
+A session that loses its tunnel now says so instead of spending two minutes finding out, and the
+repository no longer carries an employer's name — including in the copyright stamped into the
+binary itself.
 
 ### A session that loses its tunnel says so
 
@@ -20,6 +24,16 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
   *Reconnect* that offers to raise the profile. A failure to read the VPN state is deliberately not
   read as "the tunnel is down", so a broken check can never stop a reconnection that would have
   worked.
+
+### The binary no longer names a company
+
+- **The `Copyright` property is `David Simon` alone.** It is stamped into every assembly, so every
+  release before this one carried an employer's name in the file properties of `RemoteDeck.exe`.
+  `LICENSE` carried it on the repository's landing page; test fixtures carried real host names and a
+  real VPN profile, which name an infrastructure even without the company.
+- What was already published stays published: the commits pushed before today carry a work address
+  in their author field, and the v0.4.0 asset carries the old copyright string. Rewriting that
+  history was considered and deliberately not done.
 
 ## 0.4.0 — 2026-09-06
 
