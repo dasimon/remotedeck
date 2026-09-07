@@ -388,6 +388,14 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     {
         try
         {
+            // The same gate the shell uses, over this window: a detached session needs its tunnel
+            // exactly as much, and until now nothing here ever looked.
+            if (!await VpnGate.EnsureReadyAsync(this, _tab.Session.Connection,
+                    (severity, title, message) => StatusBar.Show(severity, title, message)))
+            {
+                return;
+            }
+
             await _tab.Session.ReconnectNowAsync();
         }
         catch (Exception ex)

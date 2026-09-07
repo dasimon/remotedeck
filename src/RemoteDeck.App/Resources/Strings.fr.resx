@@ -947,4 +947,7 @@
   <data name="CredEditor_ErrUserRequired" xml:space="preserve">
     <value>Le nom d'utilisateur est obligatoire.</value>
   </data>
+  <data name="Session_VpnDropped" xml:space="preserve">
+    <value>Le profil VPN « {0} » n'est plus monté. Reconnectez pour le remonter.</value>
+  </data>
 </root>

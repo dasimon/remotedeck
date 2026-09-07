@@ -820,6 +820,26 @@ From driving the 0.4.1-rc.4 on 2026-09-06 (`docs/plans/2026-09-05-full-pass-revi
       A warning (an armed delete) or an error stays until acted on.
 - [x] Search for a name that does not exist: the message ends with *Ctrl+N pour en créer une.*
 
+## A session that loses its tunnel
+
+Held by tests: the decision itself (`ReconnectGateTests`, eight cases — no VPN, tunnel up, tunnel
+down at the first and the last attempt, a code that was never retryable, the schedule running out).
+What no test can reach is the tunnel actually dropping under a live session.
+
+- [ ] Open a session on a connection that names a VPN profile, then **drop the tunnel from Windows**
+      while it is connected. RemoteDeck must stop at the **first** drop — no countdown, no five
+      attempts — and the InfoBar must name the profile: *Le profil VPN « X » n'est plus monté.*
+- [ ] The log carries one line: `… and the VPN profile '…' is not up; retries stopped`.
+- [ ] Press **Reconnecter**: the same question as a first connection appears, raising the tunnel
+      brings the session back.
+- [ ] Same from a **detached** window, with its own Reconnect button.
+- [ ] Drop the tunnel **during a countdown** (unplug the network to start one, then drop the VPN):
+      the countdown stops at its next tick rather than spending the attempt.
+- [ ] A connection with **no** VPN profile still retries exactly as before: five attempts,
+      2 / 5 / 10 / 30 / 60 seconds.
+- [ ] A drop that is **not** a network code (a server-side end) still fails as before, without
+      blaming the tunnel.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*
