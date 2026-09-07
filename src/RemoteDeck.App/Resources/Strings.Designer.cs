@@ -2725,5 +2725,13 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("CredEditor_ErrUserRequired", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to The VPN profile “{0}” is no longer up. Reconnect to raise it again..
+        /// </summary>
+        public static string Session_VpnDropped {
+            get {
+                return ResourceManager.GetString("Session_VpnDropped", resourceCulture);
+            }
+        }
     }
 }
