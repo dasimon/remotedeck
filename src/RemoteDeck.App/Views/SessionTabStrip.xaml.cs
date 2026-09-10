@@ -78,6 +78,12 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
     /// <see cref="SessionTabViewModel"/> is.</remarks>
     internal event Action<SessionTabViewModel, System.Windows.Point>? DetachRequested;
 
+    /// <summary>
+    /// What the tab's context menu was asked for. One event rather than one per entry: the strip
+    /// reports a choice, and what each choice means belongs to the shell, which owns the windows.
+    /// </summary>
+    internal event Action<SessionTabViewModel, TabAction>? ActionRequested;
+
     /// <summary>Shows — or hides — the band that says a detached window dragged over the strip would
     /// be taken back here. Driven by the shell, which is the only thing that knows where the
     /// dragged window is.</summary>
@@ -188,6 +194,34 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
     /// <summary>Middle-click closes, the way it does in a browser. Only the middle button is handled
     /// here: the left one has its own pair of handlers, and closing is refused while the window is
     /// shutting down — the same rule the cross and Ctrl+W follow.</summary>
+    /// <summary>An entry of a tab's context menu. Close is not here: it is the command the tab's
+    /// own cross already carries, bound straight from the markup.</summary>
+    internal enum TabAction
+    {
+        FullScreen,
+        Detach,
+        Reconnect,
+        Diagnostics,
+    }
+
+    private void OnMenuFullScreen(object sender, RoutedEventArgs e) => Raise(sender, TabAction.FullScreen);
+
+    private void OnMenuDetach(object sender, RoutedEventArgs e) => Raise(sender, TabAction.Detach);
+
+    private void OnMenuReconnect(object sender, RoutedEventArgs e) => Raise(sender, TabAction.Reconnect);
+
+    private void OnMenuDiagnostics(object sender, RoutedEventArgs e) => Raise(sender, TabAction.Diagnostics);
+
+    /// <summary>The menu item's DataContext is the tab it was opened over — the one the user aimed
+    /// at, which is not necessarily the active one.</summary>
+    private void Raise(object sender, TabAction action)
+    {
+        if (sender is FrameworkElement { DataContext: SessionTabViewModel tab })
+        {
+            ActionRequested?.Invoke(tab, action);
+        }
+    }
+
     private void OnTabMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (_viewModel is null || !_viewModel.CanCloseTabs
