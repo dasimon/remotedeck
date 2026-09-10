@@ -60,7 +60,10 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
     public string Subtitle { get; }
 
     /// <summary>Mirror of <see cref="RdpSession.State"/>.</summary>
-    [ObservableProperty] private SessionState _state;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanReconnect))]
+    [NotifyPropertyChangedFor(nameof(CanFullScreen))]
+    private SessionState _state;
 
     /// <summary>Which theme brush the 8 px status dot must use; one of the four keys above.</summary>
     [ObservableProperty] private string _statusBrushKey = NeutralBrushKey;
@@ -80,7 +83,25 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
     /// count and the close-all pass all keep working precisely because it does — and the strip hides
     /// it by binding <c>Visibility</c> to this flag.
     /// </summary>
-    [ObservableProperty] private bool _isDetached;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDetach))]
+    [NotifyPropertyChangedFor(nameof(CanFullScreen))]
+    private bool _isDetached;
+
+    /// <summary>
+    /// What the tab's own menu may offer. The same rule the toolbar applies to the active tab,
+    /// said once here so a menu aimed at a background tab cannot drift from the buttons.
+    /// </summary>
+    public bool CanReconnect => State is SessionState.Failed or SessionState.Idle;
+
+    /// <summary>A session already in a window of its own has nowhere to be detached to.</summary>
+    public bool CanDetach => !IsDetached;
+
+    /// <summary>
+    /// Full screen means detaching first, and <c>SetFullScreen</c> refuses any session that is not
+    /// connected — so the entry is live only where it would actually do something.
+    /// </summary>
+    public bool CanFullScreen => !IsDetached && State == SessionState.Connected;
 
     /// <summary>Closes the tab. Raises <see cref="CloseRequested"/>; the actual protocol is
     /// <see cref="SessionsViewModel.CloseAsync"/>'s.</summary>

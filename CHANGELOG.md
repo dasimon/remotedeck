@@ -2,6 +2,26 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### A docked tab has a menu of its own
+
+- **Right-click a session tab.** Full screen, Detach, Reconnect, Copy diagnostics, Close — each
+  acting on the tab you aimed at rather than on the active one. The toolbar and the palette have
+  always acted on the active session only; reconnecting or detaching a background session meant
+  switching to it first, which is a session change nobody asked for.
+- **A docked session can go full screen in one gesture.** Full screen belongs to a window of its
+  own, so the entry detaches and switches in a single step — what used to be `Ctrl+Shift+D`
+  followed by `F11`. It is live only on a connected session, because `SetFullScreen` refuses any
+  other, and greyed rather than hidden so the rule is visible.
+- **A right-click does not activate the tab**, deliberately. This is the one place the strip parts
+  with the connection pane's rule that a right-click selects the row first: activating a tab
+  switches the session on screen, which is far heavier than moving a selection — and acting on a
+  background tab without leaving the one you are watching is the whole point.
+- *Close others* is deliberately absent. A browser can afford that gesture; an RDP session is
+  expensive to re-establish, and RemoteDeck closes sessions on a deliberate protocol (5 s each,
+  30 s overall). One click that ends four of them is a trap, not a shortcut.
+
 ## 0.4.1 — 2026-09-07
 
 A session that loses its tunnel now says so instead of spending two minutes finding out, and the

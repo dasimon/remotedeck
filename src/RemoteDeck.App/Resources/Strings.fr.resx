@@ -950,4 +950,19 @@
   <data name="Session_VpnDropped" xml:space="preserve">
     <value>Le profil VPN « {0} » n'est plus monté. Reconnectez pour le remonter.</value>
   </data>
+  <data name="Tab_MenuFullScreen" xml:space="preserve">
+    <value>Plein écran</value>
+  </data>
+  <data name="Tab_MenuDetach" xml:space="preserve">
+    <value>Détacher</value>
+  </data>
+  <data name="Tab_MenuReconnect" xml:space="preserve">
+    <value>Reconnecter</value>
+  </data>
+  <data name="Tab_MenuDiagnostics" xml:space="preserve">
+    <value>Copier le diagnostic</value>
+  </data>
+  <data name="Tab_MenuClose" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
 </root>
