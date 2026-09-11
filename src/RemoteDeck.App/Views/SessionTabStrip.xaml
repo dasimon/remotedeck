@@ -129,6 +129,38 @@
                                 MouseMove="OnTabMouseMove"
                                 MouseLeftButtonUp="OnTabLeftButtonUp"
                                 MouseDown="OnTabMouseDown">
+                            <!-- Right-click does NOT activate the tab, deliberately, and this is the
+                                 one place where the strip parts with the connection pane's rule that
+                                 a right-click selects the row first. Activating a tab switches the
+                                 session on screen, which is a far heavier thing than moving a
+                                 selection — and acting on a background tab without leaving the one
+                                 you are watching is the whole point of the menu.
+
+                                 The menu's DataContext is the tab, inherited through the logical
+                                 tree from this Border, so the IsEnabled bindings read the tab's own
+                                 rules and Close reaches the same command the cross uses. -->
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{x:Static res:Strings.Tab_MenuFullScreen}"
+                                              FontWeight="SemiBold"
+                                              IsEnabled="{Binding CanFullScreen}"
+                                              Click="OnMenuFullScreen" />
+                                    <MenuItem Header="{x:Static res:Strings.Tab_MenuDetach}"
+                                              InputGestureText="{x:Static res:Strings.Palette_ShortcutDetach}"
+                                              IsEnabled="{Binding CanDetach}"
+                                              Click="OnMenuDetach" />
+                                    <Separator />
+                                    <MenuItem Header="{x:Static res:Strings.Tab_MenuReconnect}"
+                                              IsEnabled="{Binding CanReconnect}"
+                                              Click="OnMenuReconnect" />
+                                    <MenuItem Header="{x:Static res:Strings.Tab_MenuDiagnostics}"
+                                              Click="OnMenuDiagnostics" />
+                                    <Separator />
+                                    <MenuItem Header="{x:Static res:Strings.Tab_MenuClose}"
+                                              InputGestureText="{x:Static res:Strings.Palette_ShortcutCloseSession}"
+                                              Command="{Binding CloseCommand}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <!-- Three layers and the content, stacked in the order they may cover one
                                  another. Nothing here changes size or position between states: a strip
                                  walked with Ctrl+Tab never shifts under the eye (plan, constraint 8). -->

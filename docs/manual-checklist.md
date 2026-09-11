@@ -843,6 +843,28 @@ What no test can reach is the tunnel actually dropping under a live session.
 - [x] A drop that is **not** a network code (a server-side end) still fails as before, without
       blaming the tunnel.
 
+## A docked tab's context menu
+
+Held by tests only in the negative: the labels exist in both languages and no literal text sits in
+the markup (`LocalizationTests`, `XamlTextTests`). Everything below is a human's.
+
+- [x] Right-click a docked tab: the menu opens, with Full screen, Detach, Reconnect, Copy
+      diagnostics and Close, and the entries are **not all greyed** — the binding through the
+      template's logical tree works.
+      *Verified 2026-09-10 on the reference client with the 0.4.2-rc.2 build.*
+- [x] Right-clicking a **background** tab does not activate it: the session on screen does not
+      change, and the entry chosen acts on the tab that was aimed at.
+      *Verified 2026-09-10, same build.*
+- [x] **Full screen** on a connected docked tab: it leaves the strip, opens in a window of its own
+      and goes full screen in one gesture.
+      *Verified 2026-09-10, same build.*
+- [ ] On a tab whose session is **not connected**, *Full screen* is greyed; on an already
+      **detached** tab, *Detach* is greyed too, and *Reconnect* is live only when the toolbar's own
+      Reconnect button would be.
+- [ ] *Copy diagnostics* from the menu copies **that** tab's diagnostics, not the active one's.
+- [ ] English: the five labels read as commands, and the two gesture hints show `Ctrl+Shift+D`
+      and `Ctrl+W`.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*

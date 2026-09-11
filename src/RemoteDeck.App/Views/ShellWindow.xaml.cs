@@ -159,6 +159,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _sessions.TabChanged += OnTabChanged;
         TabStrip.ViewModel = _sessions;
         TabStrip.DetachRequested += OnDetachRequested;
+        TabStrip.ActionRequested += OnTabActionRequested;
 
         // Window-level shortcuts. They fire whenever the WPF side owns the keyboard; while the RDP
         // control has focus nothing reaches WPF at all, which is what ShortcutInterceptor is for —
@@ -970,7 +971,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     /// <param name="screenPoint">Where the tab was dropped, in screen device pixels, or <c>null</c>
     /// when the detach came from the keyboard or the palette.</param>
-    private void DetachTab(SessionTabViewModel tab, System.Windows.Point? screenPoint)
+    /// <param name="fullScreen">Detach straight into full screen — the tab's own menu, where a
+    /// docked session has no other way there. The window is shown first and then switched, which is
+    /// the same order the remembered-placement path below already relies on.</param>
+    private void DetachTab(SessionTabViewModel tab, System.Windows.Point? screenPoint, bool fullScreen = false)
     {
         if (_closeInProgress || tab.IsDetached)
         {
@@ -1004,7 +1008,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         if (_sessions.Detach(tab, window))
         {
-            if (placement?.FullScreen == true)
+            if (fullScreen || placement?.FullScreen == true)
             {
                 window.ToggleFullScreen();
             }
@@ -1957,15 +1961,49 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnCancelRetryClick(object sender, RoutedEventArgs e) => _sessions.Active?.Session.CancelReconnect();
 
+    /// <summary>
+    /// A tab's own context menu. Every entry acts on the tab it was opened over rather than on the
+    /// active one — the strip does not activate on a right-click, and that is the point: reconnect
+    /// or detach a background session without leaving the one on screen.
+    /// </summary>
+    private void OnTabActionRequested(SessionTabViewModel tab, SessionTabStrip.TabAction action)
+    {
+        switch (action)
+        {
+            case SessionTabStrip.TabAction.FullScreen:
+                // Full screen belongs to a window of its own: this detaches and switches in one
+                // gesture, which used to be Ctrl+Shift+D followed by F11.
+                DetachTab(tab, (System.Windows.Point?)null, fullScreen: true);
+                break;
+
+            case SessionTabStrip.TabAction.Detach:
+                DetachTab(tab, (System.Windows.Point?)null);
+                break;
+
+            case SessionTabStrip.TabAction.Reconnect:
+                ReconnectTab(tab);
+                break;
+
+            case SessionTabStrip.TabAction.Diagnostics:
+                CopyDiagnostics(tab);
+                break;
+        }
+    }
+
     /// <summary>Copies the active session's diagnostics. The clipboard is owned by whatever
     /// currently holds it, so <c>SetText</c> is allowed to fail — and must not cost the window.</summary>
     private void OnCopyDiagnosticsClick(object sender, RoutedEventArgs e)
     {
-        if (_sessions.Active is not { } tab)
+        if (_sessions.Active is { } active)
         {
-            return;
+            CopyDiagnostics(active);
         }
+    }
 
+    /// <summary>Copies one session's diagnostics. The toolbar passes the active tab; the tab menu
+    /// passes the one it was opened over.</summary>
+    private void CopyDiagnostics(SessionTabViewModel tab)
+    {
         try
         {
             // Qualified: UseWindowsForms puts System.Windows.Forms.Clipboard in scope too.
