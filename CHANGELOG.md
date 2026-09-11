@@ -2,7 +2,11 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.4.2 — 2026-09-11
+
+A docked session tab gets a menu of its own, with the full screen a docked session never had. And
+the keyboard table now says which shortcuts cross into a remote session and which do not — it
+promised more than the application delivered.
 
 ### A docked tab has a menu of its own
 
@@ -21,6 +25,22 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 - *Close others* is deliberately absent. A browser can afford that gesture; an RDP session is
   expensive to re-establish, and RemoteDeck closes sessions on a deliberate protocol (5 s each,
   30 s overall). One click that ends four of them is a trap, not a shortcut.
+
+### The keyboard table says what it does
+
+- **`Ctrl+N` and `Ctrl+F` do not cross into a remote session, and the README now says so.** It
+  listed them among the shortcuts and then said the low-level hook "is the only mechanism that
+  reaches them while the remote desktop has focus" — which was true of the hook and untrue of
+  those two: they are not in its set, so they reach the remote application instead. Found the hard
+  way, by a keystroke that landed in a remote editor rather than in RemoteDeck.
+- The behaviour is the right one and does not change. A remote session is another computer, and its
+  applications own your muscle memory there: RemoteDeck takes only the keys that act **on the
+  session or on its own window chrome** — switch, close, detach, full screen, the pane, the
+  palette. The keys that act on the **connection list** are left to the remote application, because
+  `Ctrl+F` in a remote editor should find text there rather than focus a search box hidden behind
+  the session. `Ctrl+K` is always available to reach a connection from inside a session.
+- The table now carries a column for it, rather than a paragraph the reader has to reconcile with
+  it.
 
 ## 0.4.1 — 2026-09-07
 

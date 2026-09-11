@@ -73,6 +73,12 @@ Probe evidence for the lot 0 items lives in
 - [ ] While the app is foreground, the shortcuts are swallowed **everywhere**, text
       boxes included. Until lot 5 filters on the focused control, confirm this is still
       the known behaviour and not a new regression.
+- [ ] **`Ctrl+N` and `Ctrl+F` reach the remote application**, not RemoteDeck, while the
+      remote desktop has focus — they act on the connection list and are deliberately not
+      in the hook's set. Press `Ctrl+F` in a remote editor: its own Find must open. Both
+      still work as the table says whenever RemoteDeck's own interface has the keyboard.
+      *This is what the README's table now states; it used to imply the opposite, and a
+      keystroke landing in a remote editor is how that was found (2026-09-10).*
 - [ ] In an environment where a low-level hook cannot be installed (EDR, group policy),
       `Ctrl+Alt+Left` / `Ctrl+Alt+Right` still release focus from the control through
       the native `OnFocusReleased` event — the user is never trapped in the session.

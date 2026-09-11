@@ -286,17 +286,19 @@ you composed or a secret, and the app falls back to its defaults without complai
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+K` | Command palette — connections, open tabs and commands in one list |
-| `Ctrl+N` | New connection |
-| `Ctrl+F` | Focus the search box (expands the pane if it is collapsed) |
-| `Enter` | Connect the selected connection |
-| `F2` | Edit the selected connection |
-| `Delete` | Delete the selected connection — press twice; the first press only arms it, and the confirmation expires after 5 seconds |
-| `Ctrl+B` | Collapse or restore the connection pane |
-| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous session tab (cycles; the session you leave stays connected) |
-| `Ctrl+W` | Close the active session tab — or, in a detached window, that session |
-| `Ctrl+Shift+D` | Detach the active session into its own window — or reattach it, pressed from the detached window |
-| `F11` / `Ctrl+Alt+Pause` | Full screen on and off, in a detached window |
+| Shortcut | Action | Works while the remote desktop has focus |
+|---|---|---|
+| `Ctrl+K` | Command palette — connections, open tabs and commands in one list | **yes** |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous session tab (cycles; the session you leave stays connected) | **yes** |
+| `Ctrl+W` | Close the active session tab — or, in a detached window, that session | **yes** |
+| `Ctrl+Shift+D` | Detach the active session into its own window — or reattach it, pressed from the detached window | **yes** |
+| `Ctrl+B` | Collapse or restore the connection pane | **yes** |
+| `F11` / `Ctrl+Alt+Pause` | Full screen on and off, in a detached window | **yes** |
+| `Ctrl+N` | New connection | no — goes to the remote session |
+| `Ctrl+F` | Focus the search box (expands the pane if it is collapsed) | no — goes to the remote session |
+| `Enter` | Connect the selected connection | no |
+| `F2` | Edit the selected connection | no |
+| `Delete` | Delete the selected connection — press twice; the first press only arms it, and the confirmation expires after 5 seconds | no |
 
 Shortcuts go to the **active window**. In a detached session window, `Ctrl+W` closes that
 session, `Ctrl+K` opens the palette over it, `Ctrl+Shift+D` reattaches it and `F11`
@@ -317,13 +319,25 @@ whatever was selected before.
 Search is fuzzy and ignores case and accents; it matches on name, host and group
 name, sorts favorites first, and highlights the characters your query hit.
 
-**Shortcuts and text fields.** RemoteDeck grabs shortcuts with a low-level keyboard
-hook, which is the only mechanism that reaches them while the remote desktop has
-focus. So that typing never feels broken, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W` and
-`Ctrl+B` are **left to the text field that has the keyboard focus** — a text box, a
-password box or an editable combo box. Everywhere else they do what the table says.
-`Ctrl+K` is the exception: it always opens the palette, from inside a text field
-included.
+**Which shortcuts cross into a session, and why.** A remote session is another
+computer, and its applications own your muscle memory there. So RemoteDeck takes only
+the keys that act **on the session itself or on its own window chrome** — switch,
+close, detach, full screen, the pane, and the palette that gets you out of any of it.
+The keys that act on the **connection list** are left alone: `Ctrl+N`, `Ctrl+F`, `F2`,
+`Delete` and `Enter` reach the remote application, because pressing `Ctrl+F` in a
+remote editor should find text there, not focus a search box hidden behind the
+session. They work whenever RemoteDeck's own interface has the keyboard — the pane,
+the search box, a dialog. To reach a connection from inside a session, use `Ctrl+K`,
+which always opens the palette.
+
+Only the first group is taken by the low-level keyboard hook, which is the one
+mechanism that sees a key while the remote desktop has focus.
+
+**Shortcuts and text fields.** So that typing never feels broken, `Ctrl+Tab`,
+`Ctrl+Shift+Tab`, `Ctrl+W` and `Ctrl+B` are **left to the text field that has the
+keyboard focus** — a text box, a password box or an editable combo box. Everywhere
+else they do what the table says. `Ctrl+K` is the exception: it always opens the
+palette, from inside a text field included.
 
 If a security policy blocks the low-level keyboard hook, application shortcuts
 cannot be intercepted while the remote desktop has focus. `Ctrl+Alt+Left` /
