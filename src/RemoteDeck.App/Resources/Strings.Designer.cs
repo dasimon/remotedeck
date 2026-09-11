@@ -2733,5 +2733,49 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Session_VpnDropped", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to Full screen.
+        /// </summary>
+        public static string Tab_MenuFullScreen {
+            get {
+                return ResourceManager.GetString("Tab_MenuFullScreen", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Detach.
+        /// </summary>
+        public static string Tab_MenuDetach {
+            get {
+                return ResourceManager.GetString("Tab_MenuDetach", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Reconnect.
+        /// </summary>
+        public static string Tab_MenuReconnect {
+            get {
+                return ResourceManager.GetString("Tab_MenuReconnect", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Copy diagnostics.
+        /// </summary>
+        public static string Tab_MenuDiagnostics {
+            get {
+                return ResourceManager.GetString("Tab_MenuDiagnostics", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Close.
+        /// </summary>
+        public static string Tab_MenuClose {
+            get {
+                return ResourceManager.GetString("Tab_MenuClose", resourceCulture);
+            }
+        }
     }
 }
