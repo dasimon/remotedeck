@@ -21,9 +21,6 @@ things about the repository itself, and the boxes they replaced have been remove
 So where a box below says "no missing string" or "no hard-coded English", that half is now
 proven; what remains yours is whether the French **reads** well and fits its control.
 
-Probe evidence for the lot 0 items lives in
-`docs/superpowers/probes/l0-probe-results.md`.
-
 ## Lot 0 — control hosting
 
 ### Control selection
@@ -360,8 +357,7 @@ success criteria of §1.
 ## Detached session windows
 
 None of these boxes is ticked yet: the feature shipped its code on 2026-09-01, its human
-probe has not been run. It is not closed until this section is. Design:
-`docs/superpowers/specs/2026-09-01-detached-windows-design.md`. Two monitors are needed
+probe has not been run. It is not closed until this section is. Two monitors are needed
 for most of it; `TEST-VM` is the reference target.
 
 ### Detaching and reattaching
