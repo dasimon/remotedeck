@@ -5,17 +5,17 @@ using RemoteDeck.Core.Settings;
 namespace RemoteDeck.Core.Data;
 
 /// <summary>
-/// Lecture et écriture des espaces de travail (spec espaces §3.1). Un espace est toujours écrit
-/// entier : il n'y a pas d'éditeur, donc pas de mise à jour partielle à représenter.
+/// Reads and writes workspaces (workspaces spec §3.1). A workspace is always written whole: there
+/// is no editor, so there is no partial update to represent.
 /// </summary>
 public sealed class WorkspaceRepository(SqliteDatabase db)
 {
     /// <summary>
-    /// Insère l'espace, ou remplace intégralement celui qui porte déjà ce nom. Le remplacement est
-    /// la manière normale de faire évoluer un espace (spec §5), et il conserve l'<c>Id</c> existant
-    /// pour que rien ne pointe dans le vide.
+    /// Inserts the workspace, or fully replaces the one that already has this name. Replacing is the
+    /// normal way to evolve a workspace (spec §5), and it keeps the existing <c>Id</c> so that
+    /// nothing is left pointing at nothing.
     /// </summary>
-    /// <returns>L'id de l'espace écrit.</returns>
+    /// <returns>The id of the workspace written.</returns>
     public long Save(Workspace x)
     {
         ArgumentNullException.ThrowIfNull(x);
@@ -51,8 +51,8 @@ public sealed class WorkspaceRepository(SqliteDatabase db)
             update.Add("$id", id);
             update.ExecuteNonQuery();
 
-            // Les items sont réécrits en bloc : c'est ce que « remplacer » veut dire ici, et cela
-            // évite d'avoir à calculer une différence pour une liste qui fait deux à six lignes.
+            // Items are rewritten as a block: that is what "replace" means here, and it avoids
+            // computing a diff for a list of two to six rows.
             var clear = c.Cmd("DELETE FROM WorkspaceItem WHERE WorkspaceId = $id");
             clear.Transaction = tx;
             clear.Add("$id", id);
@@ -126,8 +126,8 @@ public sealed class WorkspaceRepository(SqliteDatabase db)
         return list;
     }
 
-    /// <summary>Idempotent, comme <see cref="ConnectionRepository.Delete"/> : un id déjà parti est
-    /// un non-événement. Les items partent par cascade.</summary>
+    /// <summary>Idempotent, like <see cref="ConnectionRepository.Delete"/>: an id already gone is a
+    /// non-event. Items go with it by cascade.</summary>
     public void Delete(long id)
     {
         using var c = db.Open();
@@ -154,8 +154,8 @@ public sealed class WorkspaceRepository(SqliteDatabase db)
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
-            // Une place n'existe que si les quatre coordonnées sont là. Un item détaché dont la
-            // place n'a jamais été enregistrée est légitime : le repli par connexion s'en charge.
+            // A placement exists only if all four coordinates are there. A detached item whose
+            // placement was never saved is legitimate: the per-connection fallback handles it.
             DetachedWindowPlacement? placement = r.IsDBNull(3) || r.IsDBNull(4) || r.IsDBNull(5) || r.IsDBNull(6)
                 ? null
                 : new DetachedWindowPlacement(r.GetDouble(3), r.GetDouble(4), r.GetDouble(5), r.GetDouble(6), r.GetInt64(7) != 0);

@@ -3,51 +3,51 @@ using RemoteDeck.Core.Settings;
 
 namespace RemoteDeck.Core.Sessions;
 
-/// <summary>Ce qu'il faut faire d'une connexion pour monter un espace.</summary>
+/// <summary>What to do with a connection to open a workspace.</summary>
 public enum WorkspaceActionKind
 {
-    /// <summary>La session est déjà là et déjà dans le bon conteneur : l'amener au premier plan.</summary>
+    /// <summary>The session is already there, in the right container: bring it to the front.</summary>
     Activate = 0,
-    /// <summary>La session est détachée et l'espace la veut détachée : l'amener au premier plan et la replacer.</summary>
+    /// <summary>The session is detached and the workspace wants it detached: bring it to the front and move it.</summary>
     MoveDetached = 1,
-    /// <summary>La session est ancrée et l'espace la veut détachée.</summary>
+    /// <summary>The session is docked and the workspace wants it detached.</summary>
     Detach = 2,
-    /// <summary>La session est détachée et l'espace la veut ancrée.</summary>
+    /// <summary>The session is detached and the workspace wants it docked.</summary>
     Reattach = 3,
-    /// <summary>Pas de session : ouvrir un onglet.</summary>
+    /// <summary>No session: open a tab.</summary>
     OpenDocked = 4,
-    /// <summary>Pas de session : ouvrir puis détacher.</summary>
+    /// <summary>No session: open, then detach.</summary>
     OpenDetached = 5,
 }
 
 /// <summary>
-/// Une action du montage. <paramref name="Placement"/> est le rectangle déjà ajusté aux écrans
-/// présents, ou <c>null</c> quand l'espace n'en a pas ou que celui qu'il avait appartient à un
-/// écran disparu.
+/// One step of opening a workspace. <paramref name="Placement"/> is the rectangle already fitted to
+/// the screens present, or <c>null</c> when the workspace has none or the one it had belongs to a
+/// screen that is gone.
 ///
-/// Ce que l'appelant en fait dépend de l'action. Pour <see cref="WorkspaceActionKind.OpenDetached"/>
-/// et <see cref="WorkspaceActionKind.Detach"/>, un <c>null</c> le fait retomber sur la mémorisation
-/// par connexion, puis sur le centrage, exactement comme un détachement ordinaire. Pour
-/// <see cref="WorkspaceActionKind.MoveDetached"/>, il n'y a pas de repli : la fenêtre est déjà à
-/// l'écran quelque part, et sans rectangle à lui imposer l'espace la laisse où elle est plutôt que
-/// de la déplacer vers une place qu'il n'a pas demandée.
+/// What the caller does with it depends on the action. For <see cref="WorkspaceActionKind.OpenDetached"/>
+/// and <see cref="WorkspaceActionKind.Detach"/>, a <c>null</c> makes it fall back to the
+/// per-connection memory, then to centering, exactly like an ordinary detach. For
+/// <see cref="WorkspaceActionKind.MoveDetached"/>, there is no fallback: the window is already on
+/// screen somewhere, and with no rectangle to impose the workspace leaves it where it is rather
+/// than moving it to a place it did not ask for.
 /// </summary>
 public sealed record WorkspaceAction(WorkspaceActionKind Kind, long ConnectionId, DetachedWindowPlacement? Placement);
 
 /// <summary>
-/// Traduit un espace en une liste d'actions, en fonction des connexions qui existent encore, des
-/// sessions déjà ouvertes et des écrans présents maintenant (spec espaces §4.1).
+/// Turns a workspace into a list of actions, given the connections that still exist, the sessions
+/// already open and the screens present right now (workspaces spec §4.1).
 ///
-/// Pur : pas d'E/S, pas d'interface, pas d'état. C'est la raison d'être de ce type — la décision se
-/// teste, l'exécution WPF non.
+/// Pure: no I/O, no UI, no state. That is this type's reason to exist — the decision can be tested,
+/// the WPF execution cannot.
 /// </summary>
 public static class WorkspacePlan
 {
-    /// <param name="existingConnectionIds">Les connexions qui existent encore en base. Un item qui
-    /// n'y est pas est ignoré en silence : la cascade a pu le retirer entre la lecture et ici, et
-    /// c'est une course, pas une erreur de l'utilisateur.</param>
-    /// <param name="openSessions">Id de connexion → la session est-elle détachée. Une connexion a au
-    /// plus une session, invariant de <c>SessionsViewModel.Find</c>.</param>
+    /// <param name="existingConnectionIds">The connections that still exist in the database. An item
+    /// that is not among them is silently skipped: the cascade may have removed it between the read
+    /// and here, and that is a race, not a user error.</param>
+    /// <param name="openSessions">Connection id → whether its session is detached. A connection has at
+    /// most one session, an invariant of <c>SessionsViewModel.Find</c>.</param>
     public static IReadOnlyList<WorkspaceAction> Build(
         Workspace workspace,
         IReadOnlySet<long> existingConnectionIds,
@@ -65,8 +65,8 @@ public static class WorkspacePlan
         {
             if (!existingConnectionIds.Contains(item.ConnectionId)) continue;
 
-            // Ajusté ici une fois pour toutes : aucune branche ci-dessous n'a à savoir ce qu'est un
-            // écran. Un item ancré n'a pas de place, et ScreenFit rend null sur une entrée nulle.
+            // Fitted here once and for all: no branch below needs to know what a screen is. A docked
+            // item has no placement, and ScreenFit returns null for a null input.
             var placement = item.Detached ? ScreenFit.Choose(item.Placement, screens) : null;
 
             var kind = openSessions.TryGetValue(item.ConnectionId, out bool isDetached)

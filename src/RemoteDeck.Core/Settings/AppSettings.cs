@@ -25,24 +25,23 @@ public sealed class AppSettings
     public Dictionary<string, DetachedWindowPlacement> DetachedWindows { get; set; } = [];
 
     /// <summary>
-    /// Rouvrir au démarrage les sessions qui étaient là à la fermeture. Faux par défaut : lancer
-    /// l'application ne doit se connecter à rien tant que l'utilisateur ne l'a pas demandé
-    /// (spec espaces §7).
+    /// Reopen at startup the sessions that were there at close. False by default: launching the
+    /// app must not connect to anything until the user has asked for it (workspaces spec §7).
     /// </summary>
     public bool RestoreLastSession { get; set; }
 
     /// <summary>
-    /// Ce qui était ouvert à la dernière fermeture propre, dans l'ordre du ruban. Réécrit à chaque
-    /// fermeture propre et seulement là : une fermeture par crash laisse la précédente, ce qui est
-    /// le comportement utile. Jamais nul après un <c>Load()</c>.
+    /// What was open at the last clean close, in tab strip order. Rewritten on every clean close and
+    /// only then: a crash leaves the previous one in place, which is the useful behaviour. Never
+    /// null after a <c>Load()</c>.
     /// </summary>
     public List<LastSessionEntry> LastSession { get; set; } = [];
 }
 
 /// <summary>
-/// Une session de la dernière fermeture. Mêmes champs qu'un <c>WorkspaceItem</c> moins l'espace :
-/// la reprise est de l'état de fenêtrage, pas du contenu composé, d'où sa place ici et non en base
-/// (spec espaces §3).
+/// A session from the last close. Same fields as a <c>WorkspaceItem</c> minus the workspace: the
+/// restore is window state, not composed content, hence its place here rather than in the database
+/// (workspaces spec §3).
 /// </summary>
 public sealed class LastSessionEntry
 {

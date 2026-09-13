@@ -93,8 +93,8 @@ public sealed class SchemaMigratorTests
     {
         using var tmp = new TempDatabase();
 
-        // Une base V1 telle qu'elle existe sur le poste d'un utilisateur : le script V1 seul,
-        // estampillé version 1, avec une connexion dedans.
+        // A V1 database as it exists on a user's machine: the V1 script alone, stamped version 1,
+        // with one connection in it.
         using (var c = tmp.Db.Open())
         {
             c.Cmd("CREATE TABLE SchemaVersion (Version INTEGER NOT NULL, AppliedUtc TEXT NOT NULL)").ExecuteNonQuery();
@@ -169,7 +169,7 @@ public sealed class SchemaMigratorTests
 
         c.Cmd("DELETE FROM Connection WHERE Id = 7").ExecuteNonQuery();
 
-        // L'espace survit, son item non : c'est ce qui empêche un id de connexion mort d'y rester.
+        // The workspace survives, its item does not: that is what keeps a dead connection id out of it.
         Assert.Equal(0L, c.Cmd("SELECT COUNT(*) FROM WorkspaceItem").ExecuteScalar());
         Assert.Equal(1L, c.Cmd("SELECT COUNT(*) FROM Workspace").ExecuteScalar());
     }
