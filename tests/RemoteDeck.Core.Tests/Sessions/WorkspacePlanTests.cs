@@ -41,7 +41,7 @@ public sealed class WorkspacePlanTests
     [Fact]
     public void An_open_docked_session_wanted_docked_is_only_activated()
     {
-        var open = new Dictionary<long, bool> { [7] = false };   // false = ancrée
+        var open = new Dictionary<long, bool> { [7] = false };   // false = docked
 
         var plan = WorkspacePlan.Build(With(Docked(7)), new HashSet<long> { 7 }, open, OneScreen);
 
@@ -63,7 +63,7 @@ public sealed class WorkspacePlanTests
     [Fact]
     public void An_open_detached_session_wanted_docked_is_reattached()
     {
-        var open = new Dictionary<long, bool> { [7] = true };    // true = détachée
+        var open = new Dictionary<long, bool> { [7] = true };    // true = detached
 
         var plan = WorkspacePlan.Build(With(Docked(7)), new HashSet<long> { 7 }, open, OneScreen);
 
@@ -101,7 +101,7 @@ public sealed class WorkspacePlanTests
     [Fact]
     public void Actions_follow_the_item_order()
     {
-        var workspace = With(Docked(9, 1), Docked(7, 0));   // volontairement dans le désordre
+        var workspace = With(Docked(9, 1), Docked(7, 0));   // deliberately out of order
 
         var plan = WorkspacePlan.Build(workspace, new HashSet<long> { 7, 9 }, new Dictionary<long, bool>(), OneScreen);
 
@@ -111,14 +111,14 @@ public sealed class WorkspacePlanTests
     [Fact]
     public void A_placement_on_a_screen_that_is_gone_falls_back_to_no_placement()
     {
-        // Fenêtre mémorisée sur un second écran à droite, débranché depuis.
+        // Window remembered on a second screen to the right, unplugged since.
         var item = Detached(7, at: new DetachedWindowPlacement(3000, 100, 1280, 800, false));
 
         var plan = WorkspacePlan.Build(With(item), new HashSet<long> { 7 }, new Dictionary<long, bool>(), OneScreen);
 
         var action = Assert.Single(plan);
         Assert.Equal(WorkspaceActionKind.OpenDetached, action.Kind);
-        // Pas de rectangle : l'appelant retombe sur la mémorisation par connexion, puis sur le centrage.
+        // No rectangle: the caller falls back to the per-connection memory, then to centering.
         Assert.Null(action.Placement);
     }
 

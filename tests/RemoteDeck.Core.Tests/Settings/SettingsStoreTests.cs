@@ -77,8 +77,8 @@ public sealed class SettingsStoreTests : IDisposable
     [Fact]
     public void RestoreLastSession_defaults_to_false()
     {
-        // Ouvrir RemoteDeck ne doit se connecter à rien tant que l'utilisateur ne l'a pas demandé
-        // (spec espaces §7).
+        // Opening RemoteDeck must not connect to anything until the user has asked for it
+        // (workspaces spec §7).
         Assert.False(new AppSettings().RestoreLastSession);
     }
 
@@ -115,7 +115,7 @@ public sealed class SettingsStoreTests : IDisposable
     [Fact]
     public void LastSession_is_never_null_even_when_the_file_says_null()
     {
-        // Le fichier est éditable à la main : "lastSession": null écrase l'initialiseur de propriété.
+        // The file is hand-editable: "lastSession": null overrides the property initializer.
         Directory.CreateDirectory(_dir);
         File.WriteAllText(File_, """{ "lastSession": null, "detachedWindows": null }""");
 

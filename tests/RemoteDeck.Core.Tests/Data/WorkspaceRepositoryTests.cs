@@ -6,7 +6,7 @@ namespace RemoteDeck.Core.Tests.Data;
 
 public sealed class WorkspaceRepositoryTests
 {
-    /// <summary>Une base prête, avec deux connexions dont les espaces peuvent se servir.</summary>
+    /// <summary>A ready database, with two connections the workspaces can use.</summary>
     private static (TempDatabase Tmp, WorkspaceRepository Repo, long A, long B) Fixture()
     {
         var tmp = new TempDatabase();
@@ -82,7 +82,7 @@ public sealed class WorkspaceRepositoryTests
 
         long second = repo.Save(new Workspace { Name = "PROD", Items = [new WorkspaceItem { ConnectionId = b, Ordinal = 0 }] });
 
-        Assert.Equal(first, second);              // le même espace, réécrit — pas un second
+        Assert.Equal(first, second);              // the same workspace, rewritten — not a second one
         Assert.Single(repo.GetAll());
         Assert.Equal([b], repo.Get(first)!.Items.Select(i => i.ConnectionId));
     }
