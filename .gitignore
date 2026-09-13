@@ -22,3 +22,6 @@ publish/
 
 # SDD/spike workspaces — never committed
 .superpowers/
+
+# Internal design specs and implementation plans — kept local, not published
+docs/superpowers/
