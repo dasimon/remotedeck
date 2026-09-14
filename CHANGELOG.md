@@ -2,10 +2,10 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.5.0 — 2026-09-14
 
-A connection behind a VPN can raise its tunnel without the question, a connection can be
-duplicated, and the database is copied before every upgrade.
+A connection behind a VPN can raise its tunnel without the question, and the pane shows whether
+each tunnel is up. A connection can be duplicated, and the database is copied before every upgrade.
 
 ### Raise it without asking
 

@@ -653,7 +653,7 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
 - [x] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
 
-**Raise it without asking** (Unreleased). The first run of this build migrates the database;
+**Raise it without asking** (0.5.0). The first run of this build migrates the database;
 see *Upgrading the database* for the copy it takes first.
 
 - [ ] The box sits under the profile field, **greyed while the field is empty**, and is off on
