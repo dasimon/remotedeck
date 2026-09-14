@@ -974,4 +974,7 @@
   <data name="Shell_VpnAutoRaisingMessage" xml:space="preserve">
     <value>“{0}” is set to raise it without asking.</value>
   </data>
+  <data name="Shell_DatabaseBackupFailedMessage" xml:space="preserve">
+    <value>Saved connections were not upgraded, because their backup could not be written to {0}. Nothing was changed. See {1}.</value>
+  </data>
 </root>
