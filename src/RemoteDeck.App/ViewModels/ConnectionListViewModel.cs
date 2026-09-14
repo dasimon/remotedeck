@@ -131,6 +131,9 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     /// <summary>Raised when the user asks for the editor. <c>null</c> means "new connection".</summary>
     public event Action<Connection?>? EditRequested;
 
+    /// <summary>Raised when the user asks for a copy of a connection. The shell names it and opens the editor.</summary>
+    public event Action<Connection>? DuplicateRequested;
+
     /// <summary>Raised when the user asks to delete. The shell owns the confirmation.</summary>
     public event Action<Connection>? DeleteRequested;
 
@@ -280,6 +283,12 @@ public sealed partial class ConnectionListViewModel : ObservableObject
     private void EditSelected()
     {
         if (Selected is { } item) EditRequested?.Invoke(item.Connection);
+    }
+
+    [RelayCommand]
+    private void DuplicateSelected()
+    {
+        if (Selected is { } item) DuplicateRequested?.Invoke(item.Connection);
     }
 
     [RelayCommand]

@@ -977,4 +977,19 @@
   <data name="Shell_DatabaseBackupFailedMessage" xml:space="preserve">
     <value>Les connexions enregistrées n'ont pas été mises à jour : leur copie de sécurité n'a pas pu être écrite dans {0}. Rien n'a été modifié. Voir {1}.</value>
   </data>
+  <data name="Pane_MenuDuplicate" xml:space="preserve">
+    <value>Dupliquer…</value>
+  </data>
+  <data name="Connection_CopyName" xml:space="preserve">
+    <value>{0} (copie)</value>
+  </data>
+  <data name="Connection_CopyNameNth" xml:space="preserve">
+    <value>{0} (copie {1})</value>
+  </data>
+  <data name="Palette_DuplicateConnection" xml:space="preserve">
+    <value>Dupliquer la connexion</value>
+  </data>
+  <data name="Palette_DuplicateConnectionSubtitle" xml:space="preserve">
+    <value>Ouvrir l'éditeur sur une copie de {0}</value>
+  </data>
 </root>

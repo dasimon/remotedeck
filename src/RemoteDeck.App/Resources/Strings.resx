@@ -977,4 +977,19 @@
   <data name="Shell_DatabaseBackupFailedMessage" xml:space="preserve">
     <value>Saved connections were not upgraded, because their backup could not be written to {0}. Nothing was changed. See {1}.</value>
   </data>
+  <data name="Pane_MenuDuplicate" xml:space="preserve">
+    <value>Duplicate…</value>
+  </data>
+  <data name="Connection_CopyName" xml:space="preserve">
+    <value>{0} (copy)</value>
+  </data>
+  <data name="Connection_CopyNameNth" xml:space="preserve">
+    <value>{0} (copy {1})</value>
+  </data>
+  <data name="Palette_DuplicateConnection" xml:space="preserve">
+    <value>Duplicate connection</value>
+  </data>
+  <data name="Palette_DuplicateConnectionSubtitle" xml:space="preserve">
+    <value>Open the editor on a copy of {0}</value>
+  </data>
 </root>
