@@ -61,7 +61,7 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         // The existing instance is edited in place so an Update carries the columns the form does not
-        // expose (AcceptedCertThumbprint, LastConnectedUtc, CreatedUtc) through unchanged.
+        // expose (LastConnectedUtc, CreatedUtc) through unchanged.
         var connection = _existing ?? new Connection { Name = "", Host = "" };
         _viewModel.ApplyTo(connection);
 
