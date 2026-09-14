@@ -2,6 +2,33 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+A connection behind a VPN can raise its tunnel without the question.
+
+### Raise it without asking
+
+- **A box under the VPN profile, *Raise it without asking when it is not connected*.** Ticked,
+  connecting to that connection while its tunnel is down raises the tunnel straight away — no
+  dialog — with a notice naming the tunnel and a line in `probe-l0.log`. Unticked, nothing changes.
+- This **amends a rule 0.4.0 stated**: *it never dials on its own*. It still never does so on a
+  connection attempt alone — the box is off for every connection until you tick it, is saved as
+  off when no profile is named, and applies only to what you start: a connect, a reconnect, a
+  workspace.
+- **A tunnel that drops mid-session still stops the session**, as in 0.4.1, box or no box. It may
+  have been taken down on purpose, and the retry loop bringing it back would be a VPN nobody knows
+  is up.
+- **Workspaces** now go through the same gate, without ever asking: a ticked connection has its
+  tunnel raised before it opens; one whose tunnel cannot be raised opens Idle in its place, with
+  the reason; an unticked one opens as it always did.
+- The rule itself — who may raise a tunnel — is a pure decision in `Core`, with a test holding the
+  invariant for every combination: nothing is raised without the connection opting in.
+
+### Upgrading
+
+- The database moves to **schema V5** (one column, off by default). Once opened by this version it
+  is refused by 0.4.2 and earlier; keep a copy of `connections.db` if you may go back.
+
 ## 0.4.2 — 2026-09-11
 
 A docked session tab gets a menu of its own, with the full screen a docked session never had. And

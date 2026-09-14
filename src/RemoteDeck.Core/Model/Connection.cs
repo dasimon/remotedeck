@@ -34,6 +34,13 @@ public sealed class Connection
     /// </summary>
     public string? VpnProfile { get; set; }
 
+    /// <summary>
+    /// Raise <see cref="VpnProfile"/> without asking when it is down at connect. Off unless the user
+    /// ticked it: a connection attempt alone is not consent to change the machine's network state.
+    /// Never read by the retry loop — a tunnel that drops mid-session still stops the session.
+    /// </summary>
+    public bool AutoRaiseVpn { get; set; }
+
     public string Notes { get; set; } = "";
     public DateTime? LastConnectedUtc { get; set; }
     public DateTime CreatedUtc { get; set; }

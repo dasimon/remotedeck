@@ -264,6 +264,37 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void AutoRaiseVpn_is_off_unless_set_and_roundtrips()
+    {
+        var off = Make("Asks first");
+        off.VpnProfile = "VPN Contoso";
+        _repo.Insert(off);
+        Assert.False(_repo.Get(off.Id)!.AutoRaiseVpn);
+
+        var on = Make("Raises by itself");
+        on.VpnProfile = "VPN Contoso";
+        on.AutoRaiseVpn = true;
+        _repo.Insert(on);
+        Assert.True(_repo.Get(on.Id)!.AutoRaiseVpn);
+    }
+
+    [Fact]
+    public void Update_carries_AutoRaiseVpn_both_ways()
+    {
+        var x = Make("Changes its mind");
+        x.VpnProfile = "VPN Contoso";
+        _repo.Insert(x);
+
+        x.AutoRaiseVpn = true;
+        _repo.Update(x);
+        Assert.True(_repo.Get(x.Id)!.AutoRaiseVpn);
+
+        x.AutoRaiseVpn = false;
+        _repo.Update(x);
+        Assert.False(_repo.Get(x.Id)!.AutoRaiseVpn);
+    }
+
+    [Fact]
     public void SetFavorite_flips_the_flag_both_ways()
     {
         var x = Make("Star");

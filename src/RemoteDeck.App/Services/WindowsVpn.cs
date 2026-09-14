@@ -131,9 +131,9 @@ internal static class WindowsVpn
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Only ever from a button the user pressed. RemoteDeck never raises a tunnel on its own: a
-    /// connection attempt is not consent to change the machine's network state, and a VPN that goes
-    /// up by itself is a VPN nobody knows is up.
+    /// Only ever through <see cref="VpnGate"/>, on something the user started: a yes to its question,
+    /// or a connection whose own box already said yes. Never from the retry loop — a connection
+    /// attempt alone is not consent to change the machine's network state.
     /// </para>
     /// <para>
     /// This used to run <c>rasdial "&lt;profile&gt;"</c>. That fails with RAS 628 on the reference

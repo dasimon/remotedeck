@@ -158,6 +158,20 @@ public sealed class SchemaMigratorTests
     }
 
     [Fact]
+    public void V5_adds_AutoRaiseVpn_off_for_every_existing_connection()
+    {
+        // Not nullable, unlike V3 and V4: the column is a consent, and a connection saved before it
+        // existed never gave one. DEFAULT 0 is what keeps an upgrade from raising a tunnel nobody
+        // agreed to.
+        using var tmp = new TempDatabase();
+        tmp.Db.EnsureCreated();
+        using var c = tmp.Db.Open();
+        c.Cmd("INSERT INTO Connection(Name, Host, VpnProfile, CreatedUtc) VALUES ('WIN02', 'contoso-win02', 'VPN Contoso', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+
+        Assert.Equal(0L, c.Cmd("SELECT AutoRaiseVpn FROM Connection").ExecuteScalar());
+    }
+
+    [Fact]
     public void Deleting_a_connection_cascades_to_its_workspace_items()
     {
         using var tmp = new TempDatabase();

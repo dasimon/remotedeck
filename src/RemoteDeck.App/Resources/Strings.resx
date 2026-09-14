@@ -965,4 +965,13 @@
   <data name="Tab_MenuClose" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="Editor_AutoRaiseVpn" xml:space="preserve">
+    <value>Raise it without asking when it is not connected</value>
+  </data>
+  <data name="Editor_AutoRaiseVpnHint" xml:space="preserve">
+    <value>When you connect, reconnect or open a workspace. A session whose tunnel drops still stops.</value>
+  </data>
+  <data name="Shell_VpnAutoRaisingMessage" xml:space="preserve">
+    <value>“{0}” is set to raise it without asking.</value>
+  </data>
 </root>

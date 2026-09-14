@@ -1646,7 +1646,22 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             case WorkspaceActionKind.OpenDetached when tab is null:
                 if (_connections?.Get(action.ConnectionId) is { } connection)
                 {
-                    await OpenConnectionAsync(connection, start: autoConnect);
+                    // Asks nothing: a question per session would stop the series six times. A
+                    // connection that opted in still has its tunnel raised first — that consent does
+                    // not depend on who is asking — and one whose tunnel could not be raised opens
+                    // Idle, in its place, with the gate's notice saying why.
+                    var start = autoConnect &&
+                        await VpnGate.EnsureReadyAsync(this, connection,
+                            (severity, title, message) => StatusBar.Show(severity, title, message), mayAsk: false);
+
+                    // The dial is an await of several seconds, and a click on the connection is not
+                    // refused during a mount: the guard above can be stale by now, so it is asked again.
+                    if (_sessions.Find(action.ConnectionId) is not null)
+                    {
+                        break;
+                    }
+
+                    await OpenConnectionAsync(connection, start: start);
 
                     // Find again: the tab did not exist before the open.
                     if (_sessions.Find(action.ConnectionId) is not { } opened)
@@ -1659,8 +1674,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                     // session is Connecting when it returns — so without this the loop would
                     // serialise six issuings and leave six negotiations to run together, which is
                     // the very thing being avoided. Nothing to wait for when AutoConnect is off: the
-                    // tab is deliberately left Idle.
-                    if (autoConnect)
+                    // tab is deliberately left Idle, and so is one whose tunnel did not come up.
+                    if (start)
                     {
                         await WaitForConnectionAsync(opened);
                     }
@@ -1772,7 +1787,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>
-    /// Checks the VPN profile a connection names, and offers to raise it when it is down.
+    /// Checks the VPN profile a connection names, and raises it when it is down — after asking, or
+    /// straight away for a connection that opted in.
     /// </summary>
     /// <returns>True when the session may go ahead: the connection needs no VPN, the one it needs is
     /// up, or it was down and the dial the user agreed to brought it up. False otherwise — including
@@ -1780,10 +1796,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// with a cryptic RDP error.</returns>
     /// <remarks>
     /// <para>
-    /// Only on this path — a connection the user asked for. Mounting a workspace deliberately does
-    /// not check: it opens its sessions in series, and stopping that series on a question would turn
-    /// one dialog into six. A workspace whose sessions are behind a tunnel fails the ordinary way,
-    /// per session, which is the behaviour its own failure isolation already describes.
+    /// Mounting a workspace goes through the same gate with <c>mayAsk: false</c>: it opens its
+    /// sessions in series, and stopping that series on a question would turn one dialog into six. A
+    /// connection that opted in has its tunnel raised there too; any other whose tunnel is down fails
+    /// the ordinary way, per session, which is the behaviour its own failure isolation describes.
     /// </para>
     /// <para>
     /// A failure to enumerate is not treated as "the tunnel is down": that would offer to raise a

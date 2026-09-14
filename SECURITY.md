@@ -96,7 +96,11 @@ These limits are stated rather than left implicit.
   running as you** — that is what saving it means, and it is true of `rasdial`, of the
   network flyout, and of RemoteDeck alike. RemoteDeck adds no capability here: it asks
   Windows to use a credential Windows already agreed to reuse, and only when the user
-  answers a dialog. It never dials on its own.
+  answers a dialog or has ticked *Raise it without asking* on that connection. Even then it
+  dials only on a connect, a reconnect or a workspace the user started, never from the
+  retry loop, and every such dial is written to `probe-l0.log`. The box is stored in
+  `connections.db` beside the profile name: anyone able to write that file could tick it,
+  which lets them raise a tunnel you could already raise — nothing more.
 
 ## Other notes
 
