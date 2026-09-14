@@ -41,11 +41,11 @@ measured on 2026-09-05. RemoteDeck therefore sets it on every connection: 2 by d
 authentication and prompt on failure", the same as `mstsc.exe`; 1, "required", or 0, "none", only
 when the user chose so in the editor. NLA (CredSSP) is always on.
 
-What this is not: certificate pinning. The `AcceptedCertThumbprint` column in the database is a
-leftover of an intent the interop cannot honour — the generated assembly exposes no member that
-hands out the server certificate (the `[R5]` probe at every launch records that), so nothing reads
-or writes the column. The control's own warning dialog is the only server-identity check, and a
-user who clicks through it has accepted the server for that session.
+What this is not: certificate pinning. The interop cannot honour it — the generated assembly
+exposes no member that hands out the server certificate (the `[R5]` probe at every launch records
+that). The database used to carry an `AcceptedCertThumbprint` column reserved for it, which nothing
+ever read or wrote; schema V6 drops it. The control's own warning dialog is the only
+server-identity check, and a user who clicks through it has accepted the server for that session.
 
 ## Secrets RemoteDeck deliberately does not hold
 
@@ -96,7 +96,11 @@ These limits are stated rather than left implicit.
   running as you** — that is what saving it means, and it is true of `rasdial`, of the
   network flyout, and of RemoteDeck alike. RemoteDeck adds no capability here: it asks
   Windows to use a credential Windows already agreed to reuse, and only when the user
-  answers a dialog. It never dials on its own.
+  answers a dialog or has ticked *Raise it without asking* on that connection. Even then it
+  dials only on a connect, a reconnect or a workspace the user started, never from the
+  retry loop, and every such dial is written to `probe-l0.log`. The box is stored in
+  `connections.db` beside the profile name: anyone able to write that file could tick it,
+  which lets them raise a tunnel you could already raise — nothing more.
 
 ## Other notes
 

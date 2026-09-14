@@ -652,6 +652,27 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
       no Windows phone book knows it. Nothing is dialled.
 - [x] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
+
+**Raise it without asking** (0.5.0). The first run of this build migrates the database;
+see *Upgrading the database* for the copy it takes first.
+
+- [ ] The box sits under the profile field, **greyed while the field is empty**, and is off on
+      every existing connection after the upgrade.
+- [ ] Ticked, saved, reopened: still ticked. Clear the profile, save, type it again: the box is
+      **off** — a greyed tick does not come back as consent.
+- [ ] Tunnel down, box ticked, **Connect**: no dialog. A notice *Raising …* names the tunnel, then
+      the session opens once it is up. `probe-l0.log` has *raising … without asking*.
+- [ ] Tunnel down, box **not** ticked: the dialog asks, exactly as before.
+- [ ] Box ticked, **Reconnect** from the toolbar, the tab menu and a detached window: no dialog.
+- [ ] Box ticked, profile with **no saved credential**: not dialled, the InfoBar sends you to
+      Windows, the session is not opened.
+- [ ] Box ticked, **cut the tunnel during a session**: the session drops and **stops** on the VPN
+      message. The tunnel is **not** raised again, and no retry countdown starts.
+- [ ] **Workspace** with auto-connect, tunnel down: a ticked connection has its tunnel raised and
+      connects; an unticked one opens and fails the ordinary way. No dialog either way.
+- [ ] Workspace, ticked connection, dial refused: its tab opens **Idle** in its place, the notice
+      says why, and the next session of the workspace still opens.
+- [ ] English and French: the box, its hint and the notice.
 - [x] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
       machine knows — check your own profile is offered without typing it.
 - [x] A profile the list does **not** offer can still be typed by hand and works: the list is a
@@ -866,6 +887,64 @@ the markup (`LocalizationTests`, `XamlTextTests`). Everything below is a human's
 - [ ] *Copy diagnostics* from the menu copies **that** tab's diagnostics, not the active one's.
 - [ ] English: the five labels read as commands, and the two gesture hints show `Ctrl+Shift+D`
       and `Ctrl+W`.
+
+## Upgrading the database — the copy taken first
+
+The copy itself, its content, its single-file journal, its replacement of an older copy and a
+failed copy stopping the migration are covered by `DatabaseBackupTests`. What only a real profile
+shows:
+
+- [ ] First launch of this build on a 0.4.2 database (V4): `%APPDATA%\RemoteDeck\connections.v4.bak`
+      appears beside `connections.db`, and `probe-l0.log` has *Database upgraded; the previous
+      version was copied to …*. On a database already upgraded by 0.5.0-rc.1 (V5), the copy is
+      `connections.v5.bak`.
+- [ ] Second launch: no new copy, no line.
+- [ ] **The way back works.** Close RemoteDeck, copy the `.bak` over `connections.db`, start 0.4.2:
+      it opens, with the connections as they were.
+- [ ] The `.bak` is a single file — no `-wal` or `-shm` beside it after opening it in a SQLite viewer.
+- [ ] Make the copy impossible (a folder named `connections.v5.bak.tmp` beside the database, on a
+      V5 database): the pane is unavailable, the InfoBar names the backup path, and the database
+      is still V5 afterwards. Remove the folder: the next launch upgrades normally.
+
+## Duplicate a connection
+
+The copied fields and the name are covered by `ConnectionCopyTests`. The menu, the palette row and
+the editor are not.
+
+- [ ] Right-click a connection: *Duplicate…* sits under *Edit…*, and opens the editor titled as a
+      new connection would be, filled in, named *… (copy)*.
+- [ ] Cancel: no row is added.
+- [ ] Save: a new row appears; the original is untouched. Duplicate the original again: *… (copy 2)*.
+- [ ] The copy has the same credential, VPN profile, *raise without asking*, redirections, display
+      mode and notes — and is **not** a favourite even when the original is.
+- [ ] Palette (`Ctrl+K`) with a connection selected: *Duplicate connection* names it in its
+      subtitle. With nothing selected, the row is absent.
+- [ ] French: *Dupliquer…*, *(copie)*, *(copie 2)*.
+
+## The VPN tag in the pane
+
+What the tag is driven by was measured before it was built. *2026-09-14, reference home client,
+read-only probe (`NetworkChange.NetworkAddressChanged` plus a re-read of the Ppp/Tunnel interfaces):
+cutting the reference VPN profile from Windows raised the event at once with the tunnel already
+gone from the list; raising it again raised the event with the tunnel already listed; no change
+went by without an event.* Whether a slower VPN client reports its interface later is why the
+pane also re-reads three seconds after the burst.
+
+The comparison that decides whether anything changed is covered by `VpnRequirementTests`. The
+rest is a human's.
+
+- [ ] A connection with **no** profile: no tag, and the name keeps its width.
+- [ ] Tunnel **up**: a muted *VPN* tag before the state pill; its tooltip names the profile as
+      connected.
+- [ ] Cut the tunnel from Windows (not from RemoteDeck): within a few seconds the tag turns to the
+      warning colour with the warning sign, the tooltip says not connected, and `probe-l0.log` has
+      one *VPN state changed* line — not one per notification.
+- [ ] Raise it again from Windows: the tag goes back to muted, one more line.
+- [ ] *Raise it without asking* on a ticked connection: the tag follows the tunnel RemoteDeck raised.
+- [ ] A Wi-Fi change or a sleep/resume with no VPN involved writes no *VPN state changed* line.
+- [ ] Searching, adding or editing a connection (the pane rebuilds): the tags are still right.
+- [ ] Light and dark themes: the warning colour reads on both; the muted tag is not invisible.
+- [ ] French: the tooltip reads *Le profil VPN « … » est connecté* / *n'est pas connecté*.
 
 ## Build prerequisites (any lot)
 

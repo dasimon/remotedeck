@@ -87,7 +87,16 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private AuthenticationLevelOption? _selectedAuthenticationLevel = AllAuthenticationLevels[0];
     /// <summary>The Windows VPN profile this connection needs, or blank for none. Stored trimmed,
     /// and blank is normalised to null by the repository.</summary>
-    [ObservableProperty] private string _vpnProfile = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVpnProfile))]
+    private string _vpnProfile = "";
+
+    /// <summary>Raise the profile without asking when it is down at connect. Meaningless without a
+    /// profile, so the box is greyed then and saved as off.</summary>
+    [ObservableProperty] private bool _autoRaiseVpn;
+
+    /// <summary>Whether a profile is named at all — what enables the auto-raise box.</summary>
+    public bool HasVpnProfile => !string.IsNullOrWhiteSpace(VpnProfile);
 
     /// <summary>
     /// What the profile box offers. Suggestions only — the box stays typeable, so a profile this
@@ -169,6 +178,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         connection.AuthenticationLevel = SelectedAuthenticationLevel?.Value;
         connection.Notes = Notes ?? "";
         connection.VpnProfile = VpnProfile;
+        // Off when no profile is named: a greyed tick left from an earlier profile must not come back
+        // as consent the day a new one is typed in.
+        connection.AutoRaiseVpn = AutoRaiseVpn && HasVpnProfile;
     }
 
     /// <summary>Builds the form for an existing connection, or a blank one when <paramref name="connection"/> is null.</summary>
@@ -202,6 +214,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
             WebAccountUpn = connection?.WebAccountUpn ?? "",
             Notes = connection?.Notes ?? "",
             VpnProfile = connection?.VpnProfile ?? "",
+            AutoRaiseVpn = connection?.AutoRaiseVpn ?? false,
         };
 
         // A credential deleted since the connection was saved simply falls back to "(none)".

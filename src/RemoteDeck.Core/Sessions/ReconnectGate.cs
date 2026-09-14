@@ -8,8 +8,8 @@ public enum ReconnectVerdict
 
     /// <summary>
     /// Stop: the profile this connection needs is not up, and no number of attempts will change
-    /// that. The user is told which tunnel, and their next click decides — RemoteDeck raises none
-    /// on its own.
+    /// that. The user is told which tunnel, and their next click decides — the retry loop raises
+    /// none, even for a connection that opted in to <see cref="VpnConsent"/>.
     /// </summary>
     VpnDown = 1,
 

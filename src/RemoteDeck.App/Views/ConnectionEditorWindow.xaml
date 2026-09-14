@@ -135,6 +135,12 @@
                       Text="{Binding VpnProfile, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
                        Text="{x:Static res:Strings.Editor_VpnProfileHint}" />
+            <!-- Greyed without a profile rather than hidden: the option stays discoverable, and the
+                 tick is saved as off in that case (see ApplyTo). -->
+            <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_AutoRaiseVpn}"
+                      IsChecked="{Binding AutoRaiseVpn}" IsEnabled="{Binding HasVpnProfile}" />
+            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
+                       Text="{x:Static res:Strings.Editor_AutoRaiseVpnHint}" />
             <ui:TextBox Margin="0,6,0,0" Height="72" AcceptsReturn="True" TextWrapping="Wrap"
                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
                         PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />

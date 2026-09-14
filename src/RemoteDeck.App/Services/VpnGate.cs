@@ -17,44 +17,66 @@ namespace RemoteDeck.App.Services;
 /// second place for it to drift.
 /// </para>
 /// <para>
-/// Only ever from something the user pressed. RemoteDeck never raises a tunnel on its own: a
-/// connection attempt is not consent to change the machine's network state, and a VPN that goes up
-/// by itself is a VPN nobody knows is up.
+/// Only ever from something the user started — a connect, a reconnect, a workspace — and never from
+/// the retry loop. A connection attempt alone is not consent to change the machine's network state:
+/// the tunnel goes up after a yes to the question, or because the connection's own box says the
+/// answer is always yes. Which of the two applies is <see cref="VpnConsent"/>'s call; when the box
+/// answers, a notice still names the tunnel being raised, because a VPN that goes up silently is a
+/// VPN nobody knows is up.
 /// </para>
 /// </remarks>
 internal static class VpnGate
 {
     /// <summary>
     /// Whether <paramref name="connection"/> may go ahead: it needs no VPN, the one it needs is up,
-    /// or it was down and the dial the user agreed to brought it up.
+    /// or it was down and a dial the user agreed to — now, or once in the editor — brought it up.
     /// </summary>
     /// <param name="owner">The window the question is asked over.</param>
-    /// <param name="report">Where a refusal is written — each window's own status bar.</param>
+    /// <param name="report">Where a refusal or a notice is written — each window's own status bar.</param>
+    /// <param name="mayAsk">False when no question may be put — a workspace mount. An unticked
+    /// connection then goes ahead as it always did; a ticked one still has its tunnel raised.</param>
     public static async Task<bool> EnsureReadyAsync(
-        Window owner, Connection connection, Action<Wpf.Ui.Controls.InfoBarSeverity, string, string> report)
+        Window owner, Connection connection, Action<Wpf.Ui.Controls.InfoBarSeverity, string, string> report,
+        bool mayAsk = true)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(report);
 
-        if (State(connection) != VpnState.NotConnected)
+        var verdict = VpnConsent.Decide(State(connection), connection.AutoRaiseVpn, mayAsk);
+        if (verdict == VpnConsentVerdict.Proceed)
         {
             return true;
         }
 
+        // Not blank: State reads a blank profile as NotRequired, and that always proceeds.
         var profile = connection.VpnProfile!.Trim();
-        // Fully qualified: UseWindowsForms puts System.Windows.Forms.MessageBox in scope too.
-        var answer = System.Windows.MessageBox.Show(owner,
-            Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile),
-            Text.Of(Strings.Shell_VpnDownTitle, profile),
-            MessageBoxButton.OKCancel, MessageBoxImage.Warning);
 
-        if (answer != MessageBoxResult.OK)
+        if (verdict == VpnConsentVerdict.Ask)
         {
-            report(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+            // Fully qualified: UseWindowsForms puts System.Windows.Forms.MessageBox in scope too.
+            var answer = System.Windows.MessageBox.Show(owner,
+                Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile),
                 Text.Of(Strings.Shell_VpnDownTitle, profile),
-                Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile));
-            return false;
+                MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+
+            if (answer != MessageBoxResult.OK)
+            {
+                report(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+                    Text.Of(Strings.Shell_VpnDownTitle, profile),
+                    Text.Of(Strings.Shell_VpnDownMessage, connection.Name, profile));
+                return false;
+            }
+        }
+        else
+        {
+            // No question, but not silent: the notice goes up before the dial, which can take a few
+            // seconds, so the pause has a name — and the log keeps a trace of every tunnel raised
+            // without a click on a dialog.
+            ProbeLog.Write("vpn", $"'{connection.Name}': raising '{profile}' without asking (the connection opted in)");
+            report(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                Text.Of(Strings.Shell_VpnDialingTitle, profile),
+                Text.Of(Strings.Shell_VpnAutoRaisingMessage, connection.Name));
         }
 
         var result = await WindowsVpn.DialAsync(profile);
