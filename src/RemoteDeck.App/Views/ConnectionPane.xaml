@@ -40,6 +40,10 @@
             <MenuItem Header="{x:Static res:Strings.Pane_MenuEdit}"
                       InputGestureText="{x:Static res:Strings.Pane_MenuGestureEdit}"
                       Command="{Binding EditSelectedCommand}" />
+            <!-- Beside Edit, because it is Edit on a copy: it opens the same editor, filled in, and
+                 nothing is written until Save. -->
+            <MenuItem Header="{x:Static res:Strings.Pane_MenuDuplicate}"
+                      Command="{Binding DuplicateSelectedCommand}" />
             <!-- OneWay on purpose: the click toggles the check visually, but the value of record is
                  the row's, and the pane reloads right after the write. A TwoWay binding here would
                  fight that reload. -->

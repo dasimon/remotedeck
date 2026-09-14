@@ -2811,5 +2811,49 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Shell_DatabaseBackupFailedMessage", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to Duplicate….
+        /// </summary>
+        public static string Pane_MenuDuplicate {
+            get {
+                return ResourceManager.GetString("Pane_MenuDuplicate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} (copy).
+        /// </summary>
+        public static string Connection_CopyName {
+            get {
+                return ResourceManager.GetString("Connection_CopyName", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} (copy {1}).
+        /// </summary>
+        public static string Connection_CopyNameNth {
+            get {
+                return ResourceManager.GetString("Connection_CopyNameNth", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Duplicate connection.
+        /// </summary>
+        public static string Palette_DuplicateConnection {
+            get {
+                return ResourceManager.GetString("Palette_DuplicateConnection", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open the editor on a copy of {0}.
+        /// </summary>
+        public static string Palette_DuplicateConnectionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_DuplicateConnectionSubtitle", resourceCulture);
+            }
+        }
     }
 }

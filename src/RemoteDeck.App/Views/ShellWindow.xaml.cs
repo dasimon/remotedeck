@@ -297,6 +297,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _list = new ConnectionListViewModel(_connections);
         _list.ConnectRequested += OnConnectRequested;
         _list.EditRequested += OnEditRequested;
+        _list.DuplicateRequested += OnDuplicateRequested;
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
         _list.FavoriteToggleRequested += OnFavoriteToggleRequested;
@@ -682,6 +683,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
             Strings.Palette_NewConnection, Strings.Palette_NewConnectionSubtitle, CommandPriority,
             Shortcut: Strings.Palette_ShortcutNewConnection, Group: Strings.Palette_GroupCommands, Icon: "Add24"));
+        // Only with a connection selected in the pane, and named in the subtitle: the palette has no
+        // selection of its own, so the row says which connection it will copy before Enter is pressed.
+        if (_list?.SelectedConnection is { } selected)
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:duplicate",
+                Strings.Palette_DuplicateConnection,
+                Text.Of(Strings.Palette_DuplicateConnectionSubtitle, selected.Name), CommandPriority,
+                Group: Strings.Palette_GroupCommands, Icon: "Copy24"));
+        }
+
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
             Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority,
             Group: Strings.Palette_GroupCommands, Icon: "ArrowImport24"));
@@ -842,6 +853,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:import":
                 ImportConnections();
+                break;
+
+            case "cmd:duplicate":
+                if (_list?.SelectedConnection is { } toCopy)
+                {
+                    OnDuplicateRequested(toCopy);
+                }
+
                 break;
 
             case "cmd:credentials":
@@ -2169,6 +2188,29 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         var editor = new ConnectionEditorWindow(existing) { Owner = this };
+        editor.ShowDialog();
+        if (editor.Saved)
+        {
+            _list?.Reload();
+        }
+    }
+
+    /// <summary>
+    /// Opens the editor on a copy of <paramref name="source"/>, under a name no other connection has.
+    /// Nothing is written until Save: a duplicate the user abandons leaves no row behind.
+    /// </summary>
+    private void OnDuplicateRequested(Connection source)
+    {
+        if (_connections is null)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoEditMessage);
+            return;
+        }
+
+        var name = ConnectionCopy.NameFor(source.Name, _connections.GetAll().Select(c => c.Name),
+            Strings.Connection_CopyName, Strings.Connection_CopyNameNth);
+        var editor = new ConnectionEditorWindow(null, ConnectionCopy.Of(source, name)) { Owner = this };
         editor.ShowDialog();
         if (editor.Saved)
         {
