@@ -31,8 +31,8 @@ public sealed class ConnectionRepositoryTests : IDisposable
             Name = "Prod DC", Host = "dc01", Port = 3390, GroupName = "Prod", IsFavorite = true,
             DisplayMode = DisplayMode.Fixed, FixedWidth = 1920, FixedHeight = 1080,
             RedirectClipboard = false, RedirectDrives = true, RedirectPrinters = true, RedirectAudio = true,
-            AdminSession = true, UseWebAccount = true, AuthenticationLevel = 1, AcceptedCertThumbprint = "AB",
-            Notes = "notes",
+            AdminSession = true, UseWebAccount = true, AuthenticationLevel = 1,
+            Notes = "notes", VpnProfile = "VPN Contoso", AutoRaiseVpn = true, WebAccountUpn = "user@contoso.com",
         };
 
         var id = _repo.Insert(x);
@@ -53,8 +53,11 @@ public sealed class ConnectionRepositoryTests : IDisposable
         Assert.True(b.AdminSession);
         Assert.True(b.UseWebAccount);
         Assert.Equal(1, b.AuthenticationLevel);
-        Assert.Equal("AB", b.AcceptedCertThumbprint);
         Assert.Equal("notes", b.Notes);
+        // Every column after the one V6 dropped, so a reader ordinal left one place off shows here.
+        Assert.Equal("VPN Contoso", b.VpnProfile);
+        Assert.True(b.AutoRaiseVpn);
+        Assert.Equal("user@contoso.com", b.WebAccountUpn);
         Assert.Null(b.LastConnectedUtc);
         Assert.Null(b.CredentialId);
         Assert.Equal(DateTimeKind.Utc, b.CreatedUtc.Kind);

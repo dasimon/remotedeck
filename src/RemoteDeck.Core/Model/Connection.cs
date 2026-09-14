@@ -26,7 +26,6 @@ public sealed class Connection
     /// </summary>
     public string? WebAccountUpn { get; set; }
     public int? AuthenticationLevel { get; set; }
-    public string? AcceptedCertThumbprint { get; set; }
     /// <summary>
     /// The Windows VPN profile this connection needs, or <c>null</c> when it needs none. Matched
     /// loosely against the profiles that are up — see <c>VpnRequirement</c>. RemoteDeck stores the
