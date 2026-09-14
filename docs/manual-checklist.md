@@ -653,8 +653,8 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
 - [x] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
 
-**Raise it without asking** (Unreleased). Back up `%APPDATA%\RemoteDeck\connections.db`
-before the first run: this build migrates it to schema V5, and 0.4.2 then refuses to open it.
+**Raise it without asking** (Unreleased). The first run of this build migrates the database;
+see *Upgrading the database* for the copy it takes first.
 
 - [ ] The box sits under the profile field, **greyed while the field is empty**, and is off on
       every existing connection after the upgrade.
@@ -887,6 +887,39 @@ the markup (`LocalizationTests`, `XamlTextTests`). Everything below is a human's
 - [ ] *Copy diagnostics* from the menu copies **that** tab's diagnostics, not the active one's.
 - [ ] English: the five labels read as commands, and the two gesture hints show `Ctrl+Shift+D`
       and `Ctrl+W`.
+
+## Upgrading the database — the copy taken first
+
+The copy itself, its content, its single-file journal, its replacement of an older copy and a
+failed copy stopping the migration are covered by `DatabaseBackupTests`. What only a real profile
+shows:
+
+- [ ] First launch of this build on a 0.4.2 database (V4): `%APPDATA%\RemoteDeck\connections.v4.bak`
+      appears beside `connections.db`, and `probe-l0.log` has *Database upgraded; the previous
+      version was copied to …*. On a database already upgraded by 0.5.0-rc.1 (V5), the copy is
+      `connections.v5.bak`.
+- [ ] Second launch: no new copy, no line.
+- [ ] **The way back works.** Close RemoteDeck, copy the `.bak` over `connections.db`, start 0.4.2:
+      it opens, with the connections as they were.
+- [ ] The `.bak` is a single file — no `-wal` or `-shm` beside it after opening it in a SQLite viewer.
+- [ ] Make the copy impossible (a folder named `connections.v5.bak.tmp` beside the database, on a
+      V5 database): the pane is unavailable, the InfoBar names the backup path, and the database
+      is still V5 afterwards. Remove the folder: the next launch upgrades normally.
+
+## Duplicate a connection
+
+The copied fields and the name are covered by `ConnectionCopyTests`. The menu, the palette row and
+the editor are not.
+
+- [ ] Right-click a connection: *Duplicate…* sits under *Edit…*, and opens the editor titled as a
+      new connection would be, filled in, named *… (copy)*.
+- [ ] Cancel: no row is added.
+- [ ] Save: a new row appears; the original is untouched. Duplicate the original again: *… (copy 2)*.
+- [ ] The copy has the same credential, VPN profile, *raise without asking*, redirections, display
+      mode and notes — and is **not** a favourite even when the original is.
+- [ ] Palette (`Ctrl+K`) with a connection selected: *Duplicate connection* names it in its
+      subtitle. With nothing selected, the row is absent.
+- [ ] French: *Dupliquer…*, *(copie)*, *(copie 2)*.
 
 ## Build prerequisites (any lot)
 

@@ -282,6 +282,11 @@ resolution follows, sharp, instead of being stretched. Against a server that ref
 it, the session falls back to scaling the image and says so in the log.
 
 Connections, credentials and workspaces live in `%APPDATA%\RemoteDeck\connections.db`.
+Before a version of RemoteDeck upgrades that file to a newer schema, it copies it to
+`connections.v<old version>.bak` beside it — the way back, since an older RemoteDeck refuses a
+database a newer one has upgraded. To go back, close RemoteDeck and copy the `.bak` over
+`connections.db`. If the copy cannot be written, the upgrade does not happen: the connection pane
+stays unavailable for that run and says why, and the file is left exactly as it was.
 Window and pane layout — pane width, collapsed state, window size and position, where
 each detached session window was, and the last-session-restore switch and its snapshot
 — lives beside it in **`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside the
@@ -315,8 +320,11 @@ there, so they are left to the remote desktop instead of being swallowed.
 **Mouse.** A **double-click** on a connection connects it — the primary action, the same one
 `Enter` runs, and the same convention every other connection manager follows. Configuring a
 connection is the *secondary* action, so it lives where Windows has always put it: **right-click
-→ Edit…**. The row menu also carries *Connect*, a *Favorite* toggle, and *Delete* — which arms
-the same two-step confirmation the `Delete` key does, rather than deleting outright. Right-click
+→ Edit…**. The row menu also carries *Connect*, *Duplicate…*, a *Favorite* toggle, and *Delete* —
+which arms the same two-step confirmation the `Delete` key does, rather than deleting outright.
+*Duplicate…* opens the editor on a copy named *… (copy)*, with every setting and the same
+credential, but not the favourite star; nothing is saved until you press Save. The palette offers
+it too while a connection is selected. Right-click
 in the empty space below the last row instead and you get *New connection* and *Import
 connections…*, the two actions that need nothing selected.
 
