@@ -132,6 +132,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// its opens with the first one's.</summary>
     private bool _mounting;
 
+    /// <summary>Keeps the pane's VPN tags current. Null without a pane.</summary>
+    private VpnMonitor? _vpnMonitor;
+
     private bool _settingsSaved;
     private bool _closeInProgress;
     private bool _reentrantCloseLogged;
@@ -313,6 +316,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // so it hands the list a way to ask rather than a way to be told.
         _list.StatusProvider = StatusOf;
         _list.RefreshStatuses();
+
+        // The VPN tags. Started here rather than at construction: without a pane there is nothing to
+        // mark, and a listener on a static network event is not something to leave running for nothing.
+        _vpnMonitor = new VpnMonitor(Dispatcher);
+        _vpnMonitor.Changed += OnVpnChanged;
+        _vpnMonitor.Start();
+        _list.ApplyVpn(_vpnMonitor.Current);
         Pane.ViewModel = _list;
 
         // Re-select what was selected when the app last closed, when that row still exists.
@@ -394,6 +404,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     private void NewConnection() => OnEditRequested(null);
+
+    private void OnVpnChanged(IReadOnlySet<string>? profilesUp) => _list?.ApplyVpn(profilesUp);
 
     // ---------------------------------------------------------------- shortcuts
 
@@ -2558,6 +2570,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // call site, which is what makes the snapshot a clean-close-only affair.
             CaptureLastSession();
             SaveSettings();
+
+            // NetworkChange is static: an unsubscribed handler keeps this window reachable from it.
+            if (_vpnMonitor is { } monitor)
+            {
+                monitor.Changed -= OnVpnChanged;
+                monitor.Dispose();
+                _vpnMonitor = null;
+            }
         }
 
         if (_closeConfirmed || _sessions.Tabs.Count == 0)

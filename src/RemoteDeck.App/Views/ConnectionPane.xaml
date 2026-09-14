@@ -388,6 +388,7 @@
                                 <ColumnDefinition Width="3*" />
                                 <ColumnDefinition Width="2*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <!-- U+E735 = FavoriteStarFill (Segoe Fluent Icons, Segoe MDL2 Assets on Win10). -->
@@ -418,7 +419,15 @@
 
                             <!-- Only rows with a session of their own show anything here; the rest
                                  collapse the tag and give their width back to the name. -->
-                            <controls:StatusTag Grid.Column="3"
+                            <!-- Before the state pill: the tunnel is a precondition of the session, so
+                                 it reads first. Collapsed, and width-free, on a connection with no
+                                 profile. -->
+                            <controls:VpnTag Grid.Column="3"
+                                             Margin="8,0,0,0"
+                                             State="{Binding Vpn}"
+                                             Profile="{Binding VpnProfile}" />
+
+                            <controls:StatusTag Grid.Column="4"
                                                 Margin="8,0,0,0"
                                                 Status="{Binding Status}" />
                         </Grid>

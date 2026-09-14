@@ -2855,5 +2855,31 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Palette_DuplicateConnectionSubtitle", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to VPN.
+        /// </summary>
+        public static string Pane_VpnTag {
+            get {
+                return ResourceManager.GetString("Pane_VpnTag", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to VPN profile “{0}” is connected.
+        /// </summary>
+        public static string Pane_VpnUp {
+            get {
+                return ResourceManager.GetString("Pane_VpnUp", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to VPN profile “{0}” is not connected.
+        /// </summary>
+        public static string Pane_VpnDown {
+            get {
+                return ResourceManager.GetString("Pane_VpnDown", resourceCulture);
+            }
+        }
     }
 }

@@ -199,4 +199,52 @@
             </Trigger>
         </Style.Triggers>
     </Style>
+
+    <!-- ============================================================================
+         The VPN tag (controls:VpnTag). Beside the state pill and styled the same way, for the
+         same reason: the state -> colour mapping belongs to the sheet that owns the tokens.
+
+         Muted when the tunnel is up — the expected state says nothing loud — and RdWarn with a
+         warning glyph when it is down, so the problem is told by shape as well as by colour.
+         ============================================================================ -->
+    <Style TargetType="{x:Type controls:VpnTag}">
+        <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+        <Setter Property="FontSize" Value="{StaticResource RdFontSm}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="ToolTip" Value="{Binding Description, RelativeSource={RelativeSource Self}}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:VpnTag}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent"
+                                AutomationProperties.Name="{TemplateBinding Description}">
+                        <!-- U+E7BA = Warning (Segoe Fluent Icons, Segoe MDL2 Assets on Win10). -->
+                        <TextBlock x:Name="Glyph" Text="&#xE7BA;" Margin="0,0,4,0"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   VerticalAlignment="Center" Visibility="Collapsed" />
+                        <TextBlock Text="{x:Static controls:VpnTag.Word}"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="State" Value="NotConnected">
+                            <Setter TargetName="Glyph" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="State" Value="NotConnected">
+                <Setter Property="Foreground" Value="{DynamicResource RdWarn}" />
+            </Trigger>
+            <!-- A connection that needs no VPN — most of them — says nothing and takes no width. -->
+            <Trigger Property="State" Value="NotRequired">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
 </ResourceDictionary>

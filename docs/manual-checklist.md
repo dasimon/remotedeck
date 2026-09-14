@@ -921,6 +921,31 @@ the editor are not.
       subtitle. With nothing selected, the row is absent.
 - [ ] French: *Dupliquer…*, *(copie)*, *(copie 2)*.
 
+## The VPN tag in the pane
+
+What the tag is driven by was measured before it was built. *2026-09-14, reference home client,
+read-only probe (`NetworkChange.NetworkAddressChanged` plus a re-read of the Ppp/Tunnel interfaces):
+cutting the reference VPN profile from Windows raised the event at once with the tunnel already
+gone from the list; raising it again raised the event with the tunnel already listed; no change
+went by without an event.* Whether a slower VPN client reports its interface later is why the
+pane also re-reads three seconds after the burst.
+
+The comparison that decides whether anything changed is covered by `VpnRequirementTests`. The
+rest is a human's.
+
+- [ ] A connection with **no** profile: no tag, and the name keeps its width.
+- [ ] Tunnel **up**: a muted *VPN* tag before the state pill; its tooltip names the profile as
+      connected.
+- [ ] Cut the tunnel from Windows (not from RemoteDeck): within a few seconds the tag turns to the
+      warning colour with the warning sign, the tooltip says not connected, and `probe-l0.log` has
+      one *VPN state changed* line — not one per notification.
+- [ ] Raise it again from Windows: the tag goes back to muted, one more line.
+- [ ] *Raise it without asking* on a ticked connection: the tag follows the tunnel RemoteDeck raised.
+- [ ] A Wi-Fi change or a sleep/resume with no VPN involved writes no *VPN state changed* line.
+- [ ] Searching, adding or editing a connection (the pane rebuilds): the tags are still right.
+- [ ] Light and dark themes: the warning colour reads on both; the muted tag is not invisible.
+- [ ] French: the tooltip reads *Le profil VPN « … » est connecté* / *n'est pas connecté*.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*

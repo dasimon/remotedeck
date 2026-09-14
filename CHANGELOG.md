@@ -25,6 +25,18 @@ duplicated, and the database is copied before every upgrade.
 - The rule itself — who may raise a tunnel — is a pure decision in `Core`, with a test holding the
   invariant for every combination: nothing is raised without the connection opting in.
 
+### The pane shows the tunnel
+
+- **A *VPN* tag on every connection that names a profile**, before its state pill: muted when the
+  tunnel is up, warning colour and a warning sign when it is down, the profile named in its
+  tooltip. A connection with no profile shows nothing.
+- It follows Windows' own network-change notification rather than polling. Measured first, with a
+  read-only probe on the reference client: cutting and raising the tunnel each raised the
+  notification within the second, with the new state already readable. The pane re-reads once the
+  burst of notifications settles and again three seconds later, and writes a log line only when the
+  set of tunnels actually changed.
+- A state that cannot be read shows no tag at all — never a tunnel reported down that may be up.
+
 ### Duplicate a connection
 
 - **Right-click a connection → *Duplicate…***, or the palette while one is selected. The editor
