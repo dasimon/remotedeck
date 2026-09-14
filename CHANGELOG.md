@@ -4,7 +4,8 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
-A connection behind a VPN can raise its tunnel without the question.
+A connection behind a VPN can raise its tunnel without the question, a connection can be
+duplicated, and the database is copied before every upgrade.
 
 ### Raise it without asking
 
@@ -24,10 +25,25 @@ A connection behind a VPN can raise its tunnel without the question.
 - The rule itself — who may raise a tunnel — is a pure decision in `Core`, with a test holding the
   invariant for every combination: nothing is raised without the connection opting in.
 
+### Duplicate a connection
+
+- **Right-click a connection → *Duplicate…***, or the palette while one is selected. The editor
+  opens on a copy named *… (copy)*, then *(copy 2)*, with every setting and the same credential —
+  a reference, no secret is copied — but neither the favourite star nor the last connection time.
+  Nothing is written until Save.
+- Which fields a copy carries is a rule in `Core`, and its test walks every property of a
+  connection: a setting added later cannot be left out of copies without a test failing.
+
 ### Upgrading
 
-- The database moves to **schema V5** (one column, off by default). Once opened by this version it
-  is refused by 0.4.2 and earlier; keep a copy of `connections.db` if you may go back.
+- The database moves to **schema V6**. V5 adds the *raise without asking* column, off for every
+  existing connection; V6 drops `AcceptedCertThumbprint`, a column reserved for certificate
+  pinning the Remote Desktop control gives no way to build, which nothing ever read or wrote.
+- **The database is copied before it is upgraded**, to `connections.v<old version>.bak` beside it,
+  with SQLite's own backup so nothing still in the write-ahead log is missed. Once upgraded it is
+  refused by 0.4.2 and earlier; the copy is the way back. If the copy cannot be written, the
+  upgrade does not run and the pane says why — a one-way upgrade without its way back is not
+  attempted.
 
 ## 0.4.2 — 2026-09-11
 
