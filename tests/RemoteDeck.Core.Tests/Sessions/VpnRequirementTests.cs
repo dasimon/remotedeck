@@ -58,4 +58,38 @@ public sealed class VpnRequirementTests
         // already up.
         Assert.Throws<ArgumentNullException>(() => VpnRequirement.Check("VPN Contoso", null!));
     }
+
+    [Fact]
+    public void The_same_profiles_in_another_order_or_casing_are_no_change()
+    {
+        // Windows lists the same tunnel under its name and its description, in no promised order,
+        // and an address change fires for reasons that are not a VPN at all — a DHCP renewal, a
+        // Wi-Fi hop. None of those may repaint the pane or write a line.
+        IReadOnlySet<string> before = new HashSet<string> { "VPN Contoso", "WAN Miniport" };
+        IReadOnlySet<string> after = new HashSet<string> { "wan miniport", "vpn contoso" };
+
+        Assert.True(VpnRequirement.SameProfiles(before, after));
+    }
+
+    [Fact]
+    public void A_tunnel_that_comes_up_or_goes_down_is_a_change()
+    {
+        IReadOnlySet<string> none = new HashSet<string>();
+        IReadOnlySet<string> up = new HashSet<string> { "VPN Contoso" };
+
+        Assert.False(VpnRequirement.SameProfiles(none, up));
+        Assert.False(VpnRequirement.SameProfiles(up, none));
+    }
+
+    [Fact]
+    public void An_unreadable_state_is_its_own_value()
+    {
+        // Null means "could not be read", which the pane shows as nothing at all. Going from there
+        // to an empty set — the read works again, and nothing is up — is a change worth showing.
+        IReadOnlySet<string> none = new HashSet<string>();
+
+        Assert.True(VpnRequirement.SameProfiles(null, null));
+        Assert.False(VpnRequirement.SameProfiles(null, none));
+        Assert.False(VpnRequirement.SameProfiles(none, null));
+    }
 }

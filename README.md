@@ -144,6 +144,11 @@ a notice naming it. The box is off for every connection until you tick it, and i
 only what you start. A session whose tunnel drops mid-way **still stops** rather than
 bringing the tunnel back behind your back — it may have been taken down on purpose.
 
+**The pane shows the tunnel before you connect.** A connection that names a profile carries a
+small *VPN* tag: muted while the tunnel is up, and in the warning colour with a warning sign
+while it is down; hover it for the profile's name. It follows the tunnel as Windows reports it —
+cut or raise the VPN from anywhere and the tag changes within a few seconds, with no polling.
+
 **It stores no VPN secret and never will.** It dials with the credential you saved in
 the Windows profile itself. Windows does not hand that password out — it returns a
 handle to it, and the handle is all RemoteDeck ever holds. A profile with nothing saved

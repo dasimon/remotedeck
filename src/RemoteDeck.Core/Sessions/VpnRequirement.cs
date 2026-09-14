@@ -57,4 +57,25 @@ public static class VpnRequirement
 
         return VpnState.NotConnected;
     }
+
+    /// <summary>
+    /// Whether two readings of the profiles that are up say the same thing: the same names, ignoring
+    /// order, case and surrounding space. <c>null</c> — a reading that failed — equals only itself.
+    /// </summary>
+    /// <remarks>
+    /// What decides whether the pane repaints and whether a line is written. Windows raises an
+    /// address change for plenty that is not a tunnel, and every one of those must cost nothing.
+    /// </remarks>
+    public static bool SameProfiles(IReadOnlySet<string>? before, IReadOnlySet<string>? after)
+    {
+        if (before is null || after is null)
+        {
+            return before is null && after is null;
+        }
+
+        static HashSet<string> Normalised(IReadOnlySet<string> names) =>
+            new(names.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()), StringComparer.OrdinalIgnoreCase);
+
+        return Normalised(before).SetEquals(Normalised(after));
+    }
 }

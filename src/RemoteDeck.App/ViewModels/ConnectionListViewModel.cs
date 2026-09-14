@@ -7,6 +7,7 @@ using RemoteDeck.App.Resources;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Search;
+using RemoteDeck.Core.Sessions;
 
 namespace RemoteDeck.App.ViewModels;
 
@@ -38,6 +39,13 @@ public sealed partial class ConnectionItem : ObservableObject
     /// <summary>What the row's state pill says. <see cref="ConnectionStatus.None"/> — the default —
     /// hides the pill, which is the right answer for a connection nobody has opened.</summary>
     [ObservableProperty] private ConnectionStatus _status;
+
+    /// <summary>The state of the VPN profile the connection needs. Observable for the same reason as
+    /// <see cref="Status"/>: a tunnel goes up and down under a row that is not being rebuilt.</summary>
+    [ObservableProperty] private VpnState _vpn;
+
+    /// <summary>The profile's name, for the tag's tooltip.</summary>
+    public string VpnProfile => Match.Connection.VpnProfile?.Trim() ?? "";
 }
 
 /// <summary>
@@ -83,6 +91,9 @@ public sealed partial class ConnectionListViewModel : ObservableObject
 
     /// <summary>The last snapshot read from the database. <see cref="Refresh"/> filters this, not the table.</summary>
     private IReadOnlyList<Connection> _all = [];
+
+    /// <summary>The VPN profiles up at the last <see cref="ApplyVpn"/>; null until then or when unreadable.</summary>
+    private IReadOnlySet<string>? _vpnUp;
 
     public ConnectionListViewModel(ConnectionRepository repository)
     {
@@ -244,11 +255,33 @@ public sealed partial class ConnectionListViewModel : ObservableObject
             : Text.Of(Strings.Pane_EmptyNoMatch, SearchText.Trim());
 
         RefreshStatuses();
+        RefreshVpn();
     }
 
     /// <summary>Re-asks <see cref="StatusProvider"/> for every visible row. Called after a rebuild and
     /// whenever a session changes state; cheap enough to run on either, since it touches only the rows
     /// the filter left standing and an unchanged assignment raises nothing.</summary>
+    /// <summary>
+    /// Records which VPN profiles are up and re-marks every visible row. <c>null</c> means the state
+    /// could not be read, and every row then shows nothing — a broken reading is not a tunnel that is
+    /// down. Kept, so a rebuild marks its new rows without asking again.
+    /// </summary>
+    public void ApplyVpn(IReadOnlySet<string>? profilesUp)
+    {
+        _vpnUp = profilesUp;
+        RefreshVpn();
+    }
+
+    private void RefreshVpn()
+    {
+        foreach (var item in Items)
+        {
+            item.Vpn = _vpnUp is null
+                ? VpnState.NotRequired
+                : VpnRequirement.Check(item.Connection.VpnProfile, _vpnUp);
+        }
+    }
+
     public void RefreshStatuses()
     {
         if (StatusProvider is not { } provider) return;
