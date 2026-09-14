@@ -32,7 +32,9 @@ internal static class WindowsVpn
     /// </summary>
     /// <returns>Never null. An empty set means nothing is up, which is a real answer; a failure to
     /// enumerate throws rather than pretending the tunnel is down.</returns>
-    public static IReadOnlySet<string> ConnectedProfiles()
+    /// <param name="log">False for <see cref="VpnMonitor"/>, which reads on every address change and
+    /// writes a line only when the answer changes.</param>
+    public static IReadOnlySet<string> ConnectedProfiles(bool log = true)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -54,9 +56,12 @@ internal static class WindowsVpn
             names.Add(nic.Description);
         }
 
-        ProbeLog.Write("vpn", names.Count == 0
-            ? "no VPN interface is up"
-            : $"VPN interfaces up: {string.Join(", ", names.Order(StringComparer.OrdinalIgnoreCase))}");
+        if (log)
+        {
+            ProbeLog.Write("vpn", names.Count == 0
+                ? "no VPN interface is up"
+                : $"VPN interfaces up: {string.Join(", ", names.Order(StringComparer.OrdinalIgnoreCase))}");
+        }
 
         return names;
     }
@@ -131,9 +136,9 @@ internal static class WindowsVpn
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Only ever from a button the user pressed. RemoteDeck never raises a tunnel on its own: a
-    /// connection attempt is not consent to change the machine's network state, and a VPN that goes
-    /// up by itself is a VPN nobody knows is up.
+    /// Only ever through <see cref="VpnGate"/>, on something the user started: a yes to its question,
+    /// or a connection whose own box already said yes. Never from the retry loop — a connection
+    /// attempt alone is not consent to change the machine's network state.
     /// </para>
     /// <para>
     /// This used to run <c>rasdial "&lt;profile&gt;"</c>. That fails with RAS 628 on the reference

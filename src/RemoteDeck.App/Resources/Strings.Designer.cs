@@ -2777,5 +2777,109 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Tab_MenuClose", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to Raise it without asking when it is not connected.
+        /// </summary>
+        public static string Editor_AutoRaiseVpn {
+            get {
+                return ResourceManager.GetString("Editor_AutoRaiseVpn", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to When you connect, reconnect or open a workspace. A session whose tunnel drops still stops..
+        /// </summary>
+        public static string Editor_AutoRaiseVpnHint {
+            get {
+                return ResourceManager.GetString("Editor_AutoRaiseVpnHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to “{0}” is set to raise it without asking..
+        /// </summary>
+        public static string Shell_VpnAutoRaisingMessage {
+            get {
+                return ResourceManager.GetString("Shell_VpnAutoRaisingMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Saved connections were not upgraded, because their backup could not be written to {0}. Nothing was changed. See {1}..
+        /// </summary>
+        public static string Shell_DatabaseBackupFailedMessage {
+            get {
+                return ResourceManager.GetString("Shell_DatabaseBackupFailedMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Duplicate….
+        /// </summary>
+        public static string Pane_MenuDuplicate {
+            get {
+                return ResourceManager.GetString("Pane_MenuDuplicate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} (copy).
+        /// </summary>
+        public static string Connection_CopyName {
+            get {
+                return ResourceManager.GetString("Connection_CopyName", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} (copy {1}).
+        /// </summary>
+        public static string Connection_CopyNameNth {
+            get {
+                return ResourceManager.GetString("Connection_CopyNameNth", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Duplicate connection.
+        /// </summary>
+        public static string Palette_DuplicateConnection {
+            get {
+                return ResourceManager.GetString("Palette_DuplicateConnection", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open the editor on a copy of {0}.
+        /// </summary>
+        public static string Palette_DuplicateConnectionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_DuplicateConnectionSubtitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to VPN.
+        /// </summary>
+        public static string Pane_VpnTag {
+            get {
+                return ResourceManager.GetString("Pane_VpnTag", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to VPN profile “{0}” is connected.
+        /// </summary>
+        public static string Pane_VpnUp {
+            get {
+                return ResourceManager.GetString("Pane_VpnUp", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to VPN profile “{0}” is not connected.
+        /// </summary>
+        public static string Pane_VpnDown {
+            get {
+                return ResourceManager.GetString("Pane_VpnDown", resourceCulture);
+            }
+        }
     }
 }

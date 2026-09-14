@@ -965,4 +965,40 @@
   <data name="Tab_MenuClose" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="Editor_AutoRaiseVpn" xml:space="preserve">
+    <value>Raise it without asking when it is not connected</value>
+  </data>
+  <data name="Editor_AutoRaiseVpnHint" xml:space="preserve">
+    <value>When you connect, reconnect or open a workspace. A session whose tunnel drops still stops.</value>
+  </data>
+  <data name="Shell_VpnAutoRaisingMessage" xml:space="preserve">
+    <value>“{0}” is set to raise it without asking.</value>
+  </data>
+  <data name="Shell_DatabaseBackupFailedMessage" xml:space="preserve">
+    <value>Saved connections were not upgraded, because their backup could not be written to {0}. Nothing was changed. See {1}.</value>
+  </data>
+  <data name="Pane_MenuDuplicate" xml:space="preserve">
+    <value>Duplicate…</value>
+  </data>
+  <data name="Connection_CopyName" xml:space="preserve">
+    <value>{0} (copy)</value>
+  </data>
+  <data name="Connection_CopyNameNth" xml:space="preserve">
+    <value>{0} (copy {1})</value>
+  </data>
+  <data name="Palette_DuplicateConnection" xml:space="preserve">
+    <value>Duplicate connection</value>
+  </data>
+  <data name="Palette_DuplicateConnectionSubtitle" xml:space="preserve">
+    <value>Open the editor on a copy of {0}</value>
+  </data>
+  <data name="Pane_VpnTag" xml:space="preserve">
+    <value>VPN</value>
+  </data>
+  <data name="Pane_VpnUp" xml:space="preserve">
+    <value>VPN profile “{0}” is connected</value>
+  </data>
+  <data name="Pane_VpnDown" xml:space="preserve">
+    <value>VPN profile “{0}” is not connected</value>
+  </data>
 </root>

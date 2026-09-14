@@ -9,7 +9,7 @@ public sealed class ConnectionRepository(SqliteDatabase db)
     private const string Columns = """
         Id, Name, Host, Port, GroupName, CredentialId, IsFavorite, DisplayMode, FixedWidth, FixedHeight,
         RedirectClipboard, RedirectDrives, RedirectPrinters, RedirectAudio, AdminSession, UseWebAccount,
-        AuthenticationLevel, AcceptedCertThumbprint, Notes, VpnProfile, LastConnectedUtc, CreatedUtc, WebAccountUpn
+        AuthenticationLevel, Notes, VpnProfile, LastConnectedUtc, CreatedUtc, WebAccountUpn, AutoRaiseVpn
         """;
 
     public long Insert(Connection x)
@@ -19,10 +19,10 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         var cmd = c.Cmd("""
             INSERT INTO Connection (Name, Host, Port, GroupName, CredentialId, IsFavorite, DisplayMode, FixedWidth, FixedHeight,
                 RedirectClipboard, RedirectDrives, RedirectPrinters, RedirectAudio, AdminSession, UseWebAccount,
-                AuthenticationLevel, AcceptedCertThumbprint, Notes, VpnProfile, LastConnectedUtc, CreatedUtc, WebAccountUpn)
+                AuthenticationLevel, Notes, VpnProfile, LastConnectedUtc, CreatedUtc, WebAccountUpn, AutoRaiseVpn)
             VALUES ($name, $host, $port, $group, $cred, $fav, $mode, $fw, $fh,
                 $clip, $drives, $printers, $audio, $admin, $web,
-                $auth, $thumb, $notes, $vpn, $last, $created, $upn);
+                $auth, $notes, $vpn, $last, $created, $upn, $autovpn);
             SELECT last_insert_rowid();
             """);
         Bind(cmd, x);
@@ -39,8 +39,8 @@ public sealed class ConnectionRepository(SqliteDatabase db)
             UPDATE Connection SET Name = $name, Host = $host, Port = $port, GroupName = $group, CredentialId = $cred,
                 IsFavorite = $fav, DisplayMode = $mode, FixedWidth = $fw, FixedHeight = $fh,
                 RedirectClipboard = $clip, RedirectDrives = $drives, RedirectPrinters = $printers, RedirectAudio = $audio,
-                AdminSession = $admin, UseWebAccount = $web, AuthenticationLevel = $auth, AcceptedCertThumbprint = $thumb,
-                Notes = $notes, VpnProfile = $vpn, LastConnectedUtc = $last, WebAccountUpn = $upn
+                AdminSession = $admin, UseWebAccount = $web, AuthenticationLevel = $auth,
+                Notes = $notes, VpnProfile = $vpn, LastConnectedUtc = $last, WebAccountUpn = $upn, AutoRaiseVpn = $autovpn
             WHERE Id = $id
             """);
         Bind(cmd, x);
@@ -120,11 +120,11 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         cmd.Add("$admin", x.AdminSession ? 1 : 0);
         cmd.Add("$web", x.UseWebAccount ? 1 : 0);
         cmd.Add("$auth", x.AuthenticationLevel);
-        cmd.Add("$thumb", x.AcceptedCertThumbprint);
         cmd.Add("$notes", x.Notes);
         cmd.Add("$vpn", string.IsNullOrWhiteSpace(x.VpnProfile) ? null : x.VpnProfile.Trim());
         cmd.Add("$last", x.LastConnectedUtc?.ToDb());
         cmd.Add("$upn", string.IsNullOrWhiteSpace(x.WebAccountUpn) ? null : x.WebAccountUpn.Trim());
+        cmd.Add("$autovpn", x.AutoRaiseVpn ? 1 : 0);
     }
 
     private static Connection Read(SqliteDataReader r) => new()
@@ -146,11 +146,11 @@ public sealed class ConnectionRepository(SqliteDatabase db)
         AdminSession = r.GetInt32(14) != 0,
         UseWebAccount = r.GetInt32(15) != 0,
         AuthenticationLevel = r.GetInt32OrNull(16),
-        AcceptedCertThumbprint = r.GetStringOrNull(17),
-        Notes = r.GetString(18),
-        VpnProfile = r.GetStringOrNull(19),
-        LastConnectedUtc = r.GetUtcOrNull(20),
-        CreatedUtc = r.GetUtc(21),
-        WebAccountUpn = r.GetStringOrNull(22),
+        Notes = r.GetString(17),
+        VpnProfile = r.GetStringOrNull(18),
+        LastConnectedUtc = r.GetUtcOrNull(19),
+        CreatedUtc = r.GetUtc(20),
+        WebAccountUpn = r.GetStringOrNull(21),
+        AutoRaiseVpn = r.GetInt32(22) != 0,
     };
 }

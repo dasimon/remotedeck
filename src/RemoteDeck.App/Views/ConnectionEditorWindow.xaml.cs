@@ -25,7 +25,9 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
     public bool Saved { get; private set; }
 
     /// <param name="existing">The connection to edit, or <c>null</c> to create a new one.</param>
-    public ConnectionEditorWindow(Connection? existing)
+    /// <param name="template">When creating, what the form starts from instead of blank — a duplicate.
+    /// Ignored when <paramref name="existing"/> is given: saving then updates that row.</param>
+    public ConnectionEditorWindow(Connection? existing, Connection? template = null)
     {
         InitializeComponent();
         SystemThemeWatcher.Watch(this);
@@ -37,7 +39,7 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         _repository = App.Current.Services.GetRequiredService<ConnectionRepository>();
         var credentials = App.Current.Services.GetRequiredService<CredentialRepository>().GetAll();
         _existing = existing;
-        _viewModel = ConnectionEditorViewModel.From(existing, credentials, KnownGroups(), Services.WindowsVpn.KnownProfiles());
+        _viewModel = ConnectionEditorViewModel.From(existing ?? template, credentials, KnownGroups(), Services.WindowsVpn.KnownProfiles());
         DataContext = _viewModel;
         Loaded += (_, _) => NameInput.Focus();
     }
@@ -61,7 +63,7 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         // The existing instance is edited in place so an Update carries the columns the form does not
-        // expose (AcceptedCertThumbprint, LastConnectedUtc, CreatedUtc) through unchanged.
+        // expose (LastConnectedUtc, CreatedUtc) through unchanged.
         var connection = _existing ?? new Connection { Name = "", Host = "" };
         _viewModel.ApplyTo(connection);
 

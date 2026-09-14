@@ -135,8 +135,19 @@ cannot find. The profile field is a drop-down you can also type into: it lists t
 profiles the machine knows, and a name it does not offer still works.
 
 Saying yes raises the tunnel **silently** — no console window, nothing to dismiss — and
-the session opens by itself once it is really up. RemoteDeck never dials on its own: a
-connection attempt is not consent to change your machine's network state.
+the session opens by itself once it is really up. A connection attempt alone is not
+consent to change your machine's network state, so the question is the default.
+
+Tick **Raise it without asking** under the profile and that connection skips the
+question: the tunnel goes up as soon as you connect, reconnect or open a workspace, with
+a notice naming it. The box is off for every connection until you tick it, and it covers
+only what you start. A session whose tunnel drops mid-way **still stops** rather than
+bringing the tunnel back behind your back — it may have been taken down on purpose.
+
+**The pane shows the tunnel before you connect.** A connection that names a profile carries a
+small *VPN* tag: muted while the tunnel is up, and in the warning colour with a warning sign
+while it is down; hover it for the profile's name. It follows the tunnel as Windows reports it —
+cut or raise the VPN from anywhere and the tag changes within a few seconds, with no polling.
 
 **It stores no VPN secret and never will.** It dials with the credential you saved in
 the Windows profile itself. Windows does not hand that password out — it returns a
@@ -144,8 +155,9 @@ handle to it, and the handle is all RemoteDeck ever holds. A profile with nothin
 is therefore not dialled at all: connect it once from Windows with *Remember my sign-in
 info* ticked, and RemoteDeck can raise it from then on.
 
-Opening a **workspace** deliberately skips the check. Its sessions open in series, and
-stopping that series on a question would turn one dialog into six.
+Opening a **workspace** never asks. Its sessions open in series, and stopping that series
+on a question would turn one dialog into six: a connection with the box ticked has its
+tunnel raised first, any other opens as it always did.
 
 ### Sessions
 
@@ -275,6 +287,11 @@ resolution follows, sharp, instead of being stretched. Against a server that ref
 it, the session falls back to scaling the image and says so in the log.
 
 Connections, credentials and workspaces live in `%APPDATA%\RemoteDeck\connections.db`.
+Before a version of RemoteDeck upgrades that file to a newer schema, it copies it to
+`connections.v<old version>.bak` beside it — the way back, since an older RemoteDeck refuses a
+database a newer one has upgraded. To go back, close RemoteDeck and copy the `.bak` over
+`connections.db`. If the copy cannot be written, the upgrade does not happen: the connection pane
+stays unavailable for that run and says why, and the file is left exactly as it was.
 Window and pane layout — pane width, collapsed state, window size and position, where
 each detached session window was, and the last-session-restore switch and its snapshot
 — lives beside it in **`%APPDATA%\RemoteDeck\settings.json`**, deliberately outside the
@@ -308,8 +325,11 @@ there, so they are left to the remote desktop instead of being swallowed.
 **Mouse.** A **double-click** on a connection connects it — the primary action, the same one
 `Enter` runs, and the same convention every other connection manager follows. Configuring a
 connection is the *secondary* action, so it lives where Windows has always put it: **right-click
-→ Edit…**. The row menu also carries *Connect*, a *Favorite* toggle, and *Delete* — which arms
-the same two-step confirmation the `Delete` key does, rather than deleting outright. Right-click
+→ Edit…**. The row menu also carries *Connect*, *Duplicate…*, a *Favorite* toggle, and *Delete* —
+which arms the same two-step confirmation the `Delete` key does, rather than deleting outright.
+*Duplicate…* opens the editor on a copy named *… (copy)*, with every setting and the same
+credential, but not the favourite star; nothing is saved until you press Save. The palette offers
+it too while a connection is selected. Right-click
 in the empty space below the last row instead and you get *New connection* and *Import
 connections…*, the two actions that need nothing selected.
 

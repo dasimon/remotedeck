@@ -31,8 +31,8 @@ public sealed class ConnectionRepositoryTests : IDisposable
             Name = "Prod DC", Host = "dc01", Port = 3390, GroupName = "Prod", IsFavorite = true,
             DisplayMode = DisplayMode.Fixed, FixedWidth = 1920, FixedHeight = 1080,
             RedirectClipboard = false, RedirectDrives = true, RedirectPrinters = true, RedirectAudio = true,
-            AdminSession = true, UseWebAccount = true, AuthenticationLevel = 1, AcceptedCertThumbprint = "AB",
-            Notes = "notes",
+            AdminSession = true, UseWebAccount = true, AuthenticationLevel = 1,
+            Notes = "notes", VpnProfile = "VPN Contoso", AutoRaiseVpn = true, WebAccountUpn = "user@contoso.com",
         };
 
         var id = _repo.Insert(x);
@@ -53,8 +53,11 @@ public sealed class ConnectionRepositoryTests : IDisposable
         Assert.True(b.AdminSession);
         Assert.True(b.UseWebAccount);
         Assert.Equal(1, b.AuthenticationLevel);
-        Assert.Equal("AB", b.AcceptedCertThumbprint);
         Assert.Equal("notes", b.Notes);
+        // Every column after the one V6 dropped, so a reader ordinal left one place off shows here.
+        Assert.Equal("VPN Contoso", b.VpnProfile);
+        Assert.True(b.AutoRaiseVpn);
+        Assert.Equal("user@contoso.com", b.WebAccountUpn);
         Assert.Null(b.LastConnectedUtc);
         Assert.Null(b.CredentialId);
         Assert.Equal(DateTimeKind.Utc, b.CreatedUtc.Kind);
@@ -261,6 +264,37 @@ public sealed class ConnectionRepositoryTests : IDisposable
         x.WebAccountUpn = null;
         _repo.Update(x);
         Assert.Null(_repo.Get(x.Id)!.WebAccountUpn);
+    }
+
+    [Fact]
+    public void AutoRaiseVpn_is_off_unless_set_and_roundtrips()
+    {
+        var off = Make("Asks first");
+        off.VpnProfile = "VPN Contoso";
+        _repo.Insert(off);
+        Assert.False(_repo.Get(off.Id)!.AutoRaiseVpn);
+
+        var on = Make("Raises by itself");
+        on.VpnProfile = "VPN Contoso";
+        on.AutoRaiseVpn = true;
+        _repo.Insert(on);
+        Assert.True(_repo.Get(on.Id)!.AutoRaiseVpn);
+    }
+
+    [Fact]
+    public void Update_carries_AutoRaiseVpn_both_ways()
+    {
+        var x = Make("Changes its mind");
+        x.VpnProfile = "VPN Contoso";
+        _repo.Insert(x);
+
+        x.AutoRaiseVpn = true;
+        _repo.Update(x);
+        Assert.True(_repo.Get(x.Id)!.AutoRaiseVpn);
+
+        x.AutoRaiseVpn = false;
+        _repo.Update(x);
+        Assert.False(_repo.Get(x.Id)!.AutoRaiseVpn);
     }
 
     [Fact]

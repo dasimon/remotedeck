@@ -2,6 +2,61 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.5.0 — 2026-09-14
+
+A connection behind a VPN can raise its tunnel without the question, and the pane shows whether
+each tunnel is up. A connection can be duplicated, and the database is copied before every upgrade.
+
+### Raise it without asking
+
+- **A box under the VPN profile, *Raise it without asking when it is not connected*.** Ticked,
+  connecting to that connection while its tunnel is down raises the tunnel straight away — no
+  dialog — with a notice naming the tunnel and a line in `probe-l0.log`. Unticked, nothing changes.
+- This **amends a rule 0.4.0 stated**: *it never dials on its own*. It still never does so on a
+  connection attempt alone — the box is off for every connection until you tick it, is saved as
+  off when no profile is named, and applies only to what you start: a connect, a reconnect, a
+  workspace.
+- **A tunnel that drops mid-session still stops the session**, as in 0.4.1, box or no box. It may
+  have been taken down on purpose, and the retry loop bringing it back would be a VPN nobody knows
+  is up.
+- **Workspaces** now go through the same gate, without ever asking: a ticked connection has its
+  tunnel raised before it opens; one whose tunnel cannot be raised opens Idle in its place, with
+  the reason; an unticked one opens as it always did.
+- The rule itself — who may raise a tunnel — is a pure decision in `Core`, with a test holding the
+  invariant for every combination: nothing is raised without the connection opting in.
+
+### The pane shows the tunnel
+
+- **A *VPN* tag on every connection that names a profile**, before its state pill: muted when the
+  tunnel is up, warning colour and a warning sign when it is down, the profile named in its
+  tooltip. A connection with no profile shows nothing.
+- It follows Windows' own network-change notification rather than polling. Measured first, with a
+  read-only probe on the reference client: cutting and raising the tunnel each raised the
+  notification within the second, with the new state already readable. The pane re-reads once the
+  burst of notifications settles and again three seconds later, and writes a log line only when the
+  set of tunnels actually changed.
+- A state that cannot be read shows no tag at all — never a tunnel reported down that may be up.
+
+### Duplicate a connection
+
+- **Right-click a connection → *Duplicate…***, or the palette while one is selected. The editor
+  opens on a copy named *… (copy)*, then *(copy 2)*, with every setting and the same credential —
+  a reference, no secret is copied — but neither the favourite star nor the last connection time.
+  Nothing is written until Save.
+- Which fields a copy carries is a rule in `Core`, and its test walks every property of a
+  connection: a setting added later cannot be left out of copies without a test failing.
+
+### Upgrading
+
+- The database moves to **schema V6**. V5 adds the *raise without asking* column, off for every
+  existing connection; V6 drops `AcceptedCertThumbprint`, a column reserved for certificate
+  pinning the Remote Desktop control gives no way to build, which nothing ever read or wrote.
+- **The database is copied before it is upgraded**, to `connections.v<old version>.bak` beside it,
+  with SQLite's own backup so nothing still in the write-ahead log is missed. Once upgraded it is
+  refused by 0.4.2 and earlier; the copy is the way back. If the copy cannot be written, the
+  upgrade does not run and the pane says why — a one-way upgrade without its way back is not
+  attempted.
+
 ## 0.4.2 — 2026-09-11
 
 A docked session tab gets a menu of its own, with the full screen a docked session never had. And

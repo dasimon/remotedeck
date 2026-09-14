@@ -158,6 +158,41 @@ public sealed class SchemaMigratorTests
     }
 
     [Fact]
+    public void V6_drops_AcceptedCertThumbprint_and_keeps_every_row()
+    {
+        // A column nothing ever read or wrote: the interop hands out no server certificate, so the
+        // pinning it was meant for cannot be built. Dropped rather than left promising it.
+        using var tmp = new TempDatabase();
+        tmp.Db.EnsureCreated();
+        using var c = tmp.Db.Open();
+        c.Cmd("INSERT INTO Connection(Name, Host, Notes, CreatedUtc) VALUES ('WIN02', 'contoso-win02', 'kept', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+
+        var columns = new List<string>();
+        using (var r = c.Cmd("SELECT name FROM pragma_table_info('Connection')").ExecuteReader())
+        {
+            while (r.Read()) columns.Add(r.GetString(0));
+        }
+
+        Assert.DoesNotContain("AcceptedCertThumbprint", columns);
+        Assert.Contains("AutoRaiseVpn", columns);
+        Assert.Equal("kept", c.Cmd("SELECT Notes FROM Connection").ExecuteScalar());
+    }
+
+    [Fact]
+    public void V5_adds_AutoRaiseVpn_off_for_every_existing_connection()
+    {
+        // Not nullable, unlike V3 and V4: the column is a consent, and a connection saved before it
+        // existed never gave one. DEFAULT 0 is what keeps an upgrade from raising a tunnel nobody
+        // agreed to.
+        using var tmp = new TempDatabase();
+        tmp.Db.EnsureCreated();
+        using var c = tmp.Db.Open();
+        c.Cmd("INSERT INTO Connection(Name, Host, VpnProfile, CreatedUtc) VALUES ('WIN02', 'contoso-win02', 'VPN Contoso', '2026-01-01T00:00:00.0000000Z')").ExecuteNonQuery();
+
+        Assert.Equal(0L, c.Cmd("SELECT AutoRaiseVpn FROM Connection").ExecuteScalar());
+    }
+
+    [Fact]
     public void Deleting_a_connection_cascades_to_its_workspace_items()
     {
         using var tmp = new TempDatabase();

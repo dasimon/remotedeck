@@ -132,6 +132,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// its opens with the first one's.</summary>
     private bool _mounting;
 
+    /// <summary>Keeps the pane's VPN tags current. Null without a pane.</summary>
+    private VpnMonitor? _vpnMonitor;
+
     private bool _settingsSaved;
     private bool _closeInProgress;
     private bool _reentrantCloseLogged;
@@ -288,13 +291,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Pane.Visibility = Visibility.Collapsed;
             PaneUnavailable.Visibility = Visibility.Visible;
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
-                Text.Of(Strings.Shell_DatabaseUnreadableMessage, ProbeLog.Path));
+                App.Current.DatabaseBackupFailure is { } backup
+                    ? Text.Of(Strings.Shell_DatabaseBackupFailedMessage, backup, ProbeLog.Path)
+                    : Text.Of(Strings.Shell_DatabaseUnreadableMessage, ProbeLog.Path));
             return;
         }
 
         _list = new ConnectionListViewModel(_connections);
         _list.ConnectRequested += OnConnectRequested;
         _list.EditRequested += OnEditRequested;
+        _list.DuplicateRequested += OnDuplicateRequested;
         _list.DeleteRequested += OnDeleteRequested;
         _list.ImportRequested += ImportConnections;
         _list.FavoriteToggleRequested += OnFavoriteToggleRequested;
@@ -310,6 +316,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // so it hands the list a way to ask rather than a way to be told.
         _list.StatusProvider = StatusOf;
         _list.RefreshStatuses();
+
+        // The VPN tags. Started here rather than at construction: without a pane there is nothing to
+        // mark, and a listener on a static network event is not something to leave running for nothing.
+        _vpnMonitor = new VpnMonitor(Dispatcher);
+        _vpnMonitor.Changed += OnVpnChanged;
+        _vpnMonitor.Start();
+        _list.ApplyVpn(_vpnMonitor.Current);
         Pane.ViewModel = _list;
 
         // Re-select what was selected when the app last closed, when that row still exists.
@@ -391,6 +404,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     private void NewConnection() => OnEditRequested(null);
+
+    private void OnVpnChanged(IReadOnlySet<string>? profilesUp) => _list?.ApplyVpn(profilesUp);
 
     // ---------------------------------------------------------------- shortcuts
 
@@ -680,6 +695,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
             Strings.Palette_NewConnection, Strings.Palette_NewConnectionSubtitle, CommandPriority,
             Shortcut: Strings.Palette_ShortcutNewConnection, Group: Strings.Palette_GroupCommands, Icon: "Add24"));
+        // Only with a connection selected in the pane, and named in the subtitle: the palette has no
+        // selection of its own, so the row says which connection it will copy before Enter is pressed.
+        if (_list?.SelectedConnection is { } selected)
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:duplicate",
+                Strings.Palette_DuplicateConnection,
+                Text.Of(Strings.Palette_DuplicateConnectionSubtitle, selected.Name), CommandPriority,
+                Group: Strings.Palette_GroupCommands, Icon: "Copy24"));
+        }
+
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
             Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority,
             Group: Strings.Palette_GroupCommands, Icon: "ArrowImport24"));
@@ -840,6 +865,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:import":
                 ImportConnections();
+                break;
+
+            case "cmd:duplicate":
+                if (_list?.SelectedConnection is { } toCopy)
+                {
+                    OnDuplicateRequested(toCopy);
+                }
+
                 break;
 
             case "cmd:credentials":
@@ -1646,7 +1679,22 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             case WorkspaceActionKind.OpenDetached when tab is null:
                 if (_connections?.Get(action.ConnectionId) is { } connection)
                 {
-                    await OpenConnectionAsync(connection, start: autoConnect);
+                    // Asks nothing: a question per session would stop the series six times. A
+                    // connection that opted in still has its tunnel raised first — that consent does
+                    // not depend on who is asking — and one whose tunnel could not be raised opens
+                    // Idle, in its place, with the gate's notice saying why.
+                    var start = autoConnect &&
+                        await VpnGate.EnsureReadyAsync(this, connection,
+                            (severity, title, message) => StatusBar.Show(severity, title, message), mayAsk: false);
+
+                    // The dial is an await of several seconds, and a click on the connection is not
+                    // refused during a mount: the guard above can be stale by now, so it is asked again.
+                    if (_sessions.Find(action.ConnectionId) is not null)
+                    {
+                        break;
+                    }
+
+                    await OpenConnectionAsync(connection, start: start);
 
                     // Find again: the tab did not exist before the open.
                     if (_sessions.Find(action.ConnectionId) is not { } opened)
@@ -1659,8 +1707,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                     // session is Connecting when it returns — so without this the loop would
                     // serialise six issuings and leave six negotiations to run together, which is
                     // the very thing being avoided. Nothing to wait for when AutoConnect is off: the
-                    // tab is deliberately left Idle.
-                    if (autoConnect)
+                    // tab is deliberately left Idle, and so is one whose tunnel did not come up.
+                    if (start)
                     {
                         await WaitForConnectionAsync(opened);
                     }
@@ -1772,7 +1820,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>
-    /// Checks the VPN profile a connection names, and offers to raise it when it is down.
+    /// Checks the VPN profile a connection names, and raises it when it is down — after asking, or
+    /// straight away for a connection that opted in.
     /// </summary>
     /// <returns>True when the session may go ahead: the connection needs no VPN, the one it needs is
     /// up, or it was down and the dial the user agreed to brought it up. False otherwise — including
@@ -1780,10 +1829,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// with a cryptic RDP error.</returns>
     /// <remarks>
     /// <para>
-    /// Only on this path — a connection the user asked for. Mounting a workspace deliberately does
-    /// not check: it opens its sessions in series, and stopping that series on a question would turn
-    /// one dialog into six. A workspace whose sessions are behind a tunnel fails the ordinary way,
-    /// per session, which is the behaviour its own failure isolation already describes.
+    /// Mounting a workspace goes through the same gate with <c>mayAsk: false</c>: it opens its
+    /// sessions in series, and stopping that series on a question would turn one dialog into six. A
+    /// connection that opted in has its tunnel raised there too; any other whose tunnel is down fails
+    /// the ordinary way, per session, which is the behaviour its own failure isolation describes.
     /// </para>
     /// <para>
     /// A failure to enumerate is not treated as "the tunnel is down": that would offer to raise a
@@ -2159,6 +2208,29 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>
+    /// Opens the editor on a copy of <paramref name="source"/>, under a name no other connection has.
+    /// Nothing is written until Save: a duplicate the user abandons leaves no row behind.
+    /// </summary>
+    private void OnDuplicateRequested(Connection source)
+    {
+        if (_connections is null)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoEditMessage);
+            return;
+        }
+
+        var name = ConnectionCopy.NameFor(source.Name, _connections.GetAll().Select(c => c.Name),
+            Strings.Connection_CopyName, Strings.Connection_CopyNameNth);
+        var editor = new ConnectionEditorWindow(null, ConnectionCopy.Of(source, name)) { Owner = this };
+        editor.ShowDialog();
+        if (editor.Saved)
+        {
+            _list?.Reload();
+        }
+    }
+
+    /// <summary>
     /// Two-step delete, in the shell's own InfoBar and never a MessageBox: the first Delete arms
     /// the row, a second one within <see cref="DeleteConfirmationWindow"/> removes it. Arming a
     /// different row replaces the pending one rather than deleting anything.
@@ -2498,6 +2570,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // call site, which is what makes the snapshot a clean-close-only affair.
             CaptureLastSession();
             SaveSettings();
+
+            // NetworkChange is static: an unsubscribed handler keeps this window reachable from it.
+            if (_vpnMonitor is { } monitor)
+            {
+                monitor.Changed -= OnVpnChanged;
+                monitor.Dispose();
+                _vpnMonitor = null;
+            }
         }
 
         if (_closeConfirmed || _sessions.Tabs.Count == 0)
