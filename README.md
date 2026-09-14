@@ -135,8 +135,14 @@ cannot find. The profile field is a drop-down you can also type into: it lists t
 profiles the machine knows, and a name it does not offer still works.
 
 Saying yes raises the tunnel **silently** — no console window, nothing to dismiss — and
-the session opens by itself once it is really up. RemoteDeck never dials on its own: a
-connection attempt is not consent to change your machine's network state.
+the session opens by itself once it is really up. A connection attempt alone is not
+consent to change your machine's network state, so the question is the default.
+
+Tick **Raise it without asking** under the profile and that connection skips the
+question: the tunnel goes up as soon as you connect, reconnect or open a workspace, with
+a notice naming it. The box is off for every connection until you tick it, and it covers
+only what you start. A session whose tunnel drops mid-way **still stops** rather than
+bringing the tunnel back behind your back — it may have been taken down on purpose.
 
 **It stores no VPN secret and never will.** It dials with the credential you saved in
 the Windows profile itself. Windows does not hand that password out — it returns a
@@ -144,8 +150,9 @@ handle to it, and the handle is all RemoteDeck ever holds. A profile with nothin
 is therefore not dialled at all: connect it once from Windows with *Remember my sign-in
 info* ticked, and RemoteDeck can raise it from then on.
 
-Opening a **workspace** deliberately skips the check. Its sessions open in series, and
-stopping that series on a question would turn one dialog into six.
+Opening a **workspace** never asks. Its sessions open in series, and stopping that series
+on a question would turn one dialog into six: a connection with the box ticked has its
+tunnel raised first, any other opens as it always did.
 
 ### Sessions
 

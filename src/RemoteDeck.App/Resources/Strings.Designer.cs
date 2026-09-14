@@ -2777,5 +2777,31 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Tab_MenuClose", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to Raise it without asking when it is not connected.
+        /// </summary>
+        public static string Editor_AutoRaiseVpn {
+            get {
+                return ResourceManager.GetString("Editor_AutoRaiseVpn", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to When you connect, reconnect or open a workspace. A session whose tunnel drops still stops..
+        /// </summary>
+        public static string Editor_AutoRaiseVpnHint {
+            get {
+                return ResourceManager.GetString("Editor_AutoRaiseVpnHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to “{0}” is set to raise it without asking..
+        /// </summary>
+        public static string Shell_VpnAutoRaisingMessage {
+            get {
+                return ResourceManager.GetString("Shell_VpnAutoRaisingMessage", resourceCulture);
+            }
+        }
     }
 }

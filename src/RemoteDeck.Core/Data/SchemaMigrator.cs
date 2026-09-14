@@ -83,6 +83,12 @@ public static class SchemaMigrator
         """
         ALTER TABLE Connection ADD COLUMN WebAccountUpn TEXT NULL;
         """,
+        // V5 — the consent to raise the connection's VPN profile without asking. NOT NULL DEFAULT 0,
+        // unlike V3 and V4: every connection saved before this existed never agreed to a dial, and
+        // an upgrade must not read their silence as a yes.
+        """
+        ALTER TABLE Connection ADD COLUMN AutoRaiseVpn INTEGER NOT NULL DEFAULT 0;
+        """,
     ];
 
     public static int GetVersion(SqliteConnection connection)

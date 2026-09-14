@@ -52,7 +52,7 @@ public sealed class ReconnectGateTests
     public void Stopping_for_the_tunnel_asks_for_no_delay()
     {
         // Nothing is scheduled: there is no countdown to show, and the user's next click is what
-        // decides. RemoteDeck never raises a tunnel on its own.
+        // decides. The retry loop never raises a tunnel, whatever the connection opted in to.
         Assert.Equal(TimeSpan.Zero, ReconnectGate.Decide(Transient, 0, VpnState.NotConnected).Delay);
     }
 

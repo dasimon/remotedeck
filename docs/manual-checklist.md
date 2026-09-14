@@ -652,6 +652,27 @@ feature rests on. **Verify that box first: if it fails, the rest is meaningless.
       no Windows phone book knows it. Nothing is dialled.
 - [x] Opening a **workspace** whose connections name a profile does **not** ask: the check is on
       the user-initiated path only, by design.
+
+**Raise it without asking** (Unreleased). Back up `%APPDATA%\RemoteDeck\connections.db`
+before the first run: this build migrates it to schema V5, and 0.4.2 then refuses to open it.
+
+- [ ] The box sits under the profile field, **greyed while the field is empty**, and is off on
+      every existing connection after the upgrade.
+- [ ] Ticked, saved, reopened: still ticked. Clear the profile, save, type it again: the box is
+      **off** — a greyed tick does not come back as consent.
+- [ ] Tunnel down, box ticked, **Connect**: no dialog. A notice *Raising …* names the tunnel, then
+      the session opens once it is up. `probe-l0.log` has *raising … without asking*.
+- [ ] Tunnel down, box **not** ticked: the dialog asks, exactly as before.
+- [ ] Box ticked, **Reconnect** from the toolbar, the tab menu and a detached window: no dialog.
+- [ ] Box ticked, profile with **no saved credential**: not dialled, the InfoBar sends you to
+      Windows, the session is not opened.
+- [ ] Box ticked, **cut the tunnel during a session**: the session drops and **stops** on the VPN
+      message. The tunnel is **not** raised again, and no retry countdown starts.
+- [ ] **Workspace** with auto-connect, tunnel down: a ticked connection has its tunnel raised and
+      connects; an unticked one opens and fails the ordinary way. No dialog either way.
+- [ ] Workspace, ticked connection, dial refused: its tab opens **Idle** in its place, the notice
+      says why, and the next session of the workspace still opens.
+- [ ] English and French: the box, its hint and the notice.
 - [x] The profile field is a **drop-down you can also type in**. It lists the VPN profiles the
       machine knows — check your own profile is offered without typing it.
 - [x] A profile the list does **not** offer can still be typed by hand and works: the list is a
