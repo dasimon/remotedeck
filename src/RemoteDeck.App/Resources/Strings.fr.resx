@@ -974,4 +974,7 @@
   <data name="Shell_VpnAutoRaisingMessage" xml:space="preserve">
     <value>« {0} » est réglée pour le monter sans demander.</value>
   </data>
+  <data name="Shell_DatabaseBackupFailedMessage" xml:space="preserve">
+    <value>Les connexions enregistrées n'ont pas été mises à jour : leur copie de sécurité n'a pas pu être écrite dans {0}. Rien n'a été modifié. Voir {1}.</value>
+  </data>
 </root>

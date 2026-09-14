@@ -2803,5 +2803,13 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Shell_VpnAutoRaisingMessage", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to Saved connections were not upgraded, because their backup could not be written to {0}. Nothing was changed. See {1}..
+        /// </summary>
+        public static string Shell_DatabaseBackupFailedMessage {
+            get {
+                return ResourceManager.GetString("Shell_DatabaseBackupFailedMessage", resourceCulture);
+            }
+        }
     }
 }

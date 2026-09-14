@@ -23,6 +23,12 @@ public partial class App : System.Windows.Application
     /// <summary>The local database, opened and migrated at startup (spec §4). Null until <see cref="OnStartup"/> has run.</summary>
     public SqliteDatabase? Database { get; private set; }
 
+    /// <summary>
+    /// Where the pre-migration copy was to be written when writing it failed, so the database was
+    /// left at its old version and not opened. Null otherwise. The shell names it in its notice.
+    /// </summary>
+    public string? DatabaseBackupFailure { get; private set; }
+
     /// <summary>True only once the database has been created and migrated without error; the shell must not read it otherwise.</summary>
     public bool DatabaseReady { get; private set; }
 
@@ -44,9 +50,20 @@ public partial class App : System.Windows.Application
         {
             // Built here rather than in a field initialiser: a throwing initialiser would kill the process before OnStartup runs.
             Database = new SqliteDatabase(SqliteDatabase.DefaultPath());
-            Database.EnsureCreated();
+            if (Database.EnsureCreated() is { } backup)
+            {
+                ProbeLog.Write("startup", $"Database upgraded; the previous version was copied to {backup}");
+            }
+
             DatabaseReady = true;
             ProbeLog.Write("startup", $"Database ready at {Database.Path}, schema v{SchemaMigrator.CurrentVersion}");
+        }
+        catch (DatabaseBackupException ex)
+        {
+            // Not migrated, deliberately: without the copy the upgrade would be a one-way door, and the
+            // build the user came from refuses the new schema. The shell still opens for RDP-only use.
+            DatabaseBackupFailure = ex.BackupPath;
+            ProbeLog.Write("startup", $"Database not upgraded: {ex.Message} ({ex.InnerException?.GetType().Name})");
         }
         catch (SchemaTooNewException ex)
         {

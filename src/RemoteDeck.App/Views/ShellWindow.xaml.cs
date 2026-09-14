@@ -288,7 +288,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Pane.Visibility = Visibility.Collapsed;
             PaneUnavailable.Visibility = Visibility.Visible;
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
-                Text.Of(Strings.Shell_DatabaseUnreadableMessage, ProbeLog.Path));
+                App.Current.DatabaseBackupFailure is { } backup
+                    ? Text.Of(Strings.Shell_DatabaseBackupFailedMessage, backup, ProbeLog.Path)
+                    : Text.Of(Strings.Shell_DatabaseUnreadableMessage, ProbeLog.Path));
             return;
         }
 
