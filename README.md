@@ -323,7 +323,9 @@ toggles its full screen; `Ctrl+Tab`, `Ctrl+Shift+Tab` and `Ctrl+B` have nothing 
 there, so they are left to the remote desktop instead of being swallowed.
 
 **Mouse.** A **double-click** on a connection connects it — the primary action, the same one
-`Enter` runs, and the same convention every other connection manager follows. Configuring a
+`Enter` runs, and the same convention every other connection manager follows. On a connection
+that already has a tab it brings that tab forward, and reconnects it when its session has ended
+or failed — through the same VPN check as a first connect. Configuring a
 connection is the *secondary* action, so it lives where Windows has always put it: **right-click
 → Edit…**. The row menu also carries *Connect*, *Duplicate…*, a *Favorite* toggle, and *Delete* —
 which arms the same two-step confirmation the `Delete` key does, rather than deleting outright.

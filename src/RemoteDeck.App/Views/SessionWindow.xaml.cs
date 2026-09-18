@@ -386,12 +386,29 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// take, hence the fully guarded body.</summary>
     private async void ReconnectSession()
     {
+        if (_tab.IsReconnectPending)
+        {
+            return;
+        }
+
         try
         {
             // The same gate the shell uses, over this window: a detached session needs its tunnel
-            // exactly as much, and until now nothing here ever looked.
-            if (!await VpnGate.EnsureReadyAsync(this, _tab.Session.Connection,
-                    (severity, title, message) => StatusBar.Show(severity, title, message)))
+            // exactly as much, and until now nothing here ever looked. Pending across the gate
+            // only, as in the shell — which can reconnect this same session from its list.
+            bool ready;
+            _tab.IsReconnectPending = true;
+            try
+            {
+                ready = await VpnGate.EnsureReadyAsync(this, _tab.Session.Connection,
+                    (severity, title, message) => StatusBar.Show(severity, title, message));
+            }
+            finally
+            {
+                _tab.IsReconnectPending = false;
+            }
+
+            if (!ready)
             {
                 return;
             }

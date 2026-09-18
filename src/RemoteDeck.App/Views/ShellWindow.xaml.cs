@@ -1795,8 +1795,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>
     /// Opens one connection, or brings its tab forward when it already has one — a connection has
-    /// at most one session. <c>async void</c> is the only shape an event handler that awaits can
-    /// take, hence the fully guarded body.
+    /// at most one session — and reconnects that tab when its session has ended or failed.
+    /// <c>async void</c> is the only shape an event handler that awaits can take, hence the fully
+    /// guarded body.
     /// </summary>
     private async void OnConnectRequested(Connection connection)
     {
@@ -1808,6 +1809,17 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         if (_sessions.Find(connection.Id) is { } existing)
         {
             _sessions.Activate(existing);
+
+            // Connect means "make this connection connected": on a dead tab, bringing it forward
+            // alone left the user on a Reconnect button. Only Idle and Failed — a session that is
+            // live, negotiating or counting down to its own retry is left to it. ReconnectTab passes
+            // the VPN gate, so a connection that opted in raises its tunnel here as on a first
+            // connect; the retry loop still never does.
+            if (existing.CanReconnect)
+            {
+                ReconnectTab(existing);
+            }
+
             return;
         }
 
@@ -1985,7 +1997,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// take, hence the fully guarded body.</summary>
     private async void ReconnectTab(SessionTabViewModel? tab)
     {
-        if (tab is null)
+        if (tab is null || tab.IsReconnectPending)
         {
             return;
         }
@@ -1993,8 +2005,21 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             // The same gate the first connection passes: a reconnection is a connection, and the
-            // most likely reason this one dropped is the tunnel it needs.
-            if (!await VpnIsReadyAsync(tab.Session.Connection))
+            // most likely reason this one dropped is the tunnel it needs. Pending only across the
+            // gate: ReconnectNowAsync moves the session to Reconnecting before its first await, and
+            // from there the state itself keeps a second request out.
+            bool ready;
+            tab.IsReconnectPending = true;
+            try
+            {
+                ready = await VpnIsReadyAsync(tab.Session.Connection);
+            }
+            finally
+            {
+                tab.IsReconnectPending = false;
+            }
+
+            if (!ready)
             {
                 return;
             }
