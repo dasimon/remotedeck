@@ -2,6 +2,29 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.5.1 — 2026-09-19
+
+Double-click a connection whose tab has ended and it reconnects, VPN included — once, however many
+times it is clicked.
+
+### Connect reconnects a tab that has ended
+
+- **Double-click a connection whose tab has ended, and it reconnects.** Until now *Connect* on a
+  connection that already had a tab only brought the tab forward, and a session that had ended or
+  failed left the user in front of a *Reconnect* button, one more click away from what they had
+  just asked for. `Enter`, *Connect* in the row menu and the palette row do the same: they were
+  already one action, and stay one.
+- Only a session that has **ended or failed** reconnects. A live one, one still negotiating, or one
+  counting down to its own retry is brought forward and left alone.
+- The reconnection passes **the same VPN check as a first connect**: the question, or — for a
+  connection that opted in — the tunnel raised without asking, with its notice and its log line.
+  The automatic retry loop still never raises a tunnel.
+- **One reconnection at a time per session.** While the VPN check is running — the question, or a
+  dial that takes seconds — the session still reads as ended, and a second double-click or a second
+  press of *Reconnect* went through the same path again: a second dial of the same tunnel, then a
+  second attempt on a control already connecting. Both the main window and a detached one now ignore it, and the tab's
+  menu greys *Reconnect* out until the check is over.
+
 ## 0.5.0 — 2026-09-14
 
 A connection behind a VPN can raise its tunnel without the question, and the pane shows whether

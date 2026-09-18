@@ -89,10 +89,23 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
     private bool _isDetached;
 
     /// <summary>
-    /// What the tab's own menu may offer. The same rule the toolbar applies to the active tab,
-    /// said once here so a menu aimed at a background tab cannot drift from the buttons.
+    /// True while a reconnection someone asked for is still at the VPN gate — the question, or a
+    /// dial that can take several seconds. The session is still <see cref="SessionState.Failed"/> or
+    /// <see cref="SessionState.Idle"/> all that time, so without this a second double-click in the
+    /// connection list, or a second press of <em>Reconnect</em>, would dial the same tunnel twice
+    /// and then start a second attempt on a control already connecting. Set and cleared by whichever
+    /// window runs the reconnection; on the tab because both the shell and a detached window can.
     /// </summary>
-    public bool CanReconnect => State is SessionState.Failed or SessionState.Idle;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanReconnect))]
+    private bool _isReconnectPending;
+
+    /// <summary>
+    /// What the tab's own menu may offer, and when a <em>Connect</em> on a connection that already
+    /// has this tab means reconnecting it. The toolbar applies the same state rule to the active
+    /// tab; it is said once here so a menu aimed at a background tab cannot drift from the buttons.
+    /// </summary>
+    public bool CanReconnect => !IsReconnectPending && State is SessionState.Failed or SessionState.Idle;
 
     /// <summary>A session already in a window of its own has nowhere to be detached to.</summary>
     public bool CanDetach => !IsDetached;

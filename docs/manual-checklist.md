@@ -946,6 +946,29 @@ rest is a human's.
 - [ ] Light and dark themes: the warning colour reads on both; the muted tag is not invisible.
 - [ ] French: the tooltip reads *Le profil VPN « … » est connecté* / *n'est pas connecté*.
 
+## Connect on a connection whose tab has ended
+
+All in `RemoteDeck.App`, so none of it is covered by an automated test. The VPN decision itself is
+`VpnConsent`'s, and its tests still hold.
+
+- [ ] Sign out of a remote session (tab lands in *Idle*), then **double-click** its connection in
+      the list: the tab comes forward and reconnects. `Enter`, *Connect* in the row menu and the
+      palette row do the same.
+- [ ] Cancel a retry countdown (tab lands in *Failed*), then double-click the connection: it
+      reconnects.
+- [ ] Double-click a connection whose tab is **connected**: the tab only comes forward — no flash,
+      no reconnection. Same while a retry is **counting down**: the countdown carries on.
+- [ ] A connection with *Raise it without asking*, tunnel cut from Windows, tab ended: double-click
+      it — the notice names the tunnel, the tunnel goes up, the session reconnects, and
+      `probe-l0.log` has one *raising … without asking* line. Now do it again, **double-clicking
+      several times while the tunnel is dialling**: still one *raising* line and one attempt.
+- [ ] Same, on a connection **without** the box: the question is asked once; *Cancel* leaves the
+      tab ended, with the warning in the status bar.
+- [ ] While that dial is running, press *Reconnect* on the toolbar: nothing more happens. The
+      tab's own menu shows *Reconnect* greyed out until the dial is over.
+- [ ] A **detached** session that has ended: *Reconnect* in its own window, then double-click its
+      connection in the shell's list during the dial — one attempt only.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*
