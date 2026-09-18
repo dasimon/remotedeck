@@ -2,7 +2,10 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.5.1 — 2026-09-19
+
+Double-click a connection whose tab has ended and it reconnects, VPN included — once, however many
+times it is clicked.
 
 ### Connect reconnects a tab that has ended
 
