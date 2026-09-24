@@ -100,6 +100,11 @@ internal sealed class RdpSession : IDisposable
     private DateTime _retryDueUtc;
     private int _lastExtendedReason;
 
+    /// <summary>Set by <see cref="CancelReconnect"/>, cleared by the next attempt the user or the
+    /// shell starts: until then a drop is final, even the one an attempt already in flight reports
+    /// after the user gave up on it.</summary>
+    private bool _retriesCancelled;
+
     /// <summary>Set once <see cref="RdpSessionHost.UpdateDisplay"/> has been refused twice: from then
     /// on the control scales the image instead, and no further resize is attempted for this session.</summary>
     private bool _smartSizingFallback;
@@ -283,7 +288,8 @@ internal sealed class RdpSession : IDisposable
     /// <remarks>
     /// Cancelling while a retry is already in flight cannot recall it — if that attempt succeeds,
     /// <c>OnConnected</c> still moves the session to <see cref="SessionState.Connected"/>, which is
-    /// the outcome the user wanted anyway.
+    /// the outcome the user wanted anyway. If it fails, the session stays failed: the drop it
+    /// reports does not start a new countdown.
     /// </remarks>
     public void CancelReconnect()
     {
@@ -293,6 +299,7 @@ internal sealed class RdpSession : IDisposable
         }
 
         StopCountdown();
+        _retriesCancelled = true;
         ProbeLog.Write("session", $"'{Connection.Name}': reconnection cancelled by the user");
         SetState(SessionState.Failed);
     }
@@ -381,6 +388,7 @@ internal sealed class RdpSession : IDisposable
     /// </summary>
     private async Task RunAttemptAsync(SessionState phase)
     {
+        _retriesCancelled = false;
         SetState(phase);
 
         // A new attempt means a new remote desktop: nothing known about the previous one carries
@@ -514,6 +522,16 @@ internal sealed class RdpSession : IDisposable
             StopCountdown();
             ProbeLog.Write("session", $"'{Connection.Name}': disconnected normally (code {info.Reason} — {description.Title})");
             SetState(SessionState.Idle);
+            return;
+        }
+
+        if (_retriesCancelled)
+        {
+            // The attempt the user cancelled has just failed: it must not restart the countdown
+            // they stopped.
+            StopCountdown();
+            ProbeLog.Write("session", $"'{Connection.Name}': cancelled attempt ended (code {info.Reason} — {description.Title}); no retry");
+            SetState(SessionState.Failed);
             return;
         }
 

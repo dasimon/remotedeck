@@ -119,6 +119,19 @@ public static class SchemaMigrator
         for (var v = version + 1; v <= CurrentVersion; v++)
         {
             using var tx = connection.BeginTransaction();
+
+            // Asked again under the write lock (BeginTransaction is BEGIN IMMEDIATE): a second
+            // instance started at the same moment may have applied this version while this one
+            // waited for the lock, and replaying it fails on "duplicate column" or "table exists".
+            var applied = connection.Cmd("SELECT COUNT(*) FROM SchemaVersion WHERE Version = $v");
+            applied.Transaction = tx;
+            applied.Add("$v", v);
+            if (Convert.ToInt64(applied.ExecuteScalar()) > 0)
+            {
+                tx.Rollback();
+                continue;
+            }
+
             var script = connection.Cmd(Scripts[v - 1]);
             script.Transaction = tx;
             script.ExecuteNonQuery();

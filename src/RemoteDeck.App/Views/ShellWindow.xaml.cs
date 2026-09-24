@@ -125,6 +125,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private double _paneWidth;
     private bool _connecting;
 
+    /// <summary>The connections whose VPN check or dial is still being awaited, so a second request
+    /// for one of them does not stack a second question and a second dial on the first.</summary>
+    private readonly HashSet<long> _vpnPending = [];
+
     /// <summary>True while <see cref="MountWorkspaceAsync"/> is walking a plan. Its own guard, and
     /// not <see cref="_connecting"/>: the mount really does yield between two connections now — it
     /// waits for each session to answer — and <c>_connecting</c> is false for the whole of that
@@ -1014,7 +1018,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        var window = new SessionWindow(tab, _sessions);
+        var window = NewSessionWindow(tab);
         var placement = RememberedPlacement(tab, window)
             ?? (screenPoint is { } point ? PlaceUnder(point, window) : null);
         if (placement is not null)
@@ -1124,6 +1128,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <see cref="ScreenFit"/> is what turns "last seen on the monitor that has since been
     /// unplugged" into "forget it" rather than "open it where nobody can reach it".
     /// </summary>
+    /// <summary>
+    /// A detached window for <paramref name="tab"/>. It re-arms the shortcut hook when activated,
+    /// as the shell does: a user who stays in a detached full-screen window never activates the
+    /// shell, and a hook Windows removed silently would stay removed for the whole session.
+    /// </summary>
+    private SessionWindow NewSessionWindow(SessionTabViewModel tab)
+    {
+        var window = new SessionWindow(tab, _sessions);
+        window.Activated += (_, _) => _shortcuts?.Rearm();
+        return window;
+    }
+
     private DetachedWindowPlacement? RememberedPlacement(SessionTabViewModel tab, SessionWindow window) =>
         ScreenFit.Choose(_settings.DetachedWindows.GetValueOrDefault(PlacementKey(tab)),
             Screens(VisualTreeHelper.GetDpi(this)), window.MinWidth, window.MinHeight);
@@ -1333,7 +1349,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             var confirm = System.Windows.MessageBox.Show(owner,
                 Text.Of(Strings.WorkspaceName_ReplaceMessage, dialog.WorkspaceName),
                 Text.Of(Strings.WorkspaceName_ReplaceTitle, dialog.WorkspaceName),
-                MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel);
             if (confirm != MessageBoxResult.OK)
             {
                 return;
@@ -1401,10 +1417,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        // Cancel is the default button: Enter on a destructive question must not be the yes.
         var confirm = System.Windows.MessageBox.Show(from ?? (Window)this,
             Strings.Shell_DeleteWorkspaceMessage,
             Text.Of(Strings.Shell_DeleteWorkspaceTitle, toDelete.Name),
-            MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+            MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel);
         if (confirm != MessageBoxResult.OK)
         {
             return;
@@ -1470,7 +1487,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        var window = new SessionWindow(tab, _sessions);
+        var window = NewSessionWindow(tab);
         var chosen = placement ?? RememberedPlacement(tab, window);
         if (chosen is not null)
         {
@@ -1823,8 +1840,39 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        if (!await VpnIsReadyAsync(connection))
+        // A dial can take a minute and the shell stays live meanwhile: a second request for the same
+        // connection in that time would ask again and dial again.
+        if (!_vpnPending.Add(connection.Id))
         {
+            return;
+        }
+
+        bool ready;
+        try
+        {
+            ready = await VpnIsReadyAsync(connection);
+        }
+        finally
+        {
+            _vpnPending.Remove(connection.Id);
+        }
+
+        if (!ready)
+        {
+            return;
+        }
+
+        // Everything checked above may have changed during the wait: the window started closing,
+        // another open is under way, or the connection got its tab some other way (a workspace).
+        if (_connecting || _closeInProgress)
+        {
+            ProbeLog.Write("session", $"'{connection.Name}' not opened: the shell moved on while the VPN came up");
+            return;
+        }
+
+        if (_sessions.Find(connection.Id) is { } opened)
+        {
+            _sessions.Activate(opened);
             return;
         }
 

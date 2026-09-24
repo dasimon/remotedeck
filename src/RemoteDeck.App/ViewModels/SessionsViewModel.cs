@@ -486,15 +486,25 @@ internal sealed partial class SessionsViewModel : ObservableObject
         Tabs.Remove(tab);
 
         // The host is wherever this tab last put it: the shell's container, or the window that was
-        // showing it — which is now empty and goes with the session it was holding.
-        if (_detached.Remove(tab, out var window))
+        // showing it — which is now empty and goes with the session it was holding. Guarded: what
+        // follows must run whatever happens here, or Active would keep pointing at a removed tab.
+        try
         {
-            SetDetached(tab, false);
-            Close(window, tab);
+            if (_detached.Remove(tab, out var window))
+            {
+                SetDetached(tab, false);
+                Close(window, tab);
+            }
+            else
+            {
+                _detach(tab.Session);
+            }
+
+            ReleaseHost(tab);
         }
-        else
+        catch (Exception ex)
         {
-            _detach(tab.Session);
+            ProbeLog.Write("tabs", $"'{tab.Title}': removing its host failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
 
         tab.Dispose();
@@ -564,6 +574,24 @@ internal sealed partial class SessionsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Destroys the native window of a closed session's host, once it has left its container. The
+    /// session's own disposal empties the host but cannot dispose it — the host may still be in the
+    /// tree at that point — and an <c>HwndHost</c> keeps its window until disposed: without this,
+    /// every closed tab left one behind for the life of the process.
+    /// </summary>
+    private static void ReleaseHost(SessionTabViewModel tab)
+    {
+        try
+        {
+            tab.Session.Host.Dispose();
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("tabs", $"'{tab.Title}': host disposal failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Last-resort teardown for the second closing pass: whatever survived <see cref="CloseAllAsync"/>
     /// is disposed without any protocol, and its host leaves the container.
     /// </summary>
@@ -591,6 +619,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
                 Close(window, tab);
             }
 
+            ReleaseHost(tab);
             tab.CloseRequested -= OnTabCloseRequested;
             tab.Changed -= OnTabChanged;
             tab.Dispose();
