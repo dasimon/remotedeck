@@ -333,7 +333,7 @@
     <value>Supprimer « {0} » ?</value>
   </data>
   <data name="Shell_DeleteConfirmMessage" xml:space="preserve">
-    <value>Appuyez de nouveau sur Suppr pour confirmer.</value>
+    <value>Supprimez-la de nouveau dans les 5 secondes pour confirmer.</value>
   </data>
   <data name="Shell_ClosingConnectionTitle" xml:space="preserve">
     <value>Fermeture de « {0} »…</value>
@@ -681,7 +681,7 @@
     <value>Supprimer cet identifiant ?</value>
   </data>
   <data name="Credentials_DeleteConfirmMessage" xml:space="preserve">
-    <value>« {0} » sera supprimé ; les connexions qui l'utilisent devront recevoir un nouvel identifiant. Cliquez de nouveau pour confirmer.</value>
+    <value>« {0} » sera supprimé ; les connexions qui l'utilisent devront recevoir un nouvel identifiant. Supprimez-le de nouveau dans les 5 secondes pour confirmer.</value>
   </data>
   <data name="Import_Title" xml:space="preserve">
     <value>Importer des connexions</value>
@@ -1000,5 +1000,47 @@
   </data>
   <data name="Pane_VpnDown" xml:space="preserve">
     <value>Le profil VPN « {0} » n'est pas connecté</value>
+  </data>
+  <data name="Shell_CloseShortcutArmedTitle" xml:space="preserve">
+    <value>Appuyez de nouveau sur Ctrl+W pour fermer « {0} »</value>
+  </data>
+  <data name="Shell_CloseShortcutArmedMessage" xml:space="preserve">
+    <value>Dans les 3 secondes. Dans un bureau distant, Ctrl+W revient à RemoteDeck, pas à l'application distante.</value>
+  </data>
+  <data name="Editor_DiscardTitle" xml:space="preserve">
+    <value>Abandonner vos modifications ?</value>
+  </data>
+  <data name="Editor_DiscardMessage" xml:space="preserve">
+    <value>Vos modifications de cette connexion ne sont pas enregistrées.</value>
+  </data>
+  <data name="Editor_TitleNew" xml:space="preserve">
+    <value>Nouvelle connexion</value>
+  </data>
+  <data name="Editor_TitleEdit" xml:space="preserve">
+    <value>Modifier « {0} »</value>
+  </data>
+  <data name="CredEditor_TitleNew" xml:space="preserve">
+    <value>Nouvel identifiant</value>
+  </data>
+  <data name="Credentials_Empty" xml:space="preserve">
+    <value>Aucun identifiant pour l'instant. Ajoutez-en un pour vous connecter sans retaper de mot de passe.</value>
+  </data>
+  <data name="Palette_EditConnection" xml:space="preserve">
+    <value>Modifier la connexion</value>
+  </data>
+  <data name="Palette_EditConnectionSubtitle" xml:space="preserve">
+    <value>Ouvrir l'éditeur sur {0}</value>
+  </data>
+  <data name="Palette_DeleteConnection" xml:space="preserve">
+    <value>Supprimer la connexion</value>
+  </data>
+  <data name="Palette_DeleteConnectionSubtitle" xml:space="preserve">
+    <value>Retirer {0}, après confirmation</value>
+  </data>
+  <data name="Palette_UpdateWorkspace" xml:space="preserve">
+    <value>Mettre à jour l'espace « {0} »</value>
+  </data>
+  <data name="Palette_UpdateWorkspaceSubtitle" xml:space="preserve">
+    <value>Remplace son contenu par les sessions ouvertes</value>
   </data>
 </root>

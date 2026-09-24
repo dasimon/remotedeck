@@ -305,7 +305,7 @@ you composed or a secret, and the app falls back to its defaults without complai
 |---|---|---|
 | `Ctrl+K` | Command palette — connections, open tabs and commands in one list | **yes** |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous session tab (cycles; the session you leave stays connected) | **yes** |
-| `Ctrl+W` | Close the active session tab — or, in a detached window, that session | **yes** |
+| `Ctrl+W` | Close the active session tab — or, in a detached window, that session. From inside a connected remote desktop, press it twice within 3 seconds: once is too easy to type for the remote browser or editor | **yes** |
 | `Ctrl+Shift+D` | Detach the active session into its own window — or reattach it, pressed from the detached window | **yes** |
 | `Ctrl+B` | Collapse or restore the connection pane | **yes** |
 | `F11` / `Ctrl+Alt+Pause` | Full screen on and off, in a detached window | **yes** |

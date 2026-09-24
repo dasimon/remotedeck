@@ -333,7 +333,7 @@
     <value>Delete '{0}'?</value>
   </data>
   <data name="Shell_DeleteConfirmMessage" xml:space="preserve">
-    <value>Press Delete again to confirm.</value>
+    <value>Delete it again within 5 seconds to confirm.</value>
   </data>
   <data name="Shell_ClosingConnectionTitle" xml:space="preserve">
     <value>Closing '{0}'…</value>
@@ -681,7 +681,7 @@
     <value>Delete credential?</value>
   </data>
   <data name="Credentials_DeleteConfirmMessage" xml:space="preserve">
-    <value>'{0}' will be removed; connections using it will need a new credential. Click again to confirm.</value>
+    <value>'{0}' will be removed; connections using it will need a new credential. Delete it again within 5 seconds to confirm.</value>
   </data>
   <data name="Import_Title" xml:space="preserve">
     <value>Import connections</value>
@@ -1000,5 +1000,47 @@
   </data>
   <data name="Pane_VpnDown" xml:space="preserve">
     <value>VPN profile “{0}” is not connected</value>
+  </data>
+  <data name="Shell_CloseShortcutArmedTitle" xml:space="preserve">
+    <value>Press Ctrl+W again to close “{0}”</value>
+  </data>
+  <data name="Shell_CloseShortcutArmedMessage" xml:space="preserve">
+    <value>Within 3 seconds. Inside a remote desktop, Ctrl+W belongs to RemoteDeck, not to the remote application.</value>
+  </data>
+  <data name="Editor_DiscardTitle" xml:space="preserve">
+    <value>Discard your changes?</value>
+  </data>
+  <data name="Editor_DiscardMessage" xml:space="preserve">
+    <value>What you changed in this connection has not been saved.</value>
+  </data>
+  <data name="Editor_TitleNew" xml:space="preserve">
+    <value>New connection</value>
+  </data>
+  <data name="Editor_TitleEdit" xml:space="preserve">
+    <value>Edit “{0}”</value>
+  </data>
+  <data name="CredEditor_TitleNew" xml:space="preserve">
+    <value>New credential</value>
+  </data>
+  <data name="Credentials_Empty" xml:space="preserve">
+    <value>No credential yet. Add one to connect without typing a password each time.</value>
+  </data>
+  <data name="Palette_EditConnection" xml:space="preserve">
+    <value>Edit connection</value>
+  </data>
+  <data name="Palette_EditConnectionSubtitle" xml:space="preserve">
+    <value>Open the editor on {0}</value>
+  </data>
+  <data name="Palette_DeleteConnection" xml:space="preserve">
+    <value>Delete connection</value>
+  </data>
+  <data name="Palette_DeleteConnectionSubtitle" xml:space="preserve">
+    <value>Remove {0}, after a confirmation</value>
+  </data>
+  <data name="Palette_UpdateWorkspace" xml:space="preserve">
+    <value>Update workspace “{0}”</value>
+  </data>
+  <data name="Palette_UpdateWorkspaceSubtitle" xml:space="preserve">
+    <value>Replace its contents with the sessions open now</value>
   </data>
 </root>

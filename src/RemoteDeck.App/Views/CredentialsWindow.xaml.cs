@@ -16,11 +16,17 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
     private readonly CredentialRepository _repository;
     private Credential? _pendingDelete;
 
+    /// <summary>Disarms a pending delete after the same five seconds the connection pane allows,
+    /// so a second click much later is not taken as the confirmation of a first one forgotten.</summary>
+    private readonly System.Windows.Threading.DispatcherTimer _disarm = new() { Interval = TimeSpan.FromSeconds(5) };
+
     public CredentialsWindow()
     {
         InitializeComponent();
         SystemThemeWatcher.Watch(this);
         _repository = App.Current.Services.GetRequiredService<CredentialRepository>();
+        _disarm.Tick += (_, _) => Disarm();
+        Closed += (_, _) => _disarm.Stop();
         Reload();
         Loaded += (_, _) => FocusList();
     }
@@ -65,9 +71,18 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
     private void Reload()
     {
         List.ItemsSource = _repository.GetAll();
+        EmptyState.Visibility = List.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        Disarm();
+        OnSelectionChanged(this, null!);
+    }
+
+    private void Disarm()
+    {
+        _disarm.Stop();
+        if (_pendingDelete is null) return;
         _pendingDelete = null;
         DeleteButton.Content = Strings.Credentials_Delete;
-        OnSelectionChanged(this, null!);
+        StatusBar.Hide();
     }
 
     private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -77,8 +92,7 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         DeleteButton.IsEnabled = has;
         if (_pendingDelete is not null && !ReferenceEquals(_pendingDelete, Selected))
         {
-            _pendingDelete = null;
-            DeleteButton.Content = Strings.Credentials_Delete;
+            Disarm();
         }
     }
 
@@ -103,6 +117,8 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         if (!ReferenceEquals(_pendingDelete, c))
         {
             _pendingDelete = c;
+            _disarm.Stop();
+            _disarm.Start();
             DeleteButton.Content = Strings.Credentials_ConfirmDelete;
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Credentials_DeleteConfirmTitle,
                 Text.Of(Strings.Credentials_DeleteConfirmMessage, c.Label));

@@ -42,10 +42,15 @@ namespace RemoteDeck.App.Views;
 // Wpf.Ui.Controls.* is qualified on purpose: UseWindowsForms puts System.Windows.Forms in
 // scope through implicit usings, and a bare `using Wpf.Ui.Controls;` would make Button,
 // TextBox and friends ambiguous here.
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001",
+    Justification = "A window is not disposed: the hook and the VPN monitor are disposed on the window's last close pass.")]
 public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 {
     /// <summary>How long an armed delete stays armed before it disarms itself.</summary>
     private static readonly TimeSpan DeleteConfirmationWindow = TimeSpan.FromSeconds(5);
+
+    /// <summary>How long a first Ctrl+W on a live session waits for the second one.</summary>
+    private static readonly TimeSpan CloseShortcutWindow = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// How long one workspace action waits for its session to answer before the mount moves on to
@@ -125,6 +130,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private double _paneWidth;
     private bool _connecting;
 
+    /// <summary>The session a first Ctrl+W armed, and when; see <see cref="ConfirmCloseByShortcut"/>.</summary>
+    private SessionTabViewModel? _closeArmed;
+    private DateTime _closeArmedUtc;
+
     /// <summary>The connections whose VPN check or dial is still being awaited, so a second request
     /// for one of them does not stack a second question and a second dial on the first.</summary>
     private readonly HashSet<long> _vpnPending = [];
@@ -197,7 +206,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // Resolved first, and deliberately before the RDP control version is picked: the early
         // return below leaves a window that can open no session, and the pane must still be usable
         // there. GetService, not GetRequiredService — the repositories are absent when the database
-        // failed to open (spec §6.6), which is a degraded mode, not a crash.
+        // failed to open, which is a degraded mode, not a crash.
         _connections = App.Current.Services.GetService<ConnectionRepository>();
         _workspaces = App.Current.Services.GetService<WorkspaceRepository>();
         _credentials = App.Current.Services.GetService<CredentialRepository>();
@@ -221,10 +230,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         ProbeLog.Write("R3", $"Window DPI scale X={dpi.DpiScaleX:F2} Y={dpi.DpiScaleY:F2}");
 
         // Arming the interceptor calls SetWindowsHookEx, which EDR or a GPO is allowed to deny
-        // (spec §7.3 names that an expected outcome). The failure is reported in the InfoBar and
+        // (an expected outcome, not a fault). The failure is reported in the InfoBar and
         // leaves a usable — if reduced — window behind.
         //
-        // R6 probe: which of the four §7.3 mechanisms actually sees the application shortcuts while
+        // R6 probe: which of the four interception mechanisms actually sees the application shortcuts while
         // the remote session holds keyboard focus. REMOTEDECK_PROBE_SHORTCUTS switches between them;
         // LowLevelKeyboardHook is the default because it is the only one the lot-0 probe found to
         // intercept anything — the three thread-scoped ones never see the keystrokes.
@@ -252,7 +261,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         }
         catch (Exception ex)
         {
-            // A locked-down machine can refuse the hook. Documented outcome (spec §7.3): carry on
+            // A locked-down machine can refuse the hook. Documented outcome: carry on
             // without application shortcuts; Ctrl+Alt+Left / Ctrl+Alt+Right remain the way out.
             _shortcuts = null;
             ProbeLog.Write("startup", $"ShortcutInterceptor({mechanism}) failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
@@ -378,7 +387,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>The splitter is the only way the width changes, so it is also where it is persisted.</summary>
     /// <remarks>
     /// <c>rememberDetached: false</c> — dragging the pane splitter is not one of the three triggers
-    /// spec espaces §7 allows to write the per-connection placement memory, and a workspace that had
+    /// the workspace design allows to write the per-connection placement memory, and a workspace that had
     /// just imposed its own rectangles would otherwise see them written over the fallback.
     /// </remarks>
     private void OnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
@@ -545,7 +554,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 _sessions.Previous();
                 break;
             case "Ctrl+W":
-                CloseActiveTab();
+                if (ConfirmCloseByShortcut(_sessions.Active, StatusBar))
+                {
+                    CloseActiveTab();
+                }
+
                 break;
             case "Ctrl+K":
                 OpenCommandPalette();
@@ -570,7 +583,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>
     /// The same shortcuts, aimed at the detached window the user is actually looking at. Ctrl+W goes
-    /// through that window's own <c>Close</c> so the §6.5 protocol runs exactly where its cross runs
+    /// through that window's own <c>Close</c> so the close protocol runs exactly where its cross runs
     /// it, and the palette is owned by it rather than by a shell that may be behind another monitor.
     /// </summary>
     private void OnSessionWindowShortcut(SessionWindow window, string shortcut)
@@ -578,7 +591,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         switch (shortcut)
         {
             case "Ctrl+W":
-                if (_closeInProgress)
+                if (_closeInProgress || !ConfirmCloseByShortcut(window.Tab, window.StatusBar))
                 {
                     break;
                 }
@@ -693,7 +706,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // line that only rephrases the first costs a glance and answers nothing. Keystrokes are no
         // longer written there either — they are the Shortcut, which the palette draws as a key cap.
         //
-        // The chords come from the resources like every other drawn string (spec §9): the chord
+        // The chords come from the resources like every other drawn string: the chord
         // never changes, but the names of its keys are Windows' own vocabulary and are translated
         // with it — French says Maj, not Shift, exactly as the footer already says Échap and Entrée.
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:new",
@@ -707,6 +720,18 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 Strings.Palette_DuplicateConnection,
                 Text.Of(Strings.Palette_DuplicateConnectionSubtitle, selected.Name), CommandPriority,
                 Group: Strings.Palette_GroupCommands, Icon: "Copy24"));
+            // Same rule for the other two: from a session, editing its connection used to take
+            // three keystrokes through the pane (back to the shell, search, F2).
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:edit",
+                Strings.Palette_EditConnection,
+                Text.Of(Strings.Palette_EditConnectionSubtitle, selected.Name), CommandPriority,
+                Group: Strings.Palette_GroupCommands, Icon: "Edit24"));
+            // Arms the pane's own two-step delete; Delete, or this row again, within the delay
+            // confirms it. The palette closes on selection and cannot hold a confirmation itself.
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:delete",
+                Strings.Palette_DeleteConnection,
+                Text.Of(Strings.Palette_DeleteConnectionSubtitle, selected.Name), CommandPriority,
+                Group: Strings.Palette_GroupCommands, Icon: "Delete24"));
         }
 
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
@@ -787,6 +812,17 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 Text.Plural(workspace.Items.Count, Strings.Workspace_CountOne, Strings.Workspace_CountMany,
                     workspace.Items.Count), CommandPriority,
                 Group: Strings.Palette_GroupWorkspaces));
+            // Only with something to capture, like saving a new one: updating from no session at all
+            // would empty the workspace.
+            if (_sessions.Tabs.Count > 0)
+            {
+                items.Add(new PaletteItem(PaletteItemKind.Command,
+                    string.Create(CultureInfo.InvariantCulture, $"wsupd:{workspace.Id}"),
+                    Text.Of(Strings.Palette_UpdateWorkspace, workspace.Name),
+                    Strings.Palette_UpdateWorkspaceSubtitle, CommandPriority,
+                    Group: Strings.Palette_GroupWorkspaces));
+            }
+
             items.Add(new PaletteItem(PaletteItemKind.Command,
                 string.Create(CultureInfo.InvariantCulture, $"wsdel:{workspace.Id}"),
                 Text.Of(Strings.Palette_DeleteWorkspace, workspace.Name),
@@ -836,6 +872,17 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
+        if (id.StartsWith("wsupd:", StringComparison.Ordinal))
+        {
+            // The pane's "Update from the open sessions", which asks before replacing anything.
+            if (long.TryParse(id.AsSpan(6), CultureInfo.InvariantCulture, out long updateId))
+            {
+                OnPaneWorkspaceUpdateRequested(updateId);
+            }
+
+            return;
+        }
+
         if (id.StartsWith("wsdel:", StringComparison.Ordinal))
         {
             // Confirmed, and deliberately not the two-press arm/confirm the connection list uses:
@@ -879,6 +926,22 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
                 break;
 
+            case "cmd:edit":
+                if (_list?.SelectedConnection is { } toEdit)
+                {
+                    OnEditRequested(toEdit);
+                }
+
+                break;
+
+            case "cmd:delete":
+                if (_list?.SelectedConnection is { } toDelete)
+                {
+                    OnDeleteRequested(toDelete);
+                }
+
+                break;
+
             case "cmd:credentials":
                 ManageCredentials();
                 break;
@@ -891,7 +954,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 _settings.RestoreLastSession = !_settings.RestoreLastSession;
                 // Written now rather than at the next clean close: this is the user's answer to a
                 // question, and a crash must not take it back. rememberDetached: false — answering
-                // that question is not one of the three triggers spec espaces §7 allows to write the
+                // that question is not one of the three triggers allowed to write the
                 // per-connection placement memory, and a Ctrl+K toggle right after a workspace was
                 // mounted would otherwise stamp that workspace's imposed rectangles onto the
                 // fallback the next one relies on.
@@ -918,7 +981,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 if (from is not null)
                 {
                     // Its own close, i.e. the very path Ctrl+W and the cross take in that window:
-                    // the geometry is remembered before §6.5 takes the session down.
+                    // the geometry is remembered before the close protocol takes the session down.
                     if (!_closeInProgress)
                     {
                         from.Close();
@@ -1244,7 +1307,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         Activate();
     }
 
-    /// <summary>The cross of a detached window. The §6.5 protocol is the same one Ctrl+W and the
+    /// <summary>The cross of a detached window. The close protocol is the same one Ctrl+W and the
     /// tab's own cross run, and it is what closes that window when it is done — so the geometry is
     /// taken here, while the window is still where the user left it.</summary>
     private void OnSessionWindowCloseRequested(SessionWindow window)
@@ -1372,7 +1435,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         // Guarded like every other repository write in this file: a locked database, a full disk or
         // a read-only %APPDATA% throws here, and an unhandled exception on the UI thread takes the
-        // process down with every live RDP session — without the §6.5 close protocol, which is
+        // process down with every live RDP session — without the close protocol, which is
         // exactly the server-side zombie this project spends its shutdown avoiding.
         try
         {
@@ -1429,7 +1492,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         // Guarded like every other repository write in this file: a locked database, a full disk or
         // a read-only %APPDATA% throws here, and an unhandled exception on the UI thread takes the
-        // process down with every live RDP session — without the §6.5 close protocol, which is
+        // process down with every live RDP session — without the close protocol, which is
         // exactly the server-side zombie this project spends its shutdown avoiding.
         try
         {
@@ -1599,7 +1662,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                     // Re-tested on every turn, not only on entry: the loop really yields now, and
                     // the window can start going down between two connections. Opening a further
                     // session into a close-all pass that has already walked past it would leave the
-                    // server with exactly the zombie the §6.5 protocol exists to avoid.
+                    // server with exactly the zombie the close protocol exists to avoid.
                     if (_closeInProgress)
                     {
                         break;
@@ -1719,7 +1782,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                         break;
                     }
 
-                    // The wait that makes "in series" mean what §4.2 says it means. StartAsync only
+                    // The wait that makes "in series" mean what it says. StartAsync only
                     // *issues* the connection — the ActiveX negotiation is asynchronous and the
                     // session is Connecting when it returns — so without this the loop would
                     // serialise six issuings and leave six negotiations to run together, which is
@@ -1749,7 +1812,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// Waits until <paramref name="tab"/>'s session has stopped negotiating — connected, dropped,
     /// failed or ended — or until <see cref="ConnectWaitTimeout"/> runs out, whichever comes first.
     /// Never throws and never waits longer than the cap, so a machine that answers nothing costs the
-    /// mount five seconds and the next action still runs (spec §4.3: a failure is isolated to its
+    /// mount five seconds and the next action still runs (a failure is isolated to its
     /// own session).
     /// </summary>
     /// <remarks>
@@ -2021,6 +2084,33 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>Closes the active tab (Ctrl+W, the cross, <em>Disconnect</em>). Fire and forget:
     /// <see cref="SessionsViewModel.CloseAsync(SessionTabViewModel?)"/> never throws.</summary>
+    /// <summary>
+    /// Whether a Ctrl+W caught by the hook may close <paramref name="tab"/> now. On a connected
+    /// session the first press only arms the close and says so, and a second one within
+    /// <see cref="CloseShortcutWindow"/> closes it: inside a remote desktop Ctrl+W is also "close
+    /// this browser tab" or "close this document", and one habit reflex must not end a session.
+    /// A session that is not connected closes at once — there is nothing to lose.
+    /// </summary>
+    private bool ConfirmCloseByShortcut(SessionTabViewModel? tab, Wpf.Ui.Controls.InfoBar bar)
+    {
+        if (tab is null || tab.Session.State != SessionState.Connected)
+        {
+            return true;
+        }
+
+        if (ReferenceEquals(_closeArmed, tab) && DateTime.UtcNow - _closeArmedUtc <= CloseShortcutWindow)
+        {
+            _closeArmed = null;
+            return true;
+        }
+
+        _closeArmed = tab;
+        _closeArmedUtc = DateTime.UtcNow;
+        bar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning,
+            Text.Of(Strings.Shell_CloseShortcutArmedTitle, tab.Title), Strings.Shell_CloseShortcutArmedMessage);
+        return false;
+    }
+
     private void CloseActiveTab()
     {
         if (_closeInProgress)
@@ -2031,7 +2121,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _ = _sessions.CloseAsync(_sessions.Active);
     }
 
-    /// <summary><em>Disconnect</em> is the graceful end of a session, which is exactly the §6.5
+    /// <summary><em>Disconnect</em> is the graceful end of a session, which is exactly the close protocol
     /// close protocol — the same thing the tab's cross does.</summary>
     private void OnDisconnectClick(object sender, RoutedEventArgs e) => CloseActiveTab();
 
@@ -2219,7 +2309,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>Reports the active session's state in the one place RemoteDeck reports anything.
-    /// Shared with the detached windows (§6.4): a session says the same thing wherever it is
+    /// Shared with the detached windows: a session says the same thing wherever it is
     /// shown.</summary>
     private void UpdateSessionInfoBar(SessionTabViewModel tab) =>
         SessionStatusPresenter.Report(StatusBar, tab);
@@ -2234,7 +2324,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     /// <remarks>
     /// Guarded like every other repository write in this window: an unhandled <c>SqliteException</c>
-    /// on the UI thread takes the application down, and with it every live session, without the §6.5
+    /// on the UI thread takes the application down, and with it every live session, without the close protocol
     /// close protocol.
     /// </remarks>
     private void OnFavoriteToggleRequested(Connection connection, bool isFavorite)
@@ -2309,7 +2399,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// different row replaces the pending one rather than deleting anything.
     /// </summary>
     /// <remarks>
-    /// A connection with an open tab has its session closed first, through the same §6.5 protocol
+    /// A connection with an open tab has its session closed first, through the same close protocol
     /// as any other close: deleting the row out from under a live session would leave a tab whose
     /// title names something that no longer exists. <c>async void</c> for that await, fully guarded.
     /// </remarks>
@@ -2459,7 +2549,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// Photographs the tab strip for the next start-up. Written on every clean close and only
     /// there — deliberately not from <see cref="SaveSettings"/>, which the splitter also calls: a
     /// close by crash leaves the previous snapshot on disk, which is the useful behaviour
-    /// (spec espaces §3.2).
+    ///.
     /// </summary>
     private void CaptureLastSession()
     {
@@ -2554,7 +2644,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>Writes the layout to <c>%APPDATA%\RemoteDeck\settings.json</c>. Losing it only costs
     /// geometry, so a failure is logged and swallowed — never surfaced on the way out of the app.</summary>
     /// <param name="rememberDetached">Whether the detached windows still open are also written into
-    /// the per-connection placement memory. True only where spec espaces §7 allows it — the
+    /// the per-connection placement memory. True only where the workspace design allows it — the
     /// application closing — and false everywhere else this method is called for a reason of its own.
     /// <see cref="RememberPlacement"/> is triggered by a caption drag ending, a reattach and the
     /// close, and by nothing else: a programmatic placement is not one of them, so folding the pane
@@ -2610,7 +2700,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- shutdown
 
     /// <summary>
-    /// Closing the window is a two-pass affair (spec §6.5): the first pass cancels the close and
+    /// Closing the window is a two-pass affair: the first pass cancels the close and
     /// runs the graceful <c>RequestClose</c> protocol on every open tab, one at a time, so each
     /// server is told to end its session instead of being left with a zombie one; the second pass
     /// releases the COM objects. <c>async void</c> is the only shape available to an event handler

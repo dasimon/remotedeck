@@ -151,6 +151,9 @@
                                 Cursor="Hand"
                                 ToolTip="{Binding Subtitle}"
                                 Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Focusable="True"
+                                AutomationProperties.Name="{Binding Name}"
+                                KeyDown="OnWorkspaceKeyDown"
                                 MouseLeftButtonUp="OnWorkspaceClick">
                             <Border.ContextMenu>
                                 <!-- The menu's DataContext is the row, so the commands have to be

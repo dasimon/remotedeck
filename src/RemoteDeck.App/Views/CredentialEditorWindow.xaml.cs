@@ -40,6 +40,8 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
             Domain = existing?.Domain ?? "",
         };
         DataContext = _vm;
+        Title = existing is null ? Strings.CredEditor_TitleNew : Text.Of(Strings.Editor_TitleEdit, existing.Label);
+        EditorTitleBar.Title = Title;
         Loaded += (_, _) => LabelInput.Focus();
     }
 
@@ -55,6 +57,7 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
         if (!_vm.Validate(others) || (_vm.IsNew && !hasPassword))
         {
             if (_vm.IsNew && !hasPassword) _vm.Errors = string.Join("\n", new[] { _vm.Errors, Strings.CredEditor_PasswordRequiredError }.Where(s => s.Length > 0));
+            ErrorBar.Title = Strings.Editor_CheckFormTitle;
             ErrorBar.IsOpen = true;
             return;
         }
@@ -85,6 +88,7 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
         {
             ProbeLog.Write("vault", $"Save failed: {ex.GetType().Name}: {ex.Message}");
             _vm.Errors = Text.Of(Strings.CredEditor_CouldNotSave, ex.Message);
+            ErrorBar.Title = Strings.Editor_CouldNotSaveTitle;
             ErrorBar.IsOpen = true;
         }
     }
