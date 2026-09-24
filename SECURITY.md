@@ -41,6 +41,10 @@ measured on 2026-09-05. RemoteDeck therefore sets it on every connection: 2 by d
 authentication and prompt on failure", the same as `mstsc.exe`; 1, "required", or 0, "none", only
 when the user chose so in the editor. NLA (CredSSP) is always on.
 
+Import treats a `.rdp` file as untrusted input, since one can arrive by mail: it does not carry
+over `authentication level:i:0` nor `drivestoredirect`, and says so in the preview. Either can
+still be turned on in the editor, for a server that needs it.
+
 What this is not: certificate pinning. The interop cannot honour it — the generated assembly
 exposes no member that hands out the server certificate (the `[R5]` probe at every launch records
 that). The database used to carry an `AcceptedCertThumbprint` column reserved for it, which nothing

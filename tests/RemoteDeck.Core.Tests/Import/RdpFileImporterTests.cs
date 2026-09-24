@@ -38,13 +38,89 @@ public sealed class RdpFileImporterTests
         Assert.Equal(1080, c.FixedHeight);
         Assert.True(c.RedirectClipboard);
         Assert.True(c.RedirectPrinters);
-        Assert.True(c.RedirectDrives);
+        // Read, but not carried over: see Drive_redirection_is_not_imported.
+        Assert.False(c.RedirectDrives);
         Assert.True(c.RedirectAudio);
         Assert.True(c.UseWebAccount);
         Assert.Equal(2, c.AuthenticationLevel);
         Assert.Equal(@"C:\rdp\Prod app.rdp", c.Source);
         // Full screen is a window preference, not a resolution: noted, never mapped.
-        Assert.Contains("screen mode id", Assert.Single(c.Warnings));
+        Assert.Equal(2, c.Warnings.Count);
+        Assert.Contains(c.Warnings, w => w.Contains("screen mode id", StringComparison.Ordinal));
+        Assert.Contains(c.Warnings, w => w.Contains("drivestoredirect", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Server_authentication_off_is_not_imported()
+    {
+        // A .rdp can come by mail; level 0 would connect to a spoofed server without a word.
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "authentication level:i:0"]);
+
+        Assert.NotNull(c);
+        Assert.Null(c.AuthenticationLevel);
+        Assert.Contains("authentication level:i:0", Assert.Single(c.Warnings));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void A_protective_authentication_level_is_imported(int level)
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", $"authentication level:i:{level}"]);
+
+        Assert.NotNull(c);
+        Assert.Equal(level, c.AuthenticationLevel);
+        Assert.Empty(c.Warnings);
+    }
+
+    [Theory]
+    [InlineData("E:")]
+    [InlineData("*")]
+    public void Drive_redirection_is_not_imported(string drives)
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", $"drivestoredirect:s:{drives}"]);
+
+        Assert.NotNull(c);
+        Assert.False(c.RedirectDrives);
+        Assert.Contains("drivestoredirect", Assert.Single(c.Warnings));
+    }
+
+    [Fact]
+    public void An_empty_drive_list_is_silent()
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "drivestoredirect:s:"]);
+
+        Assert.NotNull(c);
+        Assert.Empty(c.Warnings);
+    }
+
+    [Theory]
+    [InlineData("[2001:db8::1]:3390", 3390)]
+    [InlineData("[2001:db8::1]", 3389)]
+    public void A_bracketed_IPv6_address_is_split_from_its_port(string address, int port)
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", [$"full address:s:{address}"]);
+
+        Assert.NotNull(c);
+        Assert.Equal("2001:db8::1", c.Host);
+        Assert.Equal(port, c.Port);
+        Assert.Empty(c.Warnings);
+    }
+
+    [Fact]
+    public void A_host_with_whitespace_is_not_importable()
+        => Assert.Null(RdpFileImporter.Parse("srv.rdp", ["full address:s:my host"]));
+
+    [Fact]
+    public void A_size_the_editor_would_refuse_is_not_imported()
+    {
+        // 400x300 is below the editor's 640x480: importing it would leave a connection that cannot
+        // be saved again without changing it.
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "desktopwidth:i:400", "desktopheight:i:300"]);
+
+        Assert.NotNull(c);
+        Assert.Equal(DisplayMode.Dynamic, c.DisplayMode);
+        Assert.Null(c.FixedWidth);
     }
 
     [Fact]

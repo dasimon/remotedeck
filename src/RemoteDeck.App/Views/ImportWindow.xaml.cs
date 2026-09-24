@@ -26,7 +26,7 @@ public partial class ImportWindow : Wpf.Ui.Controls.FluentWindow
     private bool _loading;
 
     /// <summary>How many connections this window has written, over all its imports. The shell reloads on it.</summary>
-    public int ImportedCount { get; private set; }
+    public int ImportedCount => _viewModel.TotalImported;
 
     public ImportWindow()
     {
@@ -100,7 +100,6 @@ public partial class ImportWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             var imported = _viewModel.Import();
-            ImportedCount += imported;
             ProbeLog.Write("import", $"{imported} connection(s) imported");
             StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success,
                 Text.Plural(imported, Strings.Import_ImportedOne, Strings.Import_ImportedMany, imported),

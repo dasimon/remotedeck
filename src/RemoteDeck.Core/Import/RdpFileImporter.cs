@@ -12,14 +12,17 @@ namespace RemoteDeck.Core.Import;
 /// being read, and never appears in a warning or anywhere else.
 /// See <see href="https://learn.microsoft.com/azure/virtual-desktop/rdp-properties"/> and
 /// <see href="https://learn.microsoft.com/troubleshoot/windows-server/remote/remote-desktop-protocol-settings"/>.
+///
+/// A <c>.rdp</c> file is untrusted input — it can arrive by mail. Two documented keys are therefore
+/// read but not carried over, each with a warning: <c>authentication level:i:0</c>, which would turn
+/// off the server-identity check, and <c>drivestoredirect</c>, which would share every local drive.
+/// The user can still choose either one in the editor.
 /// </summary>
 public static class RdpFileImporter
 {
     private const int DefaultPort = 3389;
     private const int MinPort = 1;
     private const int MaxPort = 65535;
-    private const int MinDimension = 200;
-    private const int MaxDimension = 8192;
 
     /// <summary>Resolutions of <c>desktop size id</c>, in the documented order 0 to 4.</summary>
     private static readonly (int Width, int Height)[] DesktopSizes =
@@ -54,7 +57,6 @@ public static class RdpFileImporter
         int? authenticationLevel = null;
         var redirectClipboard = true;
         var redirectPrinters = false;
-        var redirectDrives = false;
         var redirectAudio = false;
         var useWebAccount = false;
 
@@ -86,11 +88,11 @@ public static class RdpFileImporter
                     domain = value.Length == 0 ? null : value;
                     break;
                 case "desktopwidth":
-                    if (TryInt(value, out var w) && w is >= MinDimension and <= MaxDimension) width = w;
+                    if (TryInt(value, out var w) && w is >= ConnectionRules.MinFixedWidth and <= ConnectionRules.MaxFixedSide) width = w;
                     else unsupported++;
                     break;
                 case "desktopheight":
-                    if (TryInt(value, out var h) && h is >= MinDimension and <= MaxDimension) height = h;
+                    if (TryInt(value, out var h) && h is >= ConnectionRules.MinFixedHeight and <= ConnectionRules.MaxFixedSide) height = h;
                     else unsupported++;
                     break;
                 case "desktop size id":
@@ -124,13 +126,19 @@ public static class RdpFileImporter
                     else unsupported++;
                     break;
                 case "drivestoredirect":
-                    // Empty means no drive; "*" or a list means at least one.
-                    redirectDrives = value.Length > 0;
+                    // Empty means no drive; "*" or a list means at least one — and RemoteDeck's switch
+                    // shares them all, so a file asking for one drive would be granted every one.
+                    if (value.Length > 0)
+                        warnings.Add("Drive redirection (drivestoredirect) was not imported: turn it on in the editor if this server needs it.");
                     break;
                 case "authentication level":
                     // 0 connect without warning, 1 do not connect, 2 warn, 3 unspecified.
                     if (TryInt(value, out var level) && level is 0 or 1 or 2 or 3)
-                        authenticationLevel = level == 3 ? null : level;
+                    {
+                        authenticationLevel = level is 1 or 2 ? level : null;
+                        if (level == 0)
+                            warnings.Add("Server authentication off (authentication level:i:0) was not imported: the default, warn on an unverified server, applies.");
+                    }
                     else unsupported++;
                     break;
                 case "enablerdsaadauth":
@@ -181,7 +189,6 @@ public static class RdpFileImporter
             FixedWidth = fixedWidth,
             FixedHeight = fixedHeight,
             RedirectClipboard = redirectClipboard,
-            RedirectDrives = redirectDrives,
             RedirectPrinters = redirectPrinters,
             RedirectAudio = redirectAudio,
             UseWebAccount = useWebAccount,
@@ -225,16 +232,37 @@ public static class RdpFileImporter
     }
 
     /// <summary>
-    /// Splits <c>host</c> or <c>host:port</c>. A value holding several colons is an IPv6 literal and is
-    /// kept whole; a single colon followed by anything but a port 1-65535 warns and keeps 3389.
+    /// Splits <c>host</c>, <c>host:port</c> or <c>[IPv6]:port</c>. A bare value holding several colons
+    /// is an IPv6 literal and is kept whole; a port that is not 1-65535 warns and keeps 3389. A host
+    /// holding whitespace is no host at all — the verdict the editor gives — and comes back empty.
     /// </summary>
     private static string ParseAddress(string value, ref int port, List<string> warnings)
     {
+        var host = SplitAddress(value, ref port, warnings);
+        return host.Any(char.IsWhiteSpace) ? "" : host;
+    }
+
+    private static string SplitAddress(string value, ref int port, List<string> warnings)
+    {
+        if (value.StartsWith('['))
+        {
+            var close = value.IndexOf(']', StringComparison.Ordinal);
+            if (close < 0) return value;
+
+            var literal = value[1..close];
+            var rest = value[(close + 1)..];
+            if (rest.Length == 0) return literal;
+            return rest[0] == ':' ? ReadPort(literal, rest[1..], ref port, warnings) : value;
+        }
+
         var at = value.IndexOf(':', StringComparison.Ordinal);
         if (at < 0 || value.IndexOf(':', at + 1) >= 0) return value;
 
-        var hostPart = value[..at];
-        var portPart = value[(at + 1)..];
+        return ReadPort(value[..at], value[(at + 1)..], ref port, warnings);
+    }
+
+    private static string ReadPort(string hostPart, string portPart, ref int port, List<string> warnings)
+    {
         if (TryInt(portPart, out var parsed) && parsed is >= MinPort and <= MaxPort)
         {
             port = parsed;
