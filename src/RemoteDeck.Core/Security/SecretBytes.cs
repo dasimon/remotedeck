@@ -42,7 +42,7 @@ internal static class SecretBytes
         {
             Encoding.UTF8.GetChars(utf8, chars);
             nint bstr = SysAllocStringLen(handle.AddrOfPinnedObject(), (uint)chars.Length);
-            if (bstr == 0) throw new OutOfMemoryException("SysAllocStringLen failed.");
+            if (bstr == 0) throw new InsufficientMemoryException("SysAllocStringLen failed.");
             return bstr;
         }
         finally

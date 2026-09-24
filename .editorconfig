@@ -1,0 +1,15 @@
+root = true
+
+# Analyzer severities only. Directory.Build.props turns on the .NET 10 recommended set, with
+# warnings as errors; the rules below are the ones this code base disagrees with, and why.
+
+[*.cs]
+# Methods return read-only interfaces on purpose: that is the API shape, and the gain CA1859
+# offers for giving it up is a virtual call.
+dotnet_diagnostic.CA1859.severity = none
+
+[tests/**.cs]
+# Test names are sentences, and xUnit shows them as such.
+dotnet_diagnostic.CA1707.severity = none
+# A literal array in a test runs once; hoisting it into a field only moves it away from its test.
+dotnet_diagnostic.CA1861.severity = none

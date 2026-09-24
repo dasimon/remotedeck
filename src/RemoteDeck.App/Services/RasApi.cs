@@ -85,7 +85,7 @@ internal sealed class RasApi : IRasGateway
     private static extern uint RasHangUp(IntPtr connection);
 
     [DllImport("rasapi32.dll", CharSet = CharSet.Unicode, EntryPoint = "RasGetErrorStringW")]
-    private static extern uint RasGetErrorString(uint error, StringBuilder message, int size);
+    private static extern uint RasGetErrorString(uint error, [Out] char[] message, int size);
 
     /// <inheritdoc />
     /// <remarks>
@@ -174,10 +174,15 @@ internal sealed class RasApi : IRasGateway
     /// <inheritdoc />
     public string Describe(uint code)
     {
-        var message = new StringBuilder(512);
-        if (RasGetErrorString(code, message, message.Capacity) == RasError.Success && message.Length > 0)
+        var message = new char[512];
+        if (RasGetErrorString(code, message, message.Length) == RasError.Success)
         {
-            return message.ToString().Trim();
+            var end = Array.IndexOf(message, char.MinValue);
+            var text = new string(message, 0, end < 0 ? message.Length : end).Trim();
+            if (text.Length > 0)
+            {
+                return text;
+            }
         }
 
         // Not every code RAS can return is a RAS code; the rest are ordinary Win32 ones.

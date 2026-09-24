@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using RemoteDeck.Core.Model;
 using RemoteDeck.Core.Settings;
@@ -5,14 +6,14 @@ using RemoteDeck.Core.Settings;
 namespace RemoteDeck.Core.Data;
 
 /// <summary>
-/// Reads and writes workspaces (workspaces spec §3.1). A workspace is always written whole: there
+/// Reads and writes workspaces. A workspace is always written whole: there
 /// is no editor, so there is no partial update to represent.
 /// </summary>
 public sealed class WorkspaceRepository(SqliteDatabase db)
 {
     /// <summary>
     /// Inserts the workspace, or fully replaces the one that already has this name. Replacing is the
-    /// normal way to evolve a workspace (spec §5), and it keeps the existing <c>Id</c> so that
+    /// normal way to evolve a workspace, and it keeps the existing <c>Id</c> so that
     /// nothing is left pointing at nothing.
     /// </summary>
     /// <returns>The id of the workspace written.</returns>
@@ -26,7 +27,7 @@ public sealed class WorkspaceRepository(SqliteDatabase db)
         var find = c.Cmd("SELECT Id FROM Workspace WHERE Name = $name COLLATE NOCASE");
         find.Transaction = tx;
         find.Add("$name", x.Name);
-        long id = find.ExecuteScalar() is { } found and not DBNull ? Convert.ToInt64(found) : 0;
+        long id = find.ExecuteScalar() is { } found and not DBNull ? Convert.ToInt64(found, CultureInfo.InvariantCulture) : 0;
 
         if (id == 0)
         {
