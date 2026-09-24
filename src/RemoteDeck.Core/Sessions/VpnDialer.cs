@@ -130,13 +130,22 @@ public sealed class VpnDialer
     /// <summary><c>RAS_MaxEntryName</c> from <c>ras.h</c>.</summary>
     private const int MaxEntryName = 256;
 
+    /// <summary>How many times, and how far apart, a tunnel RasDial reports up is looked for among the
+    /// network interfaces: the PPP interface can appear a moment after RasDial returns.</summary>
+    private const int VisibilityChecks = 4;
+    private static readonly TimeSpan VisibilityInterval = TimeSpan.FromMilliseconds(500);
+
     private readonly IRasGateway _ras;
+    private readonly Action<TimeSpan> _pause;
 
     /// <param name="ras">Never null: without it there is nothing to dial through.</param>
-    public VpnDialer(IRasGateway ras)
+    /// <param name="pause">How to wait between two visibility checks; <see cref="Thread.Sleep(TimeSpan)"/>
+    /// unless a test says otherwise. The dial already runs off the UI thread.</param>
+    public VpnDialer(IRasGateway ras, Action<TimeSpan>? pause = null)
     {
         ArgumentNullException.ThrowIfNull(ras);
         _ras = ras;
+        _pause = pause ?? Thread.Sleep;
     }
 
     /// <summary>
@@ -208,10 +217,20 @@ public sealed class VpnDialer
         }
 
         // Success from RasDial is not the same as a tunnel the rest of RemoteDeck can see, and the
-        // session is about to be opened on the strength of it.
-        return VpnRequirement.Check(entry, _ras.ConnectedProfiles()) == VpnState.Connected
-            ? new VpnDialResult(VpnDialOutcome.Connected, RasError.Success, string.Empty)
-            : new VpnDialResult(VpnDialOutcome.RaisedButNotVisible, RasError.Success, string.Empty);
+        // session is about to be opened on the strength of it. Looked for a few times: reading the
+        // interfaces once, right after the dial, reported "not visible yet" for a tunnel that was
+        // there half a second later, and cost the user a second click.
+        for (var check = 1; check <= VisibilityChecks; check++)
+        {
+            if (VpnRequirement.Check(entry, _ras.ConnectedProfiles()) == VpnState.Connected)
+            {
+                return new VpnDialResult(VpnDialOutcome.Connected, RasError.Success, string.Empty);
+            }
+
+            if (check < VisibilityChecks) _pause(VisibilityInterval);
+        }
+
+        return new VpnDialResult(VpnDialOutcome.RaisedButNotVisible, RasError.Success, string.Empty);
     }
 
     private VpnDialResult Failure(uint code) =>

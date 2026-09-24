@@ -25,8 +25,10 @@ namespace RemoteDeck.App.Services;
 /// Sixteen asterisks is all that ever passes through this file.
 /// </para>
 /// <para>
-/// <strong><c>RasHangUp</c> is deliberately never called.</strong> The documentation asks for it on
-/// any non-null connection handle, and obeying it here would hang up the tunnel just raised.
+/// <strong><c>RasHangUp</c> is called on a failed dial only.</strong> The documentation asks for it
+/// on any non-null connection handle, "even if RasDial returns a nonzero (error) value": a failed
+/// dial that keeps its handle keeps its RAS port, and the next attempt can meet 602, port already
+/// open. On success it is deliberately not called — that would hang up the tunnel just raised.
 /// <c>rasdial.exe</c> sets the precedent: it dials, returns, and leaves the connection standing.
 /// </para>
 /// </remarks>
@@ -78,6 +80,9 @@ internal sealed class RasApi : IRasGateway
     [DllImport("rasapi32.dll", CharSet = CharSet.Unicode, EntryPoint = "RasDialW")]
     private static extern uint RasDial(
         IntPtr extensions, string? phonebook, IntPtr dialParams, uint notifierType, IntPtr notifier, out IntPtr connection);
+
+    [DllImport("rasapi32.dll", CharSet = CharSet.Unicode, EntryPoint = "RasHangUpW")]
+    private static extern uint RasHangUp(IntPtr connection);
 
     [DllImport("rasapi32.dll", CharSet = CharSet.Unicode, EntryPoint = "RasGetErrorStringW")]
     private static extern uint RasGetErrorString(uint error, StringBuilder message, int size);
@@ -145,8 +150,17 @@ internal sealed class RasApi : IRasGateway
             // returns the tunnel is either up or it is not. There is no window and no message pump.
             var code = RasDial(IntPtr.Zero, phonebook, buffer, 0, IntPtr.Zero, out var connection);
 
-            ProbeLog.Write("vpn", $"RasDial \"{entry}\" returned {code}, handle {(connection == IntPtr.Zero ? "none" : "held")}"
-                + " (never hung up on purpose: that would drop the tunnel just raised)");
+            if (code != RasError.Success && connection != IntPtr.Zero)
+            {
+                // A failed dial still owns its port until the handle is released.
+                var hangUp = RasHangUp(connection);
+                ProbeLog.Write("vpn", $"RasDial \"{entry}\" returned {code}, handle released (RasHangUp {hangUp})");
+            }
+            else
+            {
+                ProbeLog.Write("vpn", $"RasDial \"{entry}\" returned {code}, handle {(connection == IntPtr.Zero ? "none" : "held")}"
+                    + (code == RasError.Success ? " (not hung up on purpose: that would drop the tunnel just raised)" : string.Empty));
+            }
 
             return new RasRead(code, null);
         });

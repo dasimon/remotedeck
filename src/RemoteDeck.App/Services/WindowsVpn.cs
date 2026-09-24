@@ -152,7 +152,9 @@ internal static class WindowsVpn
     /// <para>
     /// The dial runs on a background thread — a synchronous <c>RasDial</c> blocks until the tunnel is
     /// up or refused — and the wait is capped. Past the cap the attempt is not cancelled: it carries
-    /// on inside Windows, and the shell says so instead of pretending it failed.
+    /// on inside Windows, and the shell says so instead of pretending it failed. Asked again for a
+    /// profile whose dial is still going, this waits on that same dial rather than starting a
+    /// second one against the same entry.
     /// </para>
     /// </remarks>
     public static async Task<VpnDialResult> DialAsync(string profile)
@@ -160,20 +162,33 @@ internal static class WindowsVpn
         ArgumentException.ThrowIfNullOrWhiteSpace(profile);
 
         var entry = profile.Trim();
-        var dial = Task.Run(() =>
+        Task<VpnDialResult> dial;
+        lock (InFlight)
         {
-            try
+            if (InFlight.TryGetValue(entry, out var running) && !running.IsCompleted)
             {
-                return new VpnDialer(new RasApi()).Dial(entry);
+                ProbeLog.Write("vpn", $"RasDial \"{entry}\": already dialing, waiting on that attempt");
+                dial = running;
             }
-            catch (Exception ex)
+            else
             {
-                // A missing rasapi32, a refused entry point: worth reporting as itself rather than
-                // letting it tear down the shell from a background thread.
-                ProbeLog.Write("vpn", $"RasDial \"{entry}\" threw: {ex.GetType().Name}: {ex.Message}");
-                return new VpnDialResult(VpnDialOutcome.Failed, RasError.Success, ex.Message);
+                dial = Task.Run(() =>
+                {
+                    try
+                    {
+                        return new VpnDialer(new RasApi()).Dial(entry);
+                    }
+                    catch (Exception ex)
+                    {
+                        // A missing rasapi32, a refused entry point: worth reporting as itself rather
+                        // than letting it tear down the shell from a background thread.
+                        ProbeLog.Write("vpn", $"RasDial \"{entry}\" threw: {ex.GetType().Name}: {ex.Message}");
+                        return new VpnDialResult(VpnDialOutcome.Failed, RasError.Success, ex.Message);
+                    }
+                });
+                InFlight[entry] = dial;
             }
-        });
+        }
 
         if (await Task.WhenAny(dial, Task.Delay(DialWait)).ConfigureAwait(true) != dial)
         {
@@ -194,4 +209,7 @@ internal static class WindowsVpn
     /// to fail can take most of a minute to say so.
     /// </summary>
     private static readonly TimeSpan DialWait = TimeSpan.FromSeconds(60);
+
+    /// <summary>The last dial started per profile; a completed one is simply replaced.</summary>
+    private static readonly Dictionary<string, Task<VpnDialResult>> InFlight = new(StringComparer.OrdinalIgnoreCase);
 }
