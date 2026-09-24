@@ -78,7 +78,7 @@
             <ui:Button x:Name="ImportButton" Appearance="Primary" Icon="{ui:SymbolIcon ArrowImport24}"
                        Margin="0,0,8,0" Content="{Binding ImportButtonText}" IsEnabled="{Binding CanImport}"
                        Click="OnImport" />
-            <ui:Button Content="{x:Static res:Strings.Import_Close}" Click="OnClose" />
+            <ui:Button Content="{x:Static res:Strings.Import_Close}" Click="OnClose" IsCancel="True" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

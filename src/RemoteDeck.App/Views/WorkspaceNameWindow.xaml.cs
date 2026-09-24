@@ -18,6 +18,7 @@ internal sealed partial class WorkspaceNameWindow : Wpf.Ui.Controls.FluentWindow
     public WorkspaceNameWindow(string? proposedName, bool autoConnect)
     {
         InitializeComponent();
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
 
         NameBox.Text = proposedName ?? string.Empty;
         AutoConnectBox.IsChecked = autoConnect;

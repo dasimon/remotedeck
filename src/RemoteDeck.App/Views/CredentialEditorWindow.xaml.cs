@@ -59,7 +59,8 @@ public partial class CredentialEditorWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        var credential = _existing ?? new Credential { Label = "", UserName = "", SecretBlob = [], Entropy = [] };
+        // A copy: a failed write must leave the listed instance as it was.
+        var credential = _existing?.Copy() ?? new Credential { Label = "", UserName = "", SecretBlob = [], Entropy = [] };
         credential.Label = _vm.Label.Trim();
         credential.UserName = _vm.UserName.Trim();
         credential.Domain = string.IsNullOrWhiteSpace(_vm.Domain) ? null : _vm.Domain.Trim();

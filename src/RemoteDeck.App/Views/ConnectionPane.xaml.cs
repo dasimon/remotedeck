@@ -58,7 +58,8 @@ public partial class ConnectionPane : System.Windows.Controls.UserControl
                 e.Handled = true;
                 break;
 
-            case Key.Enter:
+            // A focused button keeps its own Enter: on "New", Enter creates rather than connects.
+            case Key.Enter when e.OriginalSource is not System.Windows.Controls.Primitives.ButtonBase:
                 // Flush the search debounce first: Enter must act on the list the query describes,
                 // not on the one from 120 ms ago. Refresh keeps the selection when it survives.
                 _viewModel.Refresh();

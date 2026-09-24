@@ -13,4 +13,9 @@ public sealed class Credential
     public required byte[] SecretBlob { get; set; }
     public required byte[] Entropy { get; set; }
     public DateTime ModifiedUtc { get; set; }
+
+    /// <summary>A field-for-field copy, for an editor to change without touching the instance a
+    /// list still shows until the write succeeds. The byte arrays are shared: sealing a secret
+    /// assigns new ones rather than writing into these.</summary>
+    public Credential Copy() => (Credential)MemberwiseClone();
 }

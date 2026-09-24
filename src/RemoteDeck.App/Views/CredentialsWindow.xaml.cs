@@ -22,6 +22,42 @@ public partial class CredentialsWindow : Wpf.Ui.Controls.FluentWindow
         SystemThemeWatcher.Watch(this);
         _repository = App.Current.Services.GetRequiredService<CredentialRepository>();
         Reload();
+        Loaded += (_, _) => FocusList();
+    }
+
+    /// <summary>The list takes the keyboard on opening, on its first row, so Enter and Delete work
+    /// without a click.</summary>
+    private void FocusList()
+    {
+        if (List.SelectedIndex < 0 && List.Items.Count > 0) List.SelectedIndex = 0;
+        List.Focus();
+        if (List.ItemContainerGenerator.ContainerFromIndex(Math.Max(List.SelectedIndex, 0)) is System.Windows.Controls.ListViewItem row) row.Focus();
+    }
+
+    /// <summary>No Cancel button here to carry IsCancel, so Escape closes the window by hand.</summary>
+    private void OnWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape)
+        {
+            e.Handled = true;
+            Close();
+        }
+    }
+
+    /// <summary>The keys the buttons stand for: Enter edits the selected row, Delete arms then confirms.</summary>
+    private void OnListKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.Enter when Selected is not null:
+                e.Handled = true;
+                OnEdit(sender, e);
+                break;
+            case System.Windows.Input.Key.Delete when Selected is not null:
+                e.Handled = true;
+                OnDelete(sender, e);
+                break;
+        }
     }
 
     private Credential? Selected => List.SelectedItem as Credential;

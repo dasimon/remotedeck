@@ -59,7 +59,7 @@
             <ui:TextBox x:Name="SearchBox"
                         Grid.Row="0"
                         Margin="10,10,10,8"
-                        PlaceholderText="{x:Static res:Strings.Palette_SearchPlaceholder}"
+                        PlaceholderText="{x:Static res:Strings.Palette_SearchPlaceholder}" AutomationProperties.Name="{x:Static res:Strings.Palette_SearchPlaceholder}"
                         ClearButtonEnabled="False"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
