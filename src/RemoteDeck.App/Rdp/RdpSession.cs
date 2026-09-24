@@ -205,7 +205,7 @@ internal sealed class RdpSession : IDisposable
     /// <summary>
     /// Tells the session its host has moved to another window. The size subscription and the DPI both
     /// belong to the new parent: without this, dynamic resolution keeps measuring the old window —
-    /// exactly the flaw the spike found on the alternative technique (design §2).
+    /// exactly the flaw the spike found on the alternative technique.
     /// </summary>
     public void AttachedTo(FrameworkElement newParent)
     {
@@ -305,7 +305,7 @@ internal sealed class RdpSession : IDisposable
     }
 
     /// <summary>
-    /// Closes the session following the §6.5 protocol (<see cref="RdpSessionHost.CloseAsync"/>) and
+    /// Closes the session following the close protocol (<see cref="RdpSessionHost.CloseAsync"/>) and
     /// disposes everything it owns. Terminal: the session is <see cref="SessionState.Closed"/>
     /// afterwards and cannot be restarted.
     /// </summary>
@@ -518,7 +518,7 @@ internal sealed class RdpSession : IDisposable
 
         if (!description.IsError)
         {
-            // Codes 0–3 (spec §6.4): the session ended on purpose. The tab stays, with Reconnect.
+            // Codes 0–3: the session ended on purpose. The tab stays, with Reconnect.
             StopCountdown();
             ProbeLog.Write("session", $"'{Connection.Name}': disconnected normally (code {info.Reason} — {description.Title})");
             SetState(SessionState.Idle);

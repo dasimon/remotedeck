@@ -7,7 +7,7 @@ using RemoteDeck.Core.Sessions;
 namespace RemoteDeck.App.Controls;
 
 /// <summary>
-/// Turns one session's state into the InfoBar line that reports it (spec §6.4). The shell writes it
+/// Turns one session's state into the InfoBar line that reports it. The shell writes it
 /// into its own status bar for the active tab, and a detached <c>SessionWindow</c> writes it into
 /// its own for the single session it holds: a session says exactly the same thing, with the same
 /// severity and the same resource keys, whether it is docked or in a window of its own.
@@ -24,7 +24,7 @@ internal static class SessionStatusPresenter
 {
     /// <summary>
     /// Reports <paramref name="tab"/>'s state in <paramref name="bar"/>. Severity follows the
-    /// disconnect family (§6.4): codes 0–3 are informational, a network drop is a warning — it is
+    /// disconnect family: codes 0–3 are informational, a network drop is a warning — it is
     /// being retried — and everything else is an error, with Windows' own wording attached because
     /// that is the only text that names the actual cause.
     /// </summary>
@@ -47,7 +47,7 @@ internal static class SessionStatusPresenter
                 break;
 
             case SessionState.Idle:
-                // disconnect.Title comes from RemoteDeck.Core and stays English in v1 (spec §9):
+                // disconnect.Title comes from RemoteDeck.Core and stays English in v1:
                 // only the wording around it is localised.
                 bar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
                     Text.Of(Strings.Session_DisconnectedTitle, tab.Title), disconnect!.Title);

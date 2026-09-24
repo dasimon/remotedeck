@@ -1,6 +1,6 @@
 namespace RemoteDeck.Core.Settings;
 
-/// <summary>User-interface state persisted between runs (spec §7). Never holds secrets.</summary>
+/// <summary>User-interface state persisted between runs. Never holds secrets.</summary>
 public sealed class AppSettings
 {
     /// <summary>Width of the connection pane, in device-independent pixels.</summary>
@@ -26,7 +26,7 @@ public sealed class AppSettings
 
     /// <summary>
     /// Reopen at startup the sessions that were there at close. False by default: launching the
-    /// app must not connect to anything until the user has asked for it (workspaces spec §7).
+    /// app must not connect to anything until the user has asked for it.
     /// </summary>
     public bool RestoreLastSession { get; set; }
 
@@ -41,7 +41,7 @@ public sealed class AppSettings
 /// <summary>
 /// A session from the last close. Same fields as a <c>WorkspaceItem</c> minus the workspace: the
 /// restore is window state, not composed content, hence its place here rather than in the database
-/// (workspaces spec §3).
+///.
 /// </summary>
 public sealed class LastSessionEntry
 {

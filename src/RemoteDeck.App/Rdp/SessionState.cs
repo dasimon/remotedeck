@@ -6,7 +6,7 @@ namespace RemoteDeck.App.Rdp;
 /// </summary>
 /// <remarks>
 /// The two "not connected, not failing" states are deliberately distinct:
-/// <see cref="Idle"/> is where a session lands after a disconnect codes 0–3 (spec §6.4 — the
+/// <see cref="Idle"/> is where a session lands after a disconnect codes 0–3 (the
 /// session ended on purpose, the tab stays open with a <em>Reconnect</em> button), whereas
 /// <see cref="Failed"/> means something actually went wrong or the retry budget is exhausted.
 /// </remarks>
@@ -30,7 +30,7 @@ public enum SessionState
     /// <summary>Not retryable, retry budget exhausted, or the user cancelled the countdown.</summary>
     Failed,
 
-    /// <summary>Close protocol running (spec §6.5): <c>RequestClose</c> issued, waiting.</summary>
+    /// <summary>Close protocol running: <c>RequestClose</c> issued, waiting.</summary>
     Closing,
 
     /// <summary>Closed and disposed. Terminal.</summary>

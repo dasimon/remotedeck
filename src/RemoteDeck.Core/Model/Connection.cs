@@ -1,6 +1,6 @@
 namespace RemoteDeck.Core.Model;
 
-/// <summary>One saved RDP target. Mirrors the Connection table (spec §4) one-to-one.</summary>
+/// <summary>One saved RDP target. Mirrors the Connection table one-to-one.</summary>
 public sealed class Connection
 {
     public long Id { get; set; }

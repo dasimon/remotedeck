@@ -6,7 +6,7 @@ using RemoteDeck.Core.Model;
 namespace RemoteDeck.Core.Security;
 
 /// <summary>
-/// Windows DPAPI, CurrentUser scope, plus 32 bytes of per-credential entropy (spec §5.1).
+/// Windows DPAPI, CurrentUser scope, plus 32 bytes of per-credential entropy.
 /// The database file alone is useless without the Windows profile; two identical secrets
 /// produce different blobs.
 /// </summary>

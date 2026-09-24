@@ -2,7 +2,7 @@ namespace RemoteDeck.Core.Model;
 
 /// <summary>
 /// A reusable account. The secret is stored as an opaque DPAPI blob plus per-row entropy;
-/// this type never holds the decrypted value (spec §5).
+/// this type never holds the decrypted value.
 /// </summary>
 public sealed class Credential
 {

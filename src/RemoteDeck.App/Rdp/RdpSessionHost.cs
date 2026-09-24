@@ -91,7 +91,7 @@ internal sealed class RdpSessionHost : IDisposable
         IMsTscAxEvents_OnDisconnectedEventHandler onDisconnected = OnDisconnected;
 
         // Container-handled full screen: Ctrl+Alt+Break stops toggling the control's own full-screen
-        // window and raises these instead, so RemoteDeck keeps its own chrome (design §5).
+        // window and raises these instead, so RemoteDeck keeps its own chrome.
         IMsTscAxEvents_OnRequestGoFullScreenEventHandler onGoFullScreen = () => Sink("OnRequestGoFullScreen", () => RequestGoFullScreen?.Invoke());
         IMsTscAxEvents_OnRequestLeaveFullScreenEventHandler onLeaveFullScreen = () => Sink("OnRequestLeaveFullScreen", () => RequestLeaveFullScreen?.Invoke());
 
@@ -172,10 +172,10 @@ internal sealed class RdpSessionHost : IDisposable
         // when a session drops it puts up its "Reconnecting... 1 of 5" dialog and only reports
         // OnDisconnected once its own five attempts are spent. Left enabled, the two mechanisms
         // stack (5 + 5) and RemoteDeck's UI lies for the whole of the control's phase — the tab
-        // still reads "Connected" while the session is in fact down. ReconnectPolicy (spec §6.3) is
+        // still reads "Connected" while the session is in fact down. ReconnectPolicy is
         // therefore the single reconnection mechanism: its six retryable codes, its 2/5/10/30/60 s
         // backoff, its visible and cancellable countdown, and — something the control's own loop
-        // cannot do — the secret re-lent by the vault for every attempt (§5.2).
+        // cannot do — the secret re-lent by the vault for every attempt.
         // IMsRdpClientAdvancedSettings2::EnableAutoReconnect; settable on a disconnected control
         // only, which is exactly the state Configure runs in.
         // https://learn.microsoft.com/windows/win32/termserv/imsrdpclientadvancedsettings2-enableautoreconnect
@@ -436,6 +436,10 @@ internal sealed class RdpSessionHost : IDisposable
     /// control asks the session (OnConfirmClose) and disconnects, so wait for OnDisconnected up
     /// to <paramref name="timeout"/>, then force Disconnect().
     /// https://learn.microsoft.com/windows/win32/termserv/imsrdpclient-requestclose
+    /// <para>
+    /// This sequence is what the rest of the code calls <em>the close protocol</em>. Disposing a
+    /// control without it leaves the session open on the server — the "zombie" it exists to prevent.
+    /// </para>
     /// </summary>
     public async Task CloseAsync(TimeSpan timeout)
     {

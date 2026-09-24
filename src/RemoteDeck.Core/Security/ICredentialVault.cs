@@ -4,7 +4,7 @@ namespace RemoteDeck.Core.Security;
 
 /// <summary>
 /// Encrypts and lends secrets. By design no member accepts or returns a <see cref="string"/>:
-/// secrets travel as native BSTRs owned by the caller (spec §5.2).
+/// secrets travel as native BSTRs owned by the caller.
 /// </summary>
 public interface ICredentialVault
 {

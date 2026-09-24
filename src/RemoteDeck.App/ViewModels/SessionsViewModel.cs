@@ -34,7 +34,7 @@ namespace RemoteDeck.App.ViewModels;
 /// </remarks>
 internal sealed partial class SessionsViewModel : ObservableObject
 {
-    /// <summary>Per-tab budget for the §6.5 close protocol when the user closes one tab.</summary>
+    /// <summary>Per-tab budget for the close protocol when the user closes one tab.</summary>
     internal static readonly TimeSpan DefaultCloseTimeout = TimeSpan.FromSeconds(5);
 
     private readonly Action<RdpSession> _attach;
@@ -44,7 +44,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
     /// The close in flight for each tab. A second Ctrl+W — or a click on the cross while the
     /// protocol waits — joins that task instead of starting a second <c>RequestClose</c>, and so
     /// does <see cref="CloseAllAsync"/>: a window closing over a tab the user has just closed must
-    /// wait for the §6.5 protocol to finish, never dispose the control out from under it.
+    /// wait for the close protocol to finish, never dispose the control out from under it.
     /// </summary>
     private readonly Dictionary<SessionTabViewModel, Task> _closing = [];
 
@@ -227,7 +227,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
     /// <see cref="SessionTabViewModel.IsDetached"/>, and the docked area falls back to a neighbour.
     ///
     /// Moving the host — rather than re-creating the control in the new window — is what keeps the
-    /// HWND, its Win32 parent and therefore the remote session alive (design §2).
+    /// HWND, its Win32 parent and therefore the remote session alive.
     /// </summary>
     /// <returns>False when the tab is unknown, already detached, or when the move failed; the
     /// session then stays docked, exactly where the caller found it.</returns>
@@ -290,9 +290,9 @@ internal sealed partial class SessionsViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(tab);
 
-        // Same guard as Detach, for the same reason: between RequestClose and Disconnect() the §6.5
+        // Same guard as Detach, for the same reason: between RequestClose and Disconnect() the close protocol
         // protocol owns that control, and moving it from one top-level window to another underneath
-        // it is exactly the zombie session §6.5 exists to prevent. Guarded here rather than in the
+        // it is exactly the zombie session the close protocol exists to prevent. Guarded here rather than in the
         // window because the button, Ctrl+Shift+D and the caption drag all end up on this line.
         if (!_detached.TryGetValue(tab, out var window) || _closing.ContainsKey(tab))
         {
@@ -397,7 +397,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
     /// <summary>
     /// Closes a detached window whose session is gone or has moved back to the shell. The window
     /// refuses every close until <see cref="SessionWindow.AllowClose"/> has been called — that is
-    /// how it makes sure the §6.5 protocol runs — so both happen here, and neither may throw: this
+    /// how it makes sure the close protocol runs — so both happen here, and neither may throw: this
     /// runs on shutdown paths that have to finish.
     /// </summary>
     private static void Close(SessionWindow window, SessionTabViewModel tab)
@@ -460,7 +460,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Runs the §6.5 close protocol on one tab, then removes it: the host leaves the container, the
+    /// Runs the close protocol on one tab, then removes it: the host leaves the container, the
     /// tab leaves the strip, and the neighbour on its right — or, for the last tab, on its left —
     /// takes over. Never throws.
     /// </summary>
@@ -522,7 +522,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Closes every session, one after another (§6.5 is a per-control protocol: two controls closing
+    /// Closes every session, one after another (the close protocol is per control: two controls closing
     /// at once would interleave their <c>RequestClose</c> waits) — detached ones included, each
     /// followed by the window that was showing it. The budget is <see cref="ClosePlan"/>'s: five
     /// seconds per session under a thirty-second ceiling, and once that is spent the rest is torn
@@ -554,7 +554,7 @@ internal sealed partial class SessionsViewModel : ObservableObject
             // A tab the user closed a moment ago — or the cross of a detached window — already has a
             // protocol in flight with a budget of its own; CloseAsync hands that task back rather
             // than starting a second RequestClose. Skipping it here is what used to let DisposeAll
-            // tear the control down mid-protocol, i.e. exactly the zombie session §6.5 prevents.
+            // tear the control down mid-protocol, i.e. exactly the zombie session the close protocol prevents.
             bool joined = _closing.ContainsKey(tab);
             var close = CloseAsync(tab, budget);
             if (!joined)

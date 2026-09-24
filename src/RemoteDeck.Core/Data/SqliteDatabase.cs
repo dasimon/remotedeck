@@ -2,13 +2,13 @@ using Microsoft.Data.Sqlite;
 
 namespace RemoteDeck.Core.Data;
 
-/// <summary>Location and connection policy for the local database (spec §4): WAL journal, foreign keys on.</summary>
+/// <summary>Location and connection policy for the local database: WAL journal, foreign keys on.</summary>
 public sealed class SqliteDatabase(string path)
 {
     public string Path { get; } = path;
 
     /// <summary>%APPDATA%\RemoteDeck\connections.db. The ACL is inherited from %APPDATA%, so SYSTEM and the local
-    /// Administrators group can read the file as well. Local administrators are outside the threat model (spec §5.4),
+    /// Administrators group can read the file as well. Local administrators are outside the threat model,
     /// and the secret blobs stay protected by DPAPI CurrentUser regardless.</summary>
     public static string DefaultPath() => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RemoteDeck", "connections.db");

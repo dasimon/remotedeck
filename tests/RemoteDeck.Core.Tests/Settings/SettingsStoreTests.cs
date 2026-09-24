@@ -78,7 +78,7 @@ public sealed class SettingsStoreTests : IDisposable
     public void RestoreLastSession_defaults_to_false()
     {
         // Opening RemoteDeck must not connect to anything until the user has asked for it
-        // (workspaces spec §7).
+        //.
         Assert.False(new AppSettings().RestoreLastSession);
     }
 
