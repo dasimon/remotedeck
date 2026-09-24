@@ -301,8 +301,6 @@ you composed or a secret, and the app falls back to its defaults without complai
 
 ### Keyboard
 
-| Shortcut | Action |
-|---|---|
 | Shortcut | Action | Works while the remote desktop has focus |
 |---|---|---|
 | `Ctrl+K` | Command palette — connections, open tabs and commands in one list | **yes** |
@@ -440,6 +438,16 @@ including what DPAPI does **not** protect against.
 Release binaries are not code-signed. Windows SmartScreen will warn on first
 launch: choose *More info* → *Run anyway*. Signing will be reconsidered once
 the project has users.
+
+What you can check instead, before running it. Each release carries a `SHA256SUMS`
+file beside the executable:
+
+    (Get-FileHash RemoteDeck.exe -Algorithm SHA256).Hash
+
+and a provenance attestation, which proves the file was built by this repository's
+release workflow from the tagged commit:
+
+    gh attestation verify RemoteDeck.exe --repo dasimon/remotedeck
 
 ## License
 
