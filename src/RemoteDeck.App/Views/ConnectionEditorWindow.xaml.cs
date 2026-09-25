@@ -41,7 +41,42 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         _existing = existing;
         _viewModel = ConnectionEditorViewModel.From(existing ?? template, credentials, KnownGroups(), Services.WindowsVpn.KnownProfiles());
         DataContext = _viewModel;
+
+        // Says which of the two it is: a form that looks the same for "new" and "edit" leaves the
+        // user to guess whether Save will add a row or change one.
+        Title = existing is null ? Strings.Editor_TitleNew : Text.Of(Strings.Editor_TitleEdit, existing.Name);
+        EditorTitleBar.Title = Title;
+
+        _initial = Snapshot();
+        Closing += OnClosing;
         Loaded += (_, _) => NameInput.Focus();
+    }
+
+    /// <summary>The form as it stood when the window opened, to tell whether leaving loses anything.</summary>
+    private readonly string _initial;
+
+    /// <summary>Everything the form would write, as one comparable string.</summary>
+    private string Snapshot()
+    {
+        var probe = new Connection { Name = "", Host = "" };
+        _viewModel.ApplyTo(probe);
+        return System.Text.Json.JsonSerializer.Serialize(probe);
+    }
+
+    /// <summary>
+    /// Escape, Cancel and the title bar's cross all end here. The form is long, and one keystroke
+    /// used to throw it away in silence; now a changed form asks first, with No as the default.
+    /// </summary>
+    private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (Saved || Snapshot() == _initial)
+        {
+            return;
+        }
+
+        var answer = System.Windows.MessageBox.Show(this, Strings.Editor_DiscardMessage, Strings.Editor_DiscardTitle,
+            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        e.Cancel = answer != MessageBoxResult.Yes;
     }
 
     /// <summary>The groups already in use, so the group combo suggests them instead of inviting typos.</summary>
@@ -62,14 +97,19 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        // The existing instance is edited in place so an Update carries the columns the form does not
-        // expose (LastConnectedUtc, CreatedUtc) through unchanged.
-        var connection = _existing ?? new Connection { Name = "", Host = "" };
+        // A copy of the existing instance, so an Update carries the columns the form does not expose
+        // (LastConnectedUtc, CreatedUtc) through unchanged — and a failed write leaves the instance
+        // the pane shows, and connects with, as it was.
+        var connection = _existing?.Copy() ?? new Connection { Name = "", Host = "" };
         _viewModel.ApplyTo(connection);
 
         try
         {
             if (_existing is null) _repository.Insert(connection); else _repository.Update(connection);
+
+            // Written: now the shared instance may change. An open session holds that same
+            // instance, and its tab and next reconnect follow the edit, as they always have.
+            if (_existing is not null) _viewModel.ApplyTo(_existing);
             ProbeLog.Write("connections", $"'{connection.Name}' {(_existing is null ? "created" : "updated")}");
             Saved = true;
             Close();

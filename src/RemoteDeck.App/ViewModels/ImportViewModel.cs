@@ -235,6 +235,7 @@ public sealed partial class ImportViewModel : ObservableObject
             {
                 _repository.Insert(ToConnection(row.Candidate));
                 imported++;
+                TotalImported++;
             }
         }
         finally
@@ -244,6 +245,12 @@ public sealed partial class ImportViewModel : ObservableObject
 
         return imported;
     }
+
+    /// <summary>
+    /// Every connection written since the window opened, counted row by row — so an import that
+    /// throws halfway still reports the rows it did write, and the pane reloads to show them.
+    /// </summary>
+    public int TotalImported { get; private set; }
 
     /// <summary>Ticks every row still marked new, and only those.</summary>
     public void SelectAllNew()

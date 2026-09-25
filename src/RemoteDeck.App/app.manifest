@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="0.1.0.0" name="RemoteDeck" />
+  <!-- Not the product version, which the release tag stamps on the executable: a manifest
+       identity only has to be well-formed, and a number here would be a second one to bump. -->
+  <assemblyIdentity version="1.0.0.0" name="RemoteDeck" />
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!-- Never elevated, and no UAC file or registry virtualisation. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <!-- R3: per-monitor DPI so the RDP surface is rendered crisp on mixed-DPI setups -->

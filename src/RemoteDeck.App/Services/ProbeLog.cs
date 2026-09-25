@@ -41,18 +41,46 @@ internal static class ProbeLog
         var line = $"{DateTime.UtcNow:O} [{probe}] {message}";
         lock (Gate)
         {
-            var writer = _writer ??= Open();
-            if (writer.BaseStream.Length > RollAt)
+            // Never throws: callers write from connect and catch paths, and a log that cannot be
+            // written must not become the error the user sees in place of the real one.
+            try
             {
-                writer.Dispose();
-                _writer = null;
-                File.Move(Path, PreviousPath, overwrite: true);
-                writer = _writer = Open();
-            }
+                var writer = _writer ??= Open();
+                if (writer.BaseStream.Length > RollAt)
+                {
+                    writer = _writer = Roll(writer);
+                }
 
-            writer.WriteLine(line);
+                writer.WriteLine(line);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _writer?.Dispose();
+                _writer = null;
+                System.Diagnostics.Debug.WriteLine($"[probe-log] write failed: {ex.Message}");
+            }
         }
         System.Diagnostics.Debug.WriteLine(line);
+    }
+
+    /// <summary>
+    /// Moves the file aside and starts a new one. A move that fails — a viewer holding the file
+    /// without delete sharing — leaves the log growing past the limit until the next line tries
+    /// again, rather than losing every line after it.
+    /// </summary>
+    private static StreamWriter Roll(StreamWriter writer)
+    {
+        writer.Dispose();
+        try
+        {
+            File.Move(Path, PreviousPath, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[probe-log] roll failed, still appending: {ex.Message}");
+        }
+
+        return Open();
     }
 
     private static StreamWriter Open()

@@ -60,7 +60,7 @@ public static class DisconnectReason
     {
         var table = new Dictionary<int, DisconnectDescription>();
 
-        // Not errors — the session ended on purpose (§6.4: never shown as a failure).
+        // Not errors — the session ended on purpose (never shown as a failure).
         Add(DisconnectCategory.NotAnError, 0, "No information available");        // disconnectReasonNoInfo
         Add(DisconnectCategory.NotAnError, 1, "Disconnected locally");            // disconnectReasonLocalNotError
         Add(DisconnectCategory.NotAnError, 2, "Disconnected by the remote user"); // disconnectReasonRemoteByUser

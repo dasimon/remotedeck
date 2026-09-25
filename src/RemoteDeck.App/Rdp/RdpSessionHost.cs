@@ -21,6 +21,11 @@ internal sealed class RdpSessionHost : IDisposable
     private readonly IMsRdpClient10 _client;
     private readonly IMsTscAxEvents_Event _events;
     private readonly IMsTscAxEvents_OnConfirmCloseEventHandler _onConfirmClose;
+
+    /// <summary>One entry per handler subscribed in the constructor, run by <see cref="Dispose"/>:
+    /// a handler left on the control keeps this object reachable from it, and a callback that
+    /// fires during teardown would run against a host that is gone.</summary>
+    private readonly List<Action> _unsubscribe = [];
     private TaskCompletionSource? _closed;
     private bool _disposed;
     // See LogDisplayFailure: outside the logged-on window, one [display] line per session rather
@@ -60,8 +65,8 @@ internal sealed class RdpSessionHost : IDisposable
         // R2 probe: does subscribing to the COM event interface work through the generated interop?
         // Every sink body goes through Sink(): an exception escaping into the control's callback
         // is undefined behaviour, so it is logged and swallowed instead.
-        _events.OnConnecting += () => Sink("OnConnecting", () => Raise("Connecting…"));
-        _events.OnConnected += () => Sink("OnConnected", () =>
+        IMsTscAxEvents_OnConnectingEventHandler onConnecting = () => Sink("OnConnecting", () => Raise("Connecting…"));
+        IMsTscAxEvents_OnConnectedEventHandler onConnected = () => Sink("OnConnected", () =>
         {
             // Each new session is entitled to its own single [display] failure line, and the
             // desktop it will get is not logged on yet.
@@ -70,7 +75,7 @@ internal sealed class RdpSessionHost : IDisposable
             Raise("Connected");
             Connected?.Invoke();
         });
-        _events.OnLoginComplete += () => Sink("OnLoginComplete", () =>
+        IMsTscAxEvents_OnLoginCompleteEventHandler onLoginComplete = () => Sink("OnLoginComplete", () =>
         {
             // The remote desktop is up: resolution changes start being accepted here, and the
             // [display] budget is re-armed so the resizes that follow are all visible.
@@ -79,16 +84,16 @@ internal sealed class RdpSessionHost : IDisposable
             Raise("Logged on");
             LoggedOn?.Invoke();
         });
-        _events.OnAuthenticationWarningDisplayed += () => Sink("OnAuthenticationWarningDisplayed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDisplayed fired (certificate warning shown by the control)"));
-        _events.OnAuthenticationWarningDismissed += () => Sink("OnAuthenticationWarningDismissed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDismissed fired"));
-        _events.OnLogonError += error => Sink("OnLogonError", () => ProbeLog.Write("session", $"OnLogonError lError={error}"));
-        _events.OnFatalError += code => Sink("OnFatalError", () => ProbeLog.Write("session", $"OnFatalError errorCode={code}"));
-        _events.OnDisconnected += OnDisconnected;
+        IMsTscAxEvents_OnAuthenticationWarningDisplayedEventHandler onWarningDisplayed = () => Sink("OnAuthenticationWarningDisplayed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDisplayed fired (certificate warning shown by the control)"));
+        IMsTscAxEvents_OnAuthenticationWarningDismissedEventHandler onWarningDismissed = () => Sink("OnAuthenticationWarningDismissed", () => ProbeLog.Write("R5", "OnAuthenticationWarningDismissed fired"));
+        IMsTscAxEvents_OnLogonErrorEventHandler onLogonError = error => Sink("OnLogonError", () => ProbeLog.Write("session", $"OnLogonError lError={error}"));
+        IMsTscAxEvents_OnFatalErrorEventHandler onFatalError = code => Sink("OnFatalError", () => ProbeLog.Write("session", $"OnFatalError errorCode={code}"));
+        IMsTscAxEvents_OnDisconnectedEventHandler onDisconnected = OnDisconnected;
 
         // Container-handled full screen: Ctrl+Alt+Break stops toggling the control's own full-screen
-        // window and raises these instead, so RemoteDeck keeps its own chrome (design §5).
-        _events.OnRequestGoFullScreen += () => Sink("OnRequestGoFullScreen", () => RequestGoFullScreen?.Invoke());
-        _events.OnRequestLeaveFullScreen += () => Sink("OnRequestLeaveFullScreen", () => RequestLeaveFullScreen?.Invoke());
+        // window and raises these instead, so RemoteDeck keeps its own chrome.
+        IMsTscAxEvents_OnRequestGoFullScreenEventHandler onGoFullScreen = () => Sink("OnRequestGoFullScreen", () => RequestGoFullScreen?.Invoke());
+        IMsTscAxEvents_OnRequestLeaveFullScreenEventHandler onLeaveFullScreen = () => Sink("OnRequestLeaveFullScreen", () => RequestLeaveFullScreen?.Invoke());
 
         // RequestClose contract: if the user is logged on, the control asks before closing.
         // Returning true lets it disconnect; OnDisconnected then completes the close.
@@ -98,7 +103,29 @@ internal sealed class RdpSessionHost : IDisposable
             ProbeLog.Write("close", "OnConfirmClose → allowing");
             return true;
         }, fallback: true);
+
+        _events.OnConnecting += onConnecting;
+        _unsubscribe.Add(() => _events.OnConnecting -= onConnecting);
+        _events.OnConnected += onConnected;
+        _unsubscribe.Add(() => _events.OnConnected -= onConnected);
+        _events.OnLoginComplete += onLoginComplete;
+        _unsubscribe.Add(() => _events.OnLoginComplete -= onLoginComplete);
+        _events.OnAuthenticationWarningDisplayed += onWarningDisplayed;
+        _unsubscribe.Add(() => _events.OnAuthenticationWarningDisplayed -= onWarningDisplayed);
+        _events.OnAuthenticationWarningDismissed += onWarningDismissed;
+        _unsubscribe.Add(() => _events.OnAuthenticationWarningDismissed -= onWarningDismissed);
+        _events.OnLogonError += onLogonError;
+        _unsubscribe.Add(() => _events.OnLogonError -= onLogonError);
+        _events.OnFatalError += onFatalError;
+        _unsubscribe.Add(() => _events.OnFatalError -= onFatalError);
+        _events.OnDisconnected += onDisconnected;
+        _unsubscribe.Add(() => _events.OnDisconnected -= onDisconnected);
+        _events.OnRequestGoFullScreen += onGoFullScreen;
+        _unsubscribe.Add(() => _events.OnRequestGoFullScreen -= onGoFullScreen);
+        _events.OnRequestLeaveFullScreen += onLeaveFullScreen;
+        _unsubscribe.Add(() => _events.OnRequestLeaveFullScreen -= onLeaveFullScreen);
         _events.OnConfirmClose += _onConfirmClose;
+        _unsubscribe.Add(() => _events.OnConfirmClose -= _onConfirmClose);
 
         ProbeLog.Write("R2", "Subscribed to IMsTscAxEvents_Event via TlbImp-generated interop");
     }
@@ -145,10 +172,10 @@ internal sealed class RdpSessionHost : IDisposable
         // when a session drops it puts up its "Reconnecting... 1 of 5" dialog and only reports
         // OnDisconnected once its own five attempts are spent. Left enabled, the two mechanisms
         // stack (5 + 5) and RemoteDeck's UI lies for the whole of the control's phase — the tab
-        // still reads "Connected" while the session is in fact down. ReconnectPolicy (spec §6.3) is
+        // still reads "Connected" while the session is in fact down. ReconnectPolicy is
         // therefore the single reconnection mechanism: its six retryable codes, its 2/5/10/30/60 s
         // backoff, its visible and cancellable countdown, and — something the control's own loop
-        // cannot do — the secret re-lent by the vault for every attempt (§5.2).
+        // cannot do — the secret re-lent by the vault for every attempt.
         // IMsRdpClientAdvancedSettings2::EnableAutoReconnect; settable on a disconnected control
         // only, which is exactly the state Configure runs in.
         // https://learn.microsoft.com/windows/win32/termserv/imsrdpclientadvancedsettings2-enableautoreconnect
@@ -409,6 +436,10 @@ internal sealed class RdpSessionHost : IDisposable
     /// control asks the session (OnConfirmClose) and disconnects, so wait for OnDisconnected up
     /// to <paramref name="timeout"/>, then force Disconnect().
     /// https://learn.microsoft.com/windows/win32/termserv/imsrdpclient-requestclose
+    /// <para>
+    /// This sequence is what the rest of the code calls <em>the close protocol</em>. Disposing a
+    /// control without it leaves the session open on the server — the "zombie" it exists to prevent.
+    /// </para>
     /// </summary>
     public async Task CloseAsync(TimeSpan timeout)
     {
@@ -523,7 +554,19 @@ internal sealed class RdpSessionHost : IDisposable
         }
 
         _disposed = true;
-        _events.OnDisconnected -= OnDisconnected;
-        _events.OnConfirmClose -= _onConfirmClose;
+        foreach (var unsubscribe in _unsubscribe)
+        {
+            try
+            {
+                unsubscribe();
+            }
+            catch (Exception ex)
+            {
+                // A control already torn down may refuse the call; the remaining handlers still go.
+                ProbeLog.Write("session", $"Event unsubscription failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            }
+        }
+
+        _unsubscribe.Clear();
     }
 }

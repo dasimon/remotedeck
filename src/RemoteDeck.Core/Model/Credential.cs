@@ -2,7 +2,7 @@ namespace RemoteDeck.Core.Model;
 
 /// <summary>
 /// A reusable account. The secret is stored as an opaque DPAPI blob plus per-row entropy;
-/// this type never holds the decrypted value (spec §5).
+/// this type never holds the decrypted value.
 /// </summary>
 public sealed class Credential
 {
@@ -13,4 +13,9 @@ public sealed class Credential
     public required byte[] SecretBlob { get; set; }
     public required byte[] Entropy { get; set; }
     public DateTime ModifiedUtc { get; set; }
+
+    /// <summary>A field-for-field copy, for an editor to change without touching the instance a
+    /// list still shows until the write succeeds. The byte arrays are shared: sealing a secret
+    /// assigns new ones rather than writing into these.</summary>
+    public Credential Copy() => (Credential)MemberwiseClone();
 }

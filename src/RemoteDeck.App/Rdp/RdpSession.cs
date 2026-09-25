@@ -100,6 +100,11 @@ internal sealed class RdpSession : IDisposable
     private DateTime _retryDueUtc;
     private int _lastExtendedReason;
 
+    /// <summary>Set by <see cref="CancelReconnect"/>, cleared by the next attempt the user or the
+    /// shell starts: until then a drop is final, even the one an attempt already in flight reports
+    /// after the user gave up on it.</summary>
+    private bool _retriesCancelled;
+
     /// <summary>Set once <see cref="RdpSessionHost.UpdateDisplay"/> has been refused twice: from then
     /// on the control scales the image instead, and no further resize is attempted for this session.</summary>
     private bool _smartSizingFallback;
@@ -200,7 +205,7 @@ internal sealed class RdpSession : IDisposable
     /// <summary>
     /// Tells the session its host has moved to another window. The size subscription and the DPI both
     /// belong to the new parent: without this, dynamic resolution keeps measuring the old window —
-    /// exactly the flaw the spike found on the alternative technique (design §2).
+    /// exactly the flaw the spike found on the alternative technique.
     /// </summary>
     public void AttachedTo(FrameworkElement newParent)
     {
@@ -283,7 +288,8 @@ internal sealed class RdpSession : IDisposable
     /// <remarks>
     /// Cancelling while a retry is already in flight cannot recall it — if that attempt succeeds,
     /// <c>OnConnected</c> still moves the session to <see cref="SessionState.Connected"/>, which is
-    /// the outcome the user wanted anyway.
+    /// the outcome the user wanted anyway. If it fails, the session stays failed: the drop it
+    /// reports does not start a new countdown.
     /// </remarks>
     public void CancelReconnect()
     {
@@ -293,12 +299,13 @@ internal sealed class RdpSession : IDisposable
         }
 
         StopCountdown();
+        _retriesCancelled = true;
         ProbeLog.Write("session", $"'{Connection.Name}': reconnection cancelled by the user");
         SetState(SessionState.Failed);
     }
 
     /// <summary>
-    /// Closes the session following the §6.5 protocol (<see cref="RdpSessionHost.CloseAsync"/>) and
+    /// Closes the session following the close protocol (<see cref="RdpSessionHost.CloseAsync"/>) and
     /// disposes everything it owns. Terminal: the session is <see cref="SessionState.Closed"/>
     /// afterwards and cannot be restarted.
     /// </summary>
@@ -381,6 +388,7 @@ internal sealed class RdpSession : IDisposable
     /// </summary>
     private async Task RunAttemptAsync(SessionState phase)
     {
+        _retriesCancelled = false;
         SetState(phase);
 
         // A new attempt means a new remote desktop: nothing known about the previous one carries
@@ -510,10 +518,20 @@ internal sealed class RdpSession : IDisposable
 
         if (!description.IsError)
         {
-            // Codes 0–3 (spec §6.4): the session ended on purpose. The tab stays, with Reconnect.
+            // Codes 0–3: the session ended on purpose. The tab stays, with Reconnect.
             StopCountdown();
             ProbeLog.Write("session", $"'{Connection.Name}': disconnected normally (code {info.Reason} — {description.Title})");
             SetState(SessionState.Idle);
+            return;
+        }
+
+        if (_retriesCancelled)
+        {
+            // The attempt the user cancelled has just failed: it must not restart the countdown
+            // they stopped.
+            StopCountdown();
+            ProbeLog.Write("session", $"'{Connection.Name}': cancelled attempt ended (code {info.Reason} — {description.Title}); no retry");
+            SetState(SessionState.Failed);
             return;
         }
 

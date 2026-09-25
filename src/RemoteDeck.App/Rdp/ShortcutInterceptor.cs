@@ -5,7 +5,7 @@ using RemoteDeck.App.Services;
 namespace RemoteDeck.App.Rdp;
 
 /// <summary>
-/// Catches application shortcuts before the RDP control swallows them (spec §7.3, R6).
+/// Catches application shortcuts before the RDP control swallows them.
 /// Four interchangeable mechanisms; the lot-0 probe keeps the one that fires while the
 /// remote session has keyboard focus.
 /// </summary>
@@ -21,7 +21,7 @@ namespace RemoteDeck.App.Rdp;
 /// therefore the default mechanism; the other three are kept as diagnostic options, not as
 /// credible fallbacks.
 /// <para>
-/// The §7.3 rule "no synchronous I/O in the low-level callback" is honoured: Windows enforces
+/// The rule "no synchronous I/O in the low-level callback" is honoured: Windows enforces
 /// <c>LowLevelHooksTimeout</c> (300 ms by default) and silently uninstalls a hook that overruns
 /// it. <see cref="LowLevelHookCallback"/> only computes the swallow/pass decision — a few
 /// <c>GetAsyncKeyState</c> calls, no file access — and posts the log write and the

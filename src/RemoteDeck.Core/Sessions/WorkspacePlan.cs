@@ -36,7 +36,7 @@ public sealed record WorkspaceAction(WorkspaceActionKind Kind, long ConnectionId
 
 /// <summary>
 /// Turns a workspace into a list of actions, given the connections that still exist, the sessions
-/// already open and the screens present right now (workspaces spec §4.1).
+/// already open and the screens present right now.
 ///
 /// Pure: no I/O, no UI, no state. That is this type's reason to exist — the decision can be tested,
 /// the WPF execution cannot.

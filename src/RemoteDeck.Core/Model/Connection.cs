@@ -1,6 +1,6 @@
 namespace RemoteDeck.Core.Model;
 
-/// <summary>One saved RDP target. Mirrors the Connection table (spec §4) one-to-one.</summary>
+/// <summary>One saved RDP target. Mirrors the Connection table one-to-one.</summary>
 public sealed class Connection
 {
     public long Id { get; set; }
@@ -43,4 +43,8 @@ public sealed class Connection
     public string Notes { get; set; } = "";
     public DateTime? LastConnectedUtc { get; set; }
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>A field-for-field copy, for an editor to change without touching the instance a
+    /// list still shows until the write succeeds.</summary>
+    public Connection Copy() => (Connection)MemberwiseClone();
 }

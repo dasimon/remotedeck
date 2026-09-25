@@ -17,11 +17,15 @@ internal static class SecretBytes
     {
         if (bstr == 0) throw new ArgumentException("BSTR must not be null.", nameof(bstr));
         int chars = Marshal.ReadInt32(bstr, -4) / 2;   // BSTR length prefix is in bytes
-        var buffer = new char[chars];
+        // Pinned, both of them: a compacting GC may copy an ordinary array before it is cleared,
+        // and the copy it leaves behind is a secret nobody zeroes.
+        var buffer = GC.AllocateUninitializedArray<char>(chars, pinned: true);
         Marshal.Copy(bstr, buffer, 0, chars);
         try
         {
-            return Encoding.UTF8.GetBytes(buffer);
+            var utf8 = GC.AllocateUninitializedArray<byte>(Encoding.UTF8.GetByteCount(buffer), pinned: true);
+            Encoding.UTF8.GetBytes(buffer, utf8);
+            return utf8;
         }
         finally
         {
@@ -38,7 +42,7 @@ internal static class SecretBytes
         {
             Encoding.UTF8.GetChars(utf8, chars);
             nint bstr = SysAllocStringLen(handle.AddrOfPinnedObject(), (uint)chars.Length);
-            if (bstr == 0) throw new OutOfMemoryException("SysAllocStringLen failed.");
+            if (bstr == 0) throw new InsufficientMemoryException("SysAllocStringLen failed.");
             return bstr;
         }
         finally

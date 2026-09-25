@@ -49,8 +49,17 @@ public sealed class SettingsStore(string path)
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
-        var temporary = path + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, Options));
-        File.Move(temporary, path, overwrite: true);
+        // One temporary file per save, not one shared name: two instances closing together would
+        // otherwise write into the same file and one of them would fail with a sharing violation.
+        var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temporary, JsonSerializer.Serialize(settings, Options));
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 }

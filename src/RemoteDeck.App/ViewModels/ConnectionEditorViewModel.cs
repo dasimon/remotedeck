@@ -114,9 +114,11 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     public IReadOnlyList<string> KnownGroups { get; init; } = [];
 
     /// <summary>Instance views on the fixed option lists: the binding engine only walks instance properties.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = "Bound from XAML, which needs an instance property.")]
     public IReadOnlyList<DisplayModeOption> DisplayModes => AllDisplayModes;
 
     /// <inheritdoc cref="DisplayModes" />
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = "Bound from XAML, which needs an instance property.")]
     public IReadOnlyList<AuthenticationLevelOption> AuthenticationLevels => AllAuthenticationLevels;
 
     /// <summary>The persisted display mode, read and written through the selected combo row. An enum

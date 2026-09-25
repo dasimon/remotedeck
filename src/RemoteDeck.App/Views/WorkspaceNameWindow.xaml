@@ -8,6 +8,7 @@
                  Width="420" SizeToContent="Height"
                  ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner"
+                 ShowInTaskbar="False"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round">
@@ -29,7 +30,7 @@
         <!-- No Height: RdControlHeight is the button token, and forcing it here clipped the text —
              a WPF-UI TextBox carries its own padding and must be left to size itself. Every other
              text field in the application sets a margin and nothing else; this one follows. -->
-        <ui:TextBox x:Name="NameBox" Grid.Row="2" Margin="16,0,16,12"
+        <ui:TextBox x:Name="NameBox" Grid.Row="2" Margin="16,0,16,12" AutomationProperties.Name="{x:Static res:Strings.WorkspaceName_NameLabel}"
                     PlaceholderText="{x:Static res:Strings.WorkspaceName_NamePlaceholder}"
                     TextChanged="OnNameChanged" />
 
@@ -38,15 +39,16 @@
                   Foreground="{DynamicResource RdText}" />
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,0">
+            <!-- Cancel then Save, the order of every other dialog in the application. -->
+            <ui:Button MinWidth="96" Margin="0,0,8,0"
+                       Content="{x:Static res:Strings.WorkspaceName_Cancel}"
+                       IsCancel="True"
+                       Click="OnCancelClick" />
             <ui:Button x:Name="SaveButton" MinWidth="96"
                        Appearance="Primary"
                        Content="{x:Static res:Strings.WorkspaceName_Save}"
                        IsDefault="True"
                        Click="OnSaveClick" />
-            <ui:Button MinWidth="96" Margin="8,0,0,0"
-                       Content="{x:Static res:Strings.WorkspaceName_Cancel}"
-                       IsCancel="True"
-                       Click="OnCancelClick" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

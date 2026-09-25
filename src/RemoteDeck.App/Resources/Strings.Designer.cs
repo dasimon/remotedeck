@@ -883,7 +883,7 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Press Delete again to confirm..
+        ///   Looks up a localized string similar to Delete it again within 5 seconds to confirm..
         /// </summary>
         public static string Shell_DeleteConfirmMessage {
             get {
@@ -1927,7 +1927,7 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to '{0}' will be removed; connections using it will need a new credential. Click again to confirm..
+        ///   Looks up a localized string similar to '{0}' will be removed; connections using it will need a new credential. Delete it again within 5 seconds to confirm..
         /// </summary>
         public static string Credentials_DeleteConfirmMessage {
             get {
@@ -2879,6 +2879,222 @@ namespace RemoteDeck.App.Resources {
         public static string Pane_VpnDown {
             get {
                 return ResourceManager.GetString("Pane_VpnDown", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Press Ctrl+W again to close “{0}”.
+        /// </summary>
+        public static string Shell_CloseShortcutArmedTitle {
+            get {
+                return ResourceManager.GetString("Shell_CloseShortcutArmedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Within 3 seconds. Inside a remote desktop, Ctrl+W belongs to RemoteDeck, not to the remote application..
+        /// </summary>
+        public static string Shell_CloseShortcutArmedMessage {
+            get {
+                return ResourceManager.GetString("Shell_CloseShortcutArmedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Discard your changes?.
+        /// </summary>
+        public static string Editor_DiscardTitle {
+            get {
+                return ResourceManager.GetString("Editor_DiscardTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to What you changed in this connection has not been saved..
+        /// </summary>
+        public static string Editor_DiscardMessage {
+            get {
+                return ResourceManager.GetString("Editor_DiscardMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to New connection.
+        /// </summary>
+        public static string Editor_TitleNew {
+            get {
+                return ResourceManager.GetString("Editor_TitleNew", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Edit “{0}”.
+        /// </summary>
+        public static string Editor_TitleEdit {
+            get {
+                return ResourceManager.GetString("Editor_TitleEdit", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to New credential.
+        /// </summary>
+        public static string CredEditor_TitleNew {
+            get {
+                return ResourceManager.GetString("CredEditor_TitleNew", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No credential yet. Add one to connect without typing a password each time..
+        /// </summary>
+        public static string Credentials_Empty {
+            get {
+                return ResourceManager.GetString("Credentials_Empty", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Edit connection.
+        /// </summary>
+        public static string Palette_EditConnection {
+            get {
+                return ResourceManager.GetString("Palette_EditConnection", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open the editor on {0}.
+        /// </summary>
+        public static string Palette_EditConnectionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_EditConnectionSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete connection.
+        /// </summary>
+        public static string Palette_DeleteConnection {
+            get {
+                return ResourceManager.GetString("Palette_DeleteConnection", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Remove {0}, after a confirmation.
+        /// </summary>
+        public static string Palette_DeleteConnectionSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_DeleteConnectionSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Update workspace “{0}”.
+        /// </summary>
+        public static string Palette_UpdateWorkspace {
+            get {
+                return ResourceManager.GetString("Palette_UpdateWorkspace", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Replace its contents with the sessions open now.
+        /// </summary>
+        public static string Palette_UpdateWorkspaceSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_UpdateWorkspaceSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to About RemoteDeck.
+        /// </summary>
+        public static string About_Title {
+            get {
+                return ResourceManager.GetString("About_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Version {0}.
+        /// </summary>
+        public static string About_Version {
+            get {
+                return ResourceManager.GetString("About_Version", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Source code.
+        /// </summary>
+        public static string About_SourceCode {
+            get {
+                return ResourceManager.GetString("About_SourceCode", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Releases.
+        /// </summary>
+        public static string About_Releases {
+            get {
+                return ResourceManager.GetString("About_Releases", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open the log folder.
+        /// </summary>
+        public static string About_OpenLogs {
+            get {
+                return ResourceManager.GetString("About_OpenLogs", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Copy the details.
+        /// </summary>
+        public static string About_CopyDetails {
+            get {
+                return ResourceManager.GetString("About_CopyDetails", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Copied.
+        /// </summary>
+        public static string About_DetailsCopied {
+            get {
+                return ResourceManager.GetString("About_DetailsCopied", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Close.
+        /// </summary>
+        public static string About_Close {
+            get {
+                return ResourceManager.GetString("About_Close", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to About RemoteDeck.
+        /// </summary>
+        public static string Palette_About {
+            get {
+                return ResourceManager.GetString("Palette_About", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Version, licence, logs.
+        /// </summary>
+        public static string Palette_AboutSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_AboutSubtitle", resourceCulture);
             }
         }
     }

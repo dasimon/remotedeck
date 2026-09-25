@@ -20,7 +20,7 @@ public partial class App : System.Windows.Application
     /// <summary>Composition root. Repositories and the vault are stateless singletons.</summary>
     public IServiceProvider Services { get; private set; } = new ServiceCollection().BuildServiceProvider();
 
-    /// <summary>The local database, opened and migrated at startup (spec §4). Null until <see cref="OnStartup"/> has run.</summary>
+    /// <summary>The local database, opened and migrated at startup. Null until <see cref="OnStartup"/> has run.</summary>
     public SqliteDatabase? Database { get; private set; }
 
     /// <summary>
@@ -162,7 +162,7 @@ public partial class App : System.Windows.Application
 
     /// <summary>
     /// The UI language is Windows' own (<see cref="CultureInfo.CurrentUICulture"/>) and v1 offers no
-    /// setting to change it — spec §9. REMOTEDECK_UI_CULTURE overrides it for verification only: it is
+    /// setting to change it. REMOTEDECK_UI_CULTURE overrides it for verification only: it is
     /// how the French pass is checked without changing the machine's language, and it is read here,
     /// before any window exists, because a <c>{x:Static}</c> binding reads its resource when the window
     /// is loaded and never again.

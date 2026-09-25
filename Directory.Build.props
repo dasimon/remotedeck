@@ -5,6 +5,9 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
+    <!-- The recommended rule set, pinned to .NET 10 rather than "latest": with warnings as errors, a
+         newer SDK bringing new rules must not break the build on its own. Exceptions: .editorconfig. -->
+    <AnalysisLevel>10.0-recommended</AnalysisLevel>
     <Authors>David Simon</Authors>
     <Copyright>Copyright (c) 2026 David Simon. MIT License.</Copyright>
   </PropertyGroup>

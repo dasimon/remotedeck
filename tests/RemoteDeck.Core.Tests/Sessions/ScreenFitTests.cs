@@ -66,6 +66,21 @@ public sealed class ScreenFitTests
     }
 
     [Fact]
+    public void A_screen_smaller_than_the_minimum_wins_over_the_minimum()
+    {
+        // 1366×768 at 175 %, taskbar excluded: about 780×411 device-independent pixels.
+        var small = new ScreenBounds(0, 0, 780, 411);
+        var saved = new DetachedWindowPlacement(10, 10, 1280, 800, false);
+
+        var fitted = ScreenFit.Choose(saved, [small]);
+
+        Assert.NotNull(fitted);
+        Assert.Equal(780, fitted.Width);
+        Assert.Equal(411, fitted.Height);
+        Assert.Equal(0, fitted.Top);
+    }
+
+    [Fact]
     public void The_full_screen_flag_survives_fitting()
     {
         var saved = new DetachedWindowPlacement(1850, 100, 1280, 800, true);

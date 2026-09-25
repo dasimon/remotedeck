@@ -2,7 +2,7 @@ using System.Resources;
 using System.Windows;
 
 // The neutral Strings.resx is English, so an English UI needs no satellite assembly: the resource
-// manager stops looking as soon as it sees this attribute (spec §9). Every other culture falls back
+// manager stops looking as soon as it sees this attribute. Every other culture falls back
 // to it, and fr-FR finds its own satellite first.
 [assembly: NeutralResourcesLanguage("en")]
 

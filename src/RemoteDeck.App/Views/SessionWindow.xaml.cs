@@ -19,7 +19,7 @@ namespace RemoteDeck.App.Views;
 /// The window owns no protocol. It raises <see cref="ReattachRequested"/>,
 /// <see cref="CloseRequested"/> and — while it is being dragged by its caption —
 /// <see cref="CaptionDragMoved"/> / <see cref="CaptionDragEnded"/>, then waits:
-/// <c>SessionsViewModel</c> is the only thing allowed to move a host between containers, the §6.5
+/// <c>SessionsViewModel</c> is the only thing allowed to move a host between containers, the close protocol
 /// close protocol belongs to the shell, and so does the decision that a drag ended over the tab
 /// strip. What the window does own is its own geometry — full screen and
 /// <see cref="CurrentPlacement"/>.
@@ -41,7 +41,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// where "there" means is decided by the shell, not here.</summary>
     private readonly SessionsViewModel _sessions;
 
-    /// <summary>What full screen replaced, so leaving it can put all three back (spec §5).</summary>
+    /// <summary>What full screen replaced, so leaving it can put all three back.</summary>
     private WindowState _restoreState = WindowState.Normal;
     private WindowStyle _restoreStyle = WindowStyle.SingleBorderWindow;
     private Rect _restoreBounds = Rect.Empty;
@@ -144,7 +144,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>True while the window covers the screen it sits on.</summary>
     public bool IsFullScreen => _isFullScreen;
 
-    /// <summary>Lets the next close through. Called by the shell once the §6.5 protocol has run;
+    /// <summary>Lets the next close through. Called by the shell once the close protocol has run;
     /// the window then closes on its own or on the caller's <c>Close()</c>.</summary>
     public void AllowClose()
     {
@@ -179,7 +179,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     // ---------------------------------------------------------------- full screen
 
     /// <summary>
-    /// Full screen is a borderless maximized window (spec §5). WPF maximizes onto the screen the
+    /// Full screen is a borderless maximized window. WPF maximizes onto the screen the
     /// window currently sits on, which is what lets two detached windows fill two monitors at the
     /// same time — no multimon flag, no explicit screen arithmetic.
     ///
@@ -325,7 +325,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         if (e.ClickCount > 1)
         {
             // Same guard as the bar's Reattach and as the caption's own button: a session on its way
-            // out through the §6.5 protocol must not be moved back into the shell mid-close.
+            // out through the close protocol must not be moved back into the shell mid-close.
             e.Handled = true;
             if (!_closeRequested)
             {
@@ -475,7 +475,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary><em>Reconnect</em> is offered exactly where a new attempt is legal (Failed, or Idle
     /// after a normal disconnect) and <em>Cancel</em> exactly where a retry is pending, so the two
     /// are never both on screen — the same rule as the shell's session bar. <em>Reattach</em> goes
-    /// with them once the cross has been answered: the shell is running §6.5 over this session, and
+    /// with them once the cross has been answered: the shell is running the close protocol over this session, and
     /// that protocol must not have its control moved to another window underneath it.</summary>
     private void RefreshCaption()
     {
@@ -492,7 +492,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>Reports the session's state in the one place RemoteDeck reports anything. Wording,
-    /// severity rule and resource keys are shared with the shell (§6.4): a session says the same
+    /// severity rule and resource keys are shared with the shell: a session says the same
     /// thing whether it is docked or detached.</summary>
     private void RefreshInfoBar() => SessionStatusPresenter.Report(StatusBar, _tab);
 
@@ -500,7 +500,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>
     /// Closing this window means closing the session it holds, and that protocol is the shell's
-    /// (§6.5). So the first pass cancels and asks: the shell disconnects the session, calls
+    ///. So the first pass cancels and asks: the shell disconnects the session, calls
     /// <see cref="AllowClose"/> and closes the window, and this handler then lets it go. Same
     /// two-pass shape the shell uses for itself.
     /// </summary>

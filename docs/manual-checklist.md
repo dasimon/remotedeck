@@ -143,7 +143,7 @@ proven; what remains yours is whether the French **reads** well and fits its con
       again instead of deleting.
 - [ ] `Delete` inside the **search box** deletes characters; it never arms a deletion.
 - [ ] `Ctrl+B` collapses and restores the pane **while the RDP control has focus**
-      (low-level hook path, §7.3) and with the focus in the WPF chrome (`InputBinding`
+      (low-level hook path) and with the focus in the WPF chrome (`InputBinding`
       path). It must never fire twice for one press.
 
 ### Layout persistence
@@ -248,14 +248,14 @@ probe has not been run. The lot is not closed until this section is.
 ### Known limitations to confirm (not regressions)
 
 - [x] ~~`Ctrl+W` typed inside a **text box** still closes the active tab~~ — **fixed in
-      lot 5**. The hook now asks the shell before swallowing a keystroke (§7.3, reserve 1).
+      lot 5**. The hook now asks the shell before swallowing a keystroke.
       This is checked in the "Lot 5 — palette, import, language" section below, not here.
 
 ## Lot 5 — palette, import, language
 
 None of these boxes is ticked yet: lot 5 shipped its code on 2026-08-31, its human probe
 has not been run. The lot is not closed until this section is, and neither are the five
-success criteria of §1.
+success criteria of the design.
 
 ### Command palette (`Ctrl+K`)
 
@@ -292,7 +292,7 @@ success criteria of §1.
       with no `full address` produces no row.
 - [ ] A file using `full address:s:host:3390` shows **port 3390**; one using
       `server port:i:3390` shows **3389** and counts that entry as ignored (`server port`
-      is deliberately not read — §8).
+      is deliberately not read).
 - [ ] A file with unknown or malformed entries carries **one** warning of the form
       `4 unsupported entries ignored` in its tooltip — not four separate ones.
 - [ ] A file containing `password 51:b:…` imports cleanly and **no warning mentions a
@@ -317,7 +317,7 @@ success criteria of §1.
       (the Remote Desktop control raises its own CredSSP prompt, since there is no
       credential).
 
-### Keyboard hook and text inputs (§7.3, reserve 1)
+### Keyboard hook and text inputs
 
 - [ ] In the pane's **search box**, `Ctrl+W` no longer closes the active tab, `Ctrl+B` no
       longer collapses the pane, and `Ctrl+Tab` moves the focus instead of switching tabs.
@@ -349,7 +349,7 @@ success criteria of §1.
       line, and the palette's placeholder and empty-state lines.
 - [ ] **Known and expected**: disconnect reasons and validation messages come from
       `RemoteDeck.Core` and stay **in English** inside the French interface — the shell
-      wraps them in a French sentence but does not translate them (§9). Confirm this is
+      wraps them in a French sentence but does not translate them. Confirm this is
       the known behaviour, not a missing translation.
 - [ ] Plurals read correctly in French for 0, 1 and several items (import tallies,
       reconnection attempts).
@@ -422,7 +422,7 @@ for most of it; `TEST-VM` is the reference target.
 
 - [ ] `Ctrl+W` inside a detached window closes **that session** cleanly, and the window
       with it. The **cross** of the window does the same thing — it is a session close
-      (§6.5 protocol), not just a window close.
+      (the close protocol), not just a window close.
 - [ ] Clicking the cross twice quickly, or pressing `Ctrl+W` while the close is already
       running, does not close two sessions or throw.
 - [ ] **Close the application with two detached windows open.** The main window announces
@@ -968,6 +968,54 @@ All in `RemoteDeck.App`, so none of it is covered by an automated test. The VPN 
       tab's own menu shows *Reconnect* greyed out until the dial is over.
 - [ ] A **detached** session that has ended: *Reconnect* in its own window, then double-click its
       connection in the shell's list during the dial — one attempt only.
+
+## Review follow-ups (2026-09-25)
+
+Shipped without a human probe: every box below is still to be ticked by hand.
+
+### Import and security
+
+- [ ] Import a `.rdp` holding `authentication level:i:0` and `drivestoredirect:s:*`: the
+      preview row warns about both, and the imported connection has drives off and the
+      default server authentication. Connecting to a host with an untrusted certificate
+      shows the control's warning.
+- [ ] Import `full address:s:[::1]:3390`: host `::1`, port 3390.
+
+### Sessions and VPN
+
+- [ ] Detach a tab on a 1366×768 screen at 175 % (or any work area under 640×480 DIP):
+      the window opens, sized to the screen; RemoteDeck does not close.
+- [ ] Cancel a reconnection while an attempt is in flight, on a host that stays down: the
+      tab stays *Failed* and no new countdown starts.
+- [ ] A VPN profile with a wrong saved password: dial it twice in a row from RemoteDeck.
+      The second attempt reports Windows' error again, not 602 "port already open".
+- [ ] Close and reopen twenty tabs: RemoteDeck's handle count (Task Manager, *Handles*
+      column) comes back to about where it started.
+
+### Keyboard
+
+- [ ] Inside a connected remote desktop, press `Ctrl+W` once: nothing closes, the status
+      bar asks for a second press. Press it again within 3 s: the session closes. On a
+      tab that is not connected, one press closes it.
+- [ ] Same in a detached, full-screen window.
+- [ ] `Tab` reaches the session tabs and the workspace rows. On a tab: `Enter` activates,
+      `Delete` closes, `Shift+F10` opens its menu. On a workspace: `Enter` opens, `Delete`
+      asks to delete.
+- [ ] Credentials window: `Escape` closes, `Enter` edits, `Delete` arms then deletes
+      within 5 s; after 5 s the button goes back to *Delete*. An empty vault shows the
+      empty-state sentence.
+- [ ] Connection editor: change a field, press `Escape`: the discard question appears,
+      *No* is the default and keeps the form. Unchanged form: `Escape` closes at once.
+      The title reads *New connection* or *Edit "…"*.
+- [ ] Palette with a connection selected in the pane: *Edit connection* opens the editor,
+      *Delete connection* arms the delete (then `Delete` confirms). *Update workspace*
+      appears for each workspace while sessions are open.
+- [ ] Narrator reads every editor field by its label, and both search boxes by their
+      placeholder.
+- [ ] `Ctrl+K` → *About RemoteDeck*: the version matches the release (a development build
+      reads 1.0.0+commit), the links open the browser, *Open the log folder* opens
+      `%APPDATA%\RemoteDeck\logs`, *Copy the details* pastes five lines. `Escape` and `Enter`
+      close it. Opened from a detached window, it appears on that window's monitor.
 
 ## Build prerequisites (any lot)
 

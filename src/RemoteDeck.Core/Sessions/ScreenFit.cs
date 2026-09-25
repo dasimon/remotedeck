@@ -22,7 +22,7 @@ public static class ScreenFit
     /// <summary>
     /// The saved placement adjusted to the screens available now, or null when it belongs to a
     /// screen that is gone. The result always sits entirely inside one screen and respects the
-    /// minimum size.
+    /// minimum size, unless that screen is itself smaller than the minimum.
     /// </summary>
     public static DetachedWindowPlacement? Choose(
         DetachedWindowPlacement? saved,
@@ -37,8 +37,10 @@ public static class ScreenFit
         if (screen is null) return null;
 
         var bounds = screen.Value;
-        double width = Math.Clamp(saved.Width, minWidth, bounds.Width);
-        double height = Math.Clamp(saved.Height, minHeight, bounds.Height);
+        // A work area smaller than the minimum (1366×768 at 175 %, a taskbar on a 720p screen) wins
+        // over the minimum: the window must fit its screen, and Math.Clamp throws when min > max.
+        double width = Math.Clamp(saved.Width, Math.Min(minWidth, bounds.Width), bounds.Width);
+        double height = Math.Clamp(saved.Height, Math.Min(minHeight, bounds.Height), bounds.Height);
         double left = Math.Clamp(saved.Left, bounds.Left, bounds.Right - width);
         double top = Math.Clamp(saved.Top, bounds.Top, bounds.Bottom - height);
 

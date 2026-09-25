@@ -76,9 +76,10 @@ see below.
 couple of letters and press `Enter`. One list holds three kinds of entry:
 
 - **Commands** — *New connection*, *Import connections…*, *Manage credentials*,
-  *Toggle the pane*, *Close session*, *Reconnect*, and — depending on where you opened
-  the palette from — *Detach current session* or *Reattach this session to the main
-  window*.
+  *About RemoteDeck*, *Toggle the pane*, *Close session*, *Reconnect*, and — depending
+  on where you opened the palette from — *Detach current session* or *Reattach this
+  session to the main window*. With a connection selected in the pane: *Duplicate*,
+  *Edit* and *Delete connection*.
 - **Open tabs** — jump straight to a session you already have.
 - **Every saved connection** — including the ones the search box is currently
   filtering out. Choosing one connects it, or brings its tab forward if it is
@@ -301,13 +302,11 @@ you composed or a secret, and the app falls back to its defaults without complai
 
 ### Keyboard
 
-| Shortcut | Action |
-|---|---|
 | Shortcut | Action | Works while the remote desktop has focus |
 |---|---|---|
 | `Ctrl+K` | Command palette — connections, open tabs and commands in one list | **yes** |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous session tab (cycles; the session you leave stays connected) | **yes** |
-| `Ctrl+W` | Close the active session tab — or, in a detached window, that session | **yes** |
+| `Ctrl+W` | Close the active session tab — or, in a detached window, that session. From inside a connected remote desktop, press it twice within 3 seconds: once is too easy to type for the remote browser or editor | **yes** |
 | `Ctrl+Shift+D` | Detach the active session into its own window — or reattach it, pressed from the detached window | **yes** |
 | `Ctrl+B` | Collapse or restore the connection pane | **yes** |
 | `F11` / `Ctrl+Alt+Pause` | Full screen on and off, in a detached window | **yes** |
@@ -440,6 +439,16 @@ including what DPAPI does **not** protect against.
 Release binaries are not code-signed. Windows SmartScreen will warn on first
 launch: choose *More info* → *Run anyway*. Signing will be reconsidered once
 the project has users.
+
+What you can check instead, before running it. Each release carries a `SHA256SUMS`
+file beside the executable:
+
+    (Get-FileHash RemoteDeck.exe -Algorithm SHA256).Hash
+
+and a provenance attestation, which proves the file was built by this repository's
+release workflow from the tagged commit:
+
+    gh attestation verify RemoteDeck.exe --repo dasimon/remotedeck
 
 ## License
 

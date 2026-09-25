@@ -3,7 +3,7 @@ using RemoteDeck.Core.Model;
 
 namespace RemoteDeck.Core.Data;
 
-/// <summary>CRUD and listing for <see cref="Connection"/> (spec §4). Ordering: favorites, then group, then name.</summary>
+/// <summary>CRUD and listing for <see cref="Connection"/>. Ordering: favorites, then group, then name.</summary>
 public sealed class ConnectionRepository(SqliteDatabase db)
 {
     private const string Columns = """

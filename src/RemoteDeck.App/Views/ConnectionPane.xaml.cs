@@ -58,7 +58,10 @@ public partial class ConnectionPane : System.Windows.Controls.UserControl
                 e.Handled = true;
                 break;
 
-            case Key.Enter:
+            // A focused button or workspace row keeps its own Enter: on "New", Enter creates rather
+            // than connects, and on a workspace it opens that workspace.
+            case Key.Enter when e.OriginalSource is not (System.Windows.Controls.Primitives.ButtonBase
+                                                         or System.Windows.FrameworkElement { DataContext: WorkspaceListItem }):
                 // Flush the search debounce first: Enter must act on the list the query describes,
                 // not on the one from 120 ms ago. Refresh keeps the selection when it survives.
                 _viewModel.Refresh();
@@ -80,6 +83,32 @@ public partial class ConnectionPane : System.Windows.Controls.UserControl
 
         _viewModel.DeleteSelectedCommand.Execute(null);
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// The keyboard's way to the same row: Tab reaches it, Enter or Space opens it, Delete asks to
+    /// delete it, and Shift+F10 or the menu key opens its context menu like any focused element.
+    /// </summary>
+    private void OnWorkspaceKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (_viewModel is null
+            || sender is not System.Windows.FrameworkElement { DataContext: WorkspaceListItem item })
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Enter:
+            case Key.Space:
+                e.Handled = true;
+                _viewModel.OpenWorkspaceCommand.Execute(item);
+                break;
+            case Key.Delete:
+                e.Handled = true;
+                _viewModel.DeleteWorkspaceCommand.Execute(item);
+                break;
+        }
     }
 
     /// <summary>A click on a workspace row opens it. On button-up, like the connection menu's entries:

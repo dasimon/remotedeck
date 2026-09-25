@@ -2,6 +2,50 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.6.0 — 2026-09-25
+
+A full review of the code, and what it found: an imported `.rdp` could switch off the server
+check, a small screen could take every session down, and a single `Ctrl+W` meant for the remote
+browser closed the session.
+
+### Security
+
+- **An imported `.rdp` is untrusted input.** `authentication level:i:0` (no server check) and
+  `drivestoredirect` (which shared *every* drive) are no longer carried over; the preview says so.
+  Either can still be turned on in the editor.
+- The password buffers stay pinned in memory until they are wiped.
+- Releases carry `SHA256SUMS` and a build provenance attestation (see the README); the workflows
+  pin their actions by commit and run the tests before publishing.
+
+### Sessions and VPN
+
+- Detaching a tab on a screen smaller than 640×480 device-independent pixels (1366×768 at 175 %)
+  no longer closes RemoteDeck.
+- A failed VPN dial releases its RAS port; a second request for a profile still dialling waits for
+  that dial; a tunnel that appears a moment after the dial is found.
+- Cancelling a reconnection is final. Connect re-checks the window after the VPN wait.
+- Closed tabs release their native window and every control event handler.
+- Two instances starting together no longer collide on a migration or on `settings.json`.
+
+### Keyboard and screen readers
+
+- **`Ctrl+W` inside a connected remote desktop asks for a second press** within 3 seconds.
+- Session tabs and workspace rows are reachable with `Tab`: `Enter` activates, `Delete` closes or
+  deletes, `Shift+F10` opens the menu.
+- The palette can edit or delete the selected connection, and update a workspace.
+- Credentials: `Escape`, `Enter` and `Delete` work, a delete disarms after 5 seconds like a
+  connection's, and an empty vault says so. Import closes on `Escape`.
+- The connection editor asks before discarding changes, and its title says *New connection* or
+  *Edit "…"*. A failed save no longer leaves unsaved values on the connection in use.
+- Every editor field has an accessible name; name and label lengths are enforced as you type.
+- French: non-breaking spaces before `: ? ; !` and inside guillemets; *vous* throughout.
+
+### About
+
+- **`Ctrl+K` → *About RemoteDeck*** shows the version, the .NET runtime and Windows version, the
+  licence, links to the source and the releases, a button to open the log folder and one to copy
+  those details for an issue. It contacts no server.
+
 ## 0.5.1 — 2026-09-19
 
 Double-click a connection whose tab has ended and it reconnects, VPN included — once, however many

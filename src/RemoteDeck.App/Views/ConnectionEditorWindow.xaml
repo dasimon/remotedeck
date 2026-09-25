@@ -4,6 +4,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:res="clr-namespace:RemoteDeck.App.Resources"
                  xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
+                 xmlns:model="clr-namespace:RemoteDeck.Core.Model;assembly=RemoteDeck.Core"
                  Title="{x:Static res:Strings.Editor_Title}" Width="520" SizeToContent="Height"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round"
                  WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
@@ -24,7 +25,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="{x:Static res:Strings.Editor_Title}" ShowMinimize="False" ShowMaximize="False" />
+        <ui:TitleBar Grid.Row="0" x:Name="EditorTitleBar" Title="{x:Static res:Strings.Editor_Title}" ShowMinimize="False" ShowMaximize="False" />
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="16,0,16,0">
@@ -39,18 +40,18 @@
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_Name}" VerticalAlignment="Center" />
-                <ui:TextBox Grid.Row="0" Grid.Column="1" x:Name="NameInput" Margin="0,3" controls:Mark.Invalid="{Binding NameInvalid}"
+                <ui:TextBox Grid.Row="0" Grid.Column="1" x:Name="NameInput" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_Name}" MaxLength="{x:Static model:ConnectionRules.MaxNameLength}" controls:Mark.Invalid="{Binding NameInvalid}"
                             Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_Host}" VerticalAlignment="Center" />
-                <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,3" controls:Mark.Invalid="{Binding HostInvalid}" PlaceholderText="{x:Static res:Strings.Editor_HostPlaceholder}"
+                <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_Host}" controls:Mark.Invalid="{Binding HostInvalid}" PlaceholderText="{x:Static res:Strings.Editor_HostPlaceholder}"
                             Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Grid.Row="2" Text="{x:Static res:Strings.Editor_Port}" VerticalAlignment="Center" />
-                <ui:NumberBox Grid.Row="2" Grid.Column="1" Margin="0,3" Width="120" HorizontalAlignment="Left" controls:Mark.Invalid="{Binding PortInvalid}"
+                <ui:NumberBox Grid.Row="2" Grid.Column="1" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_Port}" Width="120" HorizontalAlignment="Left" controls:Mark.Invalid="{Binding PortInvalid}"
                               Minimum="1" Maximum="65535" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden"
                               Value="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Grid.Row="3" Text="{x:Static res:Strings.Editor_Group}" VerticalAlignment="Center" />
                 <!-- Editable: pick an existing group or type a new one; KnownGroups is only a shortcut. -->
-                <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,3" IsEditable="True"
+                <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,3" IsEditable="True" AutomationProperties.Name="{x:Static res:Strings.Editor_Group}"
                           ItemsSource="{Binding KnownGroups}"
                           Text="{Binding GroupName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <CheckBox Grid.Row="4" Grid.Column="1" Margin="0,6,0,0" Content="{x:Static res:Strings.Editor_Favorite}"
@@ -68,10 +69,10 @@
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_Credential}" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label"
+                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_Credential}"
                           ItemsSource="{Binding Credentials}" SelectedItem="{Binding SelectedCredential}" />
                 <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_Authentication}" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label"
+                <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_Authentication}"
                           ItemsSource="{Binding AuthenticationLevels}" SelectedItem="{Binding SelectedAuthenticationLevel}" />
                 <CheckBox Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Content="{x:Static res:Strings.Editor_UseWebAccount}"
                           IsChecked="{Binding UseWebAccount}" />
@@ -80,7 +81,7 @@
                      meaningful under the box above, so it shows only then. -->
                 <TextBlock Grid.Row="3" Text="{x:Static res:Strings.Editor_WebAccountUpn}" VerticalAlignment="Center"
                            Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
-                <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,3" PlaceholderText="{x:Static res:Strings.Editor_WebAccountUpnPlaceholder}"
+                <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_WebAccountUpn}" PlaceholderText="{x:Static res:Strings.Editor_WebAccountUpnPlaceholder}"
                             Text="{Binding WebAccountUpn, UpdateSourceTrigger=PropertyChanged}"
                             Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
                 <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
@@ -98,17 +99,17 @@
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_DisplayMode}" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label"
+                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_DisplayMode}"
                           ItemsSource="{Binding DisplayModes}" SelectedItem="{Binding SelectedDisplayMode}" />
                 <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_FixedSize}" VerticalAlignment="Center" />
                 <!-- Dynamic follows the window, so both boxes stay disabled until Scaled or Fixed. -->
                 <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,3" Orientation="Horizontal"
                             IsEnabled="{Binding IsFixedSizeEnabled}">
-                    <ui:NumberBox controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_WidthPlaceholder}" Minimum="640" Maximum="8192" MaxDecimalPlaces="0"
+                    <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_WidthPlaceholder}" controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_WidthPlaceholder}" Minimum="640" Maximum="8192" MaxDecimalPlaces="0"
                                   SpinButtonPlacementMode="Hidden"
                                   Value="{Binding FixedWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Text="×" Margin="8,0" VerticalAlignment="Center" />
-                    <ui:NumberBox controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_HeightPlaceholder}" Minimum="480" Maximum="8192" MaxDecimalPlaces="0"
+                    <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_HeightPlaceholder}" controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_HeightPlaceholder}" Minimum="480" Maximum="8192" MaxDecimalPlaces="0"
                                   SpinButtonPlacementMode="Hidden"
                                   Value="{Binding FixedHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
@@ -129,7 +130,7 @@
                  RAS phonebook to fill it, and that file's location has never been verified on a
                  machine that has one — so a profile it fails to discover must still be reachable by
                  typing, exactly as before the list existed. -->
-            <ComboBox Margin="0,0,0,2"
+            <ComboBox Margin="0,0,0,2" AutomationProperties.Name="{x:Static res:Strings.Editor_VpnProfile}"
                       IsEditable="True"
                       ItemsSource="{Binding AvailableVpnProfiles}"
                       Text="{Binding VpnProfile, UpdateSourceTrigger=PropertyChanged}" />
@@ -141,7 +142,7 @@
                       IsChecked="{Binding AutoRaiseVpn}" IsEnabled="{Binding HasVpnProfile}" />
             <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
                        Text="{x:Static res:Strings.Editor_AutoRaiseVpnHint}" />
-            <ui:TextBox Margin="0,6,0,0" Height="72" AcceptsReturn="True" TextWrapping="Wrap"
+            <ui:TextBox Margin="0,6,0,0" Height="72" AcceptsReturn="True" AutomationProperties.Name="{x:Static res:Strings.Editor_NotesPlaceholder}" TextWrapping="Wrap"
                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
                         PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Margin="0,4,0,0" Opacity="0.7" FontSize="{StaticResource RdFontMd}" Text="{x:Static res:Strings.Common_RequiredHint}" />

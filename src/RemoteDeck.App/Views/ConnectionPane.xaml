@@ -82,7 +82,7 @@
         <ui:TextBox x:Name="SearchBox"
                     Grid.Row="0"
                     Margin="0,0,0,6"
-                    PlaceholderText="{x:Static res:Strings.Pane_SearchPlaceholder}"
+                    PlaceholderText="{x:Static res:Strings.Pane_SearchPlaceholder}" AutomationProperties.Name="{x:Static res:Strings.Pane_SearchPlaceholder}"
                     ClearButtonEnabled="True"
                     Icon="{ui:SymbolIcon Search24}"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
@@ -151,6 +151,9 @@
                                 Cursor="Hand"
                                 ToolTip="{Binding Subtitle}"
                                 Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Focusable="True"
+                                AutomationProperties.Name="{Binding Name}"
+                                KeyDown="OnWorkspaceKeyDown"
                                 MouseLeftButtonUp="OnWorkspaceClick">
                             <Border.ContextMenu>
                                 <!-- The menu's DataContext is the row, so the commands have to be

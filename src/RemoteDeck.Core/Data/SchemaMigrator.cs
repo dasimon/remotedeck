@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace RemoteDeck.Core.Data;
@@ -11,7 +12,7 @@ public static class SchemaMigrator
     // Index = version - 1. Never edit a shipped script; add a new one.
     private static readonly string[] Scripts =
     [
-        // V1 — spec §4
+        // V1 — the initial schema
         """
         CREATE TABLE Credential (
           Id          INTEGER PRIMARY KEY,
@@ -48,7 +49,7 @@ public static class SchemaMigrator
         CREATE INDEX IX_Connection_GroupName ON Connection(GroupName);
         CREATE INDEX IX_Connection_Favorite  ON Connection(IsFavorite) WHERE IsFavorite = 1;
         """,
-        // V2 — espaces de travail (spec espaces §3.1)
+        // V2 — espaces de travail
         """
         CREATE TABLE Workspace (
           Id          INTEGER PRIMARY KEY,
@@ -101,9 +102,9 @@ public static class SchemaMigrator
     public static int GetVersion(SqliteConnection connection)
     {
         var exists = connection.Cmd("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='SchemaVersion'").ExecuteScalar();
-        if (Convert.ToInt64(exists) == 0) return 0;
+        if (Convert.ToInt64(exists, CultureInfo.InvariantCulture) == 0) return 0;
         var max = connection.Cmd("SELECT MAX(Version) FROM SchemaVersion").ExecuteScalar();
-        return max is null or DBNull ? 0 : Convert.ToInt32(max);
+        return max is null or DBNull ? 0 : Convert.ToInt32(max, CultureInfo.InvariantCulture);
     }
 
     public static void Migrate(SqliteConnection connection)
@@ -119,6 +120,19 @@ public static class SchemaMigrator
         for (var v = version + 1; v <= CurrentVersion; v++)
         {
             using var tx = connection.BeginTransaction();
+
+            // Asked again under the write lock (BeginTransaction is BEGIN IMMEDIATE): a second
+            // instance started at the same moment may have applied this version while this one
+            // waited for the lock, and replaying it fails on "duplicate column" or "table exists".
+            var applied = connection.Cmd("SELECT COUNT(*) FROM SchemaVersion WHERE Version = $v");
+            applied.Transaction = tx;
+            applied.Add("$v", v);
+            if (Convert.ToInt64(applied.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
+            {
+                tx.Rollback();
+                continue;
+            }
+
             var script = connection.Cmd(Scripts[v - 1]);
             script.Transaction = tx;
             script.ExecuteNonQuery();

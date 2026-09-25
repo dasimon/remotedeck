@@ -19,6 +19,9 @@ public sealed class VpnDialerTests
 
     private static readonly RasCredential Saved = new("someone", "****************", "");
 
+    /// <summary>The visibility checks after a dial wait for real by default; these tests do not.</summary>
+    private static readonly Action<TimeSpan> NoPause = _ => { };
+
     /// <summary>
     /// A RAS that answers from a script rather than from Windows, and writes down what it was asked.
     /// </summary>
@@ -69,7 +72,13 @@ public sealed class VpnDialerTests
             return DialCode;
         }
 
-        public IReadOnlySet<string> ConnectedProfiles() => Connected;
+        /// <summary>How many reads of the interfaces see nothing before <see cref="Connected"/> shows.</summary>
+        public int HiddenFor { get; set; }
+
+        public int ConnectedReads { get; private set; }
+
+        public IReadOnlySet<string> ConnectedProfiles() =>
+            ++ConnectedReads <= HiddenFor ? new HashSet<string>() : Connected;
 
         public string Describe(uint code) => $"RAS says {code}";
     }
@@ -81,7 +90,7 @@ public sealed class VpnDialerTests
     public void A_blank_profile_is_refused_rather_than_dialled()
     {
         var ras = new FakeRas();
-        var dialer = new VpnDialer(ras);
+        var dialer = new VpnDialer(ras, NoPause);
 
         Assert.Throws<ArgumentNullException>(() => dialer.Dial(null!));
         Assert.Throws<ArgumentException>(() => dialer.Dial(""));
@@ -96,7 +105,7 @@ public sealed class VpnDialerTests
         // gain by making it round-trip through the API to be told so.
         var ras = new FakeRas();
 
-        var result = new VpnDialer(ras).Dial(new string('x', 257));
+        var result = new VpnDialer(ras, NoPause).Dial(new string('x', 257));
 
         Assert.Equal(VpnDialOutcome.EntryNotFound, result.Outcome);
         Assert.Empty(ras.Asked);
@@ -109,7 +118,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        new VpnDialer(ras).Dial("  VPN Contoso  ");
+        new VpnDialer(ras, NoPause).Dial("  VPN Contoso  ");
 
         Assert.Equal(Entry, ras.Dialled.Single().Entry);
     }
@@ -120,7 +129,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        new VpnDialer(ras).Dial(Entry);
+        new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal([$"entry:{UserPhonebook}:{Entry}"], ras.Asked);
     }
@@ -133,7 +142,7 @@ public sealed class VpnDialerTests
             .Entry(AllUsersPhonebook, new RasRead(RasError.Success, Saved));
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.Connected, result.Outcome);
         Assert.Equal(AllUsersPhonebook, ras.Dialled.Single().Phonebook);
@@ -149,7 +158,7 @@ public sealed class VpnDialerTests
             .Entry(AllUsersPhonebook, new RasRead(RasError.Success, Saved));
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        Assert.Equal(VpnDialOutcome.Connected, new VpnDialer(ras).Dial(Entry).Outcome);
+        Assert.Equal(VpnDialOutcome.Connected, new VpnDialer(ras, NoPause).Dial(Entry).Outcome);
     }
 
     [Fact]
@@ -157,7 +166,7 @@ public sealed class VpnDialerTests
     {
         var ras = new FakeRas();
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.EntryNotFound, result.Outcome);
         Assert.Equal(3, ras.Asked.Count);
@@ -171,7 +180,7 @@ public sealed class VpnDialerTests
         // "no such profile", which is a different — and wrong — thing to tell the user.
         var ras = new FakeRas().Entry(UserPhonebook, new RasRead(5, null));
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.Failed, result.Outcome);
         Assert.Equal(5u, result.Code);
@@ -190,7 +199,7 @@ public sealed class VpnDialerTests
             .Entry(UserPhonebook, new RasRead(RasError.Success, new RasCredential("someone", "", "")))
             .Credentials(UserPhonebook, new RasRead(RasError.Success, new RasCredential("someone", "", "")));
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.NoStoredCredential, result.Outcome);
         Assert.Empty(ras.Dialled);
@@ -205,7 +214,7 @@ public sealed class VpnDialerTests
             .Entry(UserPhonebook, new RasRead(RasError.Success, new RasCredential("", "****************", "")))
             .Credentials(UserPhonebook, new RasRead(RasError.Success, new RasCredential("", "****************", "")));
 
-        Assert.Equal(VpnDialOutcome.NoStoredCredential, new VpnDialer(ras).Dial(Entry).Outcome);
+        Assert.Equal(VpnDialOutcome.NoStoredCredential, new VpnDialer(ras, NoPause).Dial(Entry).Outcome);
         Assert.Empty(ras.Dialled);
     }
 
@@ -217,7 +226,7 @@ public sealed class VpnDialerTests
             .Credentials(UserPhonebook, new RasRead(RasError.Success, Saved));
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.Connected, result.Outcome);
         Assert.Equal(
@@ -233,7 +242,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
 
-        new VpnDialer(ras).Dial(Entry);
+        new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Same(Saved, ras.Dialled.Single().Credential);
     }
@@ -244,7 +253,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "vpn contoso" };
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.Connected, result.Outcome);
         Assert.Equal(0u, result.Code);
@@ -256,10 +265,28 @@ public sealed class VpnDialerTests
         // RasDial returning zero is not the same as a tunnel the rest of RemoteDeck can see. Opening
         // the session on that promise would fail a second later with a cryptic RDP error.
         var ras = ReadyToDial();
+        var pauses = new List<TimeSpan>();
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, pauses.Add).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.RaisedButNotVisible, result.Outcome);
+        Assert.Equal(4, ras.ConnectedReads);
+        Assert.Equal(3, pauses.Count);
+    }
+
+    [Fact]
+    public void A_tunnel_that_shows_a_moment_later_is_a_success()
+    {
+        // The PPP interface can appear half a second after RasDial returns.
+        var ras = ReadyToDial();
+        ras.Connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Entry };
+        ras.HiddenFor = 2;
+        var pauses = new List<TimeSpan>();
+
+        var result = new VpnDialer(ras, pauses.Add).Dial(Entry);
+
+        Assert.Equal(VpnDialOutcome.Connected, result.Outcome);
+        Assert.Equal(2, pauses.Count);
     }
 
     [Fact]
@@ -268,7 +295,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.DialCode = 691;
 
-        var result = new VpnDialer(ras).Dial(Entry);
+        var result = new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Equal(VpnDialOutcome.Failed, result.Outcome);
         Assert.Equal(691u, result.Code);
@@ -283,7 +310,7 @@ public sealed class VpnDialerTests
         var ras = ReadyToDial();
         ras.DialCode = 691;
 
-        new VpnDialer(ras).Dial(Entry);
+        new VpnDialer(ras, NoPause).Dial(Entry);
 
         Assert.Single(ras.Dialled);
     }

@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # The workflows pin actions by commit; this is what moves the pins, and their comments, forward.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      nuget:
+        patterns: ['*']

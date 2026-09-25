@@ -222,6 +222,31 @@ public partial class SessionTabStrip : System.Windows.Controls.UserControl
         }
     }
 
+    /// <summary>
+    /// The keyboard's way to a tab: Tab reaches it, Enter or Space brings it forward, Delete closes
+    /// it like a middle click, and Shift+F10 or the menu key opens its context menu.
+    /// </summary>
+    private void OnTabKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (_viewModel is null || TabOf(sender) is not { } tab)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Enter:
+            case Key.Space:
+                e.Handled = true;
+                _viewModel.Activate(tab);
+                break;
+            case Key.Delete when _viewModel.CanCloseTabs:
+                e.Handled = true;
+                _ = _viewModel.CloseAsync(tab);
+                break;
+        }
+    }
+
     private void OnTabMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (_viewModel is null || !_viewModel.CanCloseTabs

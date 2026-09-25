@@ -3,7 +3,7 @@ namespace RemoteDeck.Core.Sessions;
 /// <summary>
 /// How long the next session may take to close when the application is shutting down. Each session
 /// gets five seconds, but the whole shutdown is capped: with detached windows the number of live
-/// sessions is no longer bounded by what fits in a tab strip (design §6).
+/// sessions is no longer bounded by what fits in a tab strip.
 /// </summary>
 public static class ClosePlan
 {

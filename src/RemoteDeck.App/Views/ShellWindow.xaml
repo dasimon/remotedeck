@@ -46,7 +46,7 @@
 
         <Grid x:Name="PaneHost" Grid.Row="1" Grid.Column="0">
             <views:ConnectionPane x:Name="Pane" />
-            <!-- Shown instead of the pane when the database could not be opened (spec §6.6): the
+            <!-- Shown instead of the pane when the database could not be opened: the
                  window stays usable, there is simply nothing saved to connect to. -->
             <TextBlock x:Name="PaneUnavailable"
                        Visibility="Collapsed"

@@ -84,6 +84,10 @@
                 <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Border}}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
                 </DataTrigger>
+                <!-- And on the tab the keyboard is on: Tab moves to it, then to its cross. -->
+                <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=Border}}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
@@ -128,7 +132,10 @@
                                 MouseLeftButtonDown="OnTabLeftButtonDown"
                                 MouseMove="OnTabMouseMove"
                                 MouseLeftButtonUp="OnTabLeftButtonUp"
-                                MouseDown="OnTabMouseDown">
+                                MouseDown="OnTabMouseDown"
+                                Focusable="True"
+                                AutomationProperties.Name="{Binding Title}"
+                                KeyDown="OnTabKeyDown">
                             <!-- Right-click does NOT activate the tab, deliberately, and this is the
                                  one place where the strip parts with the connection pane's rule that
                                  a right-click selects the row first. Activating a tab switches the

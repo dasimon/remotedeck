@@ -4,7 +4,7 @@ namespace RemoteDeck.App.Views;
 
 /// <summary>
 /// A workspace's name, and whether it connects its sessions when opened. The only window workspaces
-/// add: there is no workspace editor, a workspace is captured (workspaces spec §5).
+/// add: there is no workspace editor, a workspace is captured.
 /// </summary>
 /// <remarks>
 /// It only rejects an empty name. A duplicate name is not an error here — it is the normal way to
@@ -18,6 +18,7 @@ internal sealed partial class WorkspaceNameWindow : Wpf.Ui.Controls.FluentWindow
     public WorkspaceNameWindow(string? proposedName, bool autoConnect)
     {
         InitializeComponent();
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
 
         NameBox.Text = proposedName ?? string.Empty;
         AutoConnectBox.IsChecked = autoConnect;
