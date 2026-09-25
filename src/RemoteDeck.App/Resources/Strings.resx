@@ -1043,4 +1043,34 @@
   <data name="Palette_UpdateWorkspaceSubtitle" xml:space="preserve">
     <value>Replace its contents with the sessions open now</value>
   </data>
+  <data name="About_Title" xml:space="preserve">
+    <value>About RemoteDeck</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="About_SourceCode" xml:space="preserve">
+    <value>Source code</value>
+  </data>
+  <data name="About_Releases" xml:space="preserve">
+    <value>Releases</value>
+  </data>
+  <data name="About_OpenLogs" xml:space="preserve">
+    <value>Open the log folder</value>
+  </data>
+  <data name="About_CopyDetails" xml:space="preserve">
+    <value>Copy the details</value>
+  </data>
+  <data name="About_DetailsCopied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="About_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Palette_About" xml:space="preserve">
+    <value>About RemoteDeck</value>
+  </data>
+  <data name="Palette_AboutSubtitle" xml:space="preserve">
+    <value>Version, licence, logs</value>
+  </data>
 </root>

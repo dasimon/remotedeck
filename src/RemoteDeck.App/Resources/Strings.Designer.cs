@@ -3007,5 +3007,95 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Palette_UpdateWorkspaceSubtitle", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to About RemoteDeck.
+        /// </summary>
+        public static string About_Title {
+            get {
+                return ResourceManager.GetString("About_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Version {0}.
+        /// </summary>
+        public static string About_Version {
+            get {
+                return ResourceManager.GetString("About_Version", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Source code.
+        /// </summary>
+        public static string About_SourceCode {
+            get {
+                return ResourceManager.GetString("About_SourceCode", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Releases.
+        /// </summary>
+        public static string About_Releases {
+            get {
+                return ResourceManager.GetString("About_Releases", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open the log folder.
+        /// </summary>
+        public static string About_OpenLogs {
+            get {
+                return ResourceManager.GetString("About_OpenLogs", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Copy the details.
+        /// </summary>
+        public static string About_CopyDetails {
+            get {
+                return ResourceManager.GetString("About_CopyDetails", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Copied.
+        /// </summary>
+        public static string About_DetailsCopied {
+            get {
+                return ResourceManager.GetString("About_DetailsCopied", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Close.
+        /// </summary>
+        public static string About_Close {
+            get {
+                return ResourceManager.GetString("About_Close", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to About RemoteDeck.
+        /// </summary>
+        public static string Palette_About {
+            get {
+                return ResourceManager.GetString("Palette_About", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Version, licence, logs.
+        /// </summary>
+        public static string Palette_AboutSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_AboutSubtitle", resourceCulture);
+            }
+        }
     }
 }

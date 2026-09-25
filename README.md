@@ -76,9 +76,10 @@ see below.
 couple of letters and press `Enter`. One list holds three kinds of entry:
 
 - **Commands** — *New connection*, *Import connections…*, *Manage credentials*,
-  *Toggle the pane*, *Close session*, *Reconnect*, and — depending on where you opened
-  the palette from — *Detach current session* or *Reattach this session to the main
-  window*.
+  *About RemoteDeck*, *Toggle the pane*, *Close session*, *Reconnect*, and — depending
+  on where you opened the palette from — *Detach current session* or *Reattach this
+  session to the main window*. With a connection selected in the pane: *Duplicate*,
+  *Edit* and *Delete connection*.
 - **Open tabs** — jump straight to a session you already have.
 - **Every saved connection** — including the ones the search box is currently
   filtering out. Choosing one connects it, or brings its tab forward if it is

@@ -1043,4 +1043,34 @@
   <data name="Palette_UpdateWorkspaceSubtitle" xml:space="preserve">
     <value>Remplace son contenu par les sessions ouvertes</value>
   </data>
+  <data name="About_Title" xml:space="preserve">
+    <value>À propos de RemoteDeck</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="About_SourceCode" xml:space="preserve">
+    <value>Code source</value>
+  </data>
+  <data name="About_Releases" xml:space="preserve">
+    <value>Versions publiées</value>
+  </data>
+  <data name="About_OpenLogs" xml:space="preserve">
+    <value>Ouvrir le dossier des journaux</value>
+  </data>
+  <data name="About_CopyDetails" xml:space="preserve">
+    <value>Copier les informations</value>
+  </data>
+  <data name="About_DetailsCopied" xml:space="preserve">
+    <value>Copié</value>
+  </data>
+  <data name="About_Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="Palette_About" xml:space="preserve">
+    <value>À propos de RemoteDeck</value>
+  </data>
+  <data name="Palette_AboutSubtitle" xml:space="preserve">
+    <value>Version, licence, journaux</value>
+  </data>
 </root>

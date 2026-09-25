@@ -740,6 +740,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:credentials",
             Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority,
             Group: Strings.Palette_GroupCommands, Icon: "Key24"));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:about",
+            Strings.Palette_About, Strings.Palette_AboutSubtitle, CommandPriority,
+            Group: Strings.Palette_GroupCommands, Icon: "Info24"));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:pane",
             Strings.Palette_TogglePane, Strings.Palette_TogglePaneSubtitle, CommandPriority,
             Shortcut: Strings.Palette_ShortcutTogglePane, Group: Strings.Palette_GroupCommands, Icon: "PanelLeft24"));
@@ -944,6 +947,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:credentials":
                 ManageCredentials();
+                break;
+
+            case "cmd:about":
+                // Owned by the window the palette was opened from, so it appears on that monitor.
+                new AboutWindow { Owner = (Window?)from ?? this }.ShowDialog();
                 break;
 
             case "cmd:pane":

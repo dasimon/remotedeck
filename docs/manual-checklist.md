@@ -1012,6 +1012,10 @@ Shipped without a human probe: every box below is still to be ticked by hand.
       appears for each workspace while sessions are open.
 - [ ] Narrator reads every editor field by its label, and both search boxes by their
       placeholder.
+- [ ] `Ctrl+K` → *About RemoteDeck*: the version matches the release (a development build
+      reads 1.0.0+commit), the links open the browser, *Open the log folder* opens
+      `%APPDATA%\RemoteDeck\logs`, *Copy the details* pastes five lines. `Escape` and `Enter`
+      close it. Opened from a detached window, it appears on that window's monitor.
 
 ## Build prerequisites (any lot)
 

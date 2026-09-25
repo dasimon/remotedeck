@@ -1,0 +1,62 @@
+<ui:FluentWindow x:Class="RemoteDeck.App.Views.AboutWindow"
+                 x:ClassModifier="internal"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+                 Title="{x:Static res:Strings.About_Title}"
+                 Width="420" SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner"
+                 ShowInTaskbar="False"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round">
+    <Grid Margin="0,0,0,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{x:Static res:Strings.About_Title}" ShowMaximize="False" ShowMinimize="False" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="16,8,16,0">
+            <Image Source="pack://application:,,,/RemoteDeck;component/Resources/RemoteDeck-32.png"
+                   Width="32" Height="32" VerticalAlignment="Center" />
+            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="RemoteDeck" FontSize="{StaticResource RdFont}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource RdText}" />
+                <!-- Selectable: the version is what a bug report needs first, and it is copied. -->
+                <TextBox x:Name="VersionText" IsReadOnly="True" BorderThickness="0" Background="Transparent" Padding="0"
+                         Foreground="{DynamicResource RdTextMuted}" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="16,12,16,0">
+            <TextBlock x:Name="EnvironmentText" TextWrapping="Wrap" Foreground="{DynamicResource RdTextMuted}" />
+            <TextBlock x:Name="CopyrightText" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource RdTextMuted}" />
+        </StackPanel>
+
+        <!-- Hyperlinks rather than buttons: they leave the application for the browser, and say so
+             by looking like links. Tab reaches them, Enter follows them. -->
+        <TextBlock Grid.Row="3" Margin="16,12,16,16">
+            <Hyperlink x:Name="SourceLink" RequestNavigate="OnNavigate">
+                <Run Text="{x:Static res:Strings.About_SourceCode}" />
+            </Hyperlink>
+            <Run Text="  &#xB7;  " />
+            <Hyperlink x:Name="ReleasesLink" RequestNavigate="OnNavigate">
+                <Run Text="{x:Static res:Strings.About_Releases}" />
+            </Hyperlink>
+        </TextBlock>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,0">
+            <ui:Button Margin="0,0,8,0" Content="{x:Static res:Strings.About_OpenLogs}" Click="OnOpenLogs" />
+            <ui:Button x:Name="CopyButton" Margin="0,0,8,0" Content="{x:Static res:Strings.About_CopyDetails}" Click="OnCopy" />
+            <ui:Button MinWidth="96" Appearance="Primary" Content="{x:Static res:Strings.About_Close}"
+                       IsDefault="True" IsCancel="True" Click="OnClose" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

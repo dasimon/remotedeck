@@ -40,6 +40,12 @@ browser closed the session.
 - Every editor field has an accessible name; name and label lengths are enforced as you type.
 - French: non-breaking spaces before `: ? ; !` and inside guillemets; *vous* throughout.
 
+### About
+
+- **`Ctrl+K` → *About RemoteDeck*** shows the version, the .NET runtime and Windows version, the
+  licence, links to the source and the releases, a button to open the log folder and one to copy
+  those details for an issue. It contacts no server.
+
 ## 0.5.1 — 2026-09-19
 
 Double-click a connection whose tab has ended and it reconnects, VPN included — once, however many
