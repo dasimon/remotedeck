@@ -2,7 +2,7 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.6.0 — 2026-09-25
 
 A full review of the code, and what it found: an imported `.rdp` could switch off the server
 check, a small screen could take every session down, and a single `Ctrl+W` meant for the remote
