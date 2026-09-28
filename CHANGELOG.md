@@ -2,7 +2,9 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.7.0 — 2026-09-28
+
+Carry your configuration to another machine, and drive a RemoteDeck from inside a RemoteDeck.
 
 ### Export and import the configuration
 
