@@ -3259,5 +3259,23 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Transfer_DatabaseNoExportMessage", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Send RemoteDeck's shortcuts to this remote desktop.
+        /// </summary>
+        public static string Editor_PassShortcuts {
+            get {
+                return ResourceManager.GetString("Editor_PassShortcuts", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to For a machine that runs RemoteDeck too: Ctrl+K, Ctrl+W, Ctrl+Tab and the others reach the RemoteDeck over there instead of this one. Ctrl+Alt+Pause is still caught here..
+        /// </summary>
+        public static string Editor_PassShortcutsHint {
+            get {
+                return ResourceManager.GetString("Editor_PassShortcutsHint", resourceCulture);
+            }
+        }
     }
 }

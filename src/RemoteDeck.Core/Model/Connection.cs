@@ -40,6 +40,13 @@ public sealed class Connection
     /// </summary>
     public bool AutoRaiseVpn { get; set; }
 
+    /// <summary>
+    /// Let RemoteDeck's own shortcuts (Ctrl+K, Ctrl+W, Ctrl+Tab…) through to this remote desktop
+    /// instead of acting on them here: for a machine that runs RemoteDeck too, whose shortcuts
+    /// would otherwise never reach it. Ctrl+Alt+Pause is still caught, as the way back out.
+    /// </summary>
+    public bool PassShortcuts { get; set; }
+
     public string Notes { get; set; } = "";
     public DateTime? LastConnectedUtc { get; set; }
     public DateTime CreatedUtc { get; set; }

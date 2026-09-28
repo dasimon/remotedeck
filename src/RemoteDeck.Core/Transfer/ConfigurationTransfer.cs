@@ -57,6 +57,7 @@ public static class ConfigurationTransfer
                 AuthenticationLevel = c.AuthenticationLevel,
                 VpnProfile = c.VpnProfile,
                 AutoRaiseVpn = c.AutoRaiseVpn,
+                PassShortcuts = c.PassShortcuts,
                 Notes = c.Notes,
             })],
             Workspaces = [.. workspaces.Select(w => new ExportedWorkspace(w.Name, w.AutoConnect,
@@ -279,6 +280,7 @@ public static class ConfigurationTransfer
         AuthenticationLevel = e.AuthenticationLevel,
         VpnProfile = e.VpnProfile,
         AutoRaiseVpn = e.AutoRaiseVpn,
+        PassShortcuts = e.PassShortcuts,
         Notes = e.Notes ?? "",
     };
 }

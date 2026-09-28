@@ -95,6 +95,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     /// profile, so the box is greyed then and saved as off.</summary>
     [ObservableProperty] private bool _autoRaiseVpn;
 
+    /// <summary>Let RemoteDeck's shortcuts through to this remote desktop, for a nested RemoteDeck.</summary>
+    [ObservableProperty] private bool _passShortcuts;
+
     /// <summary>Whether a profile is named at all — what enables the auto-raise box.</summary>
     public bool HasVpnProfile => !string.IsNullOrWhiteSpace(VpnProfile);
 
@@ -183,6 +186,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         // Off when no profile is named: a greyed tick left from an earlier profile must not come back
         // as consent the day a new one is typed in.
         connection.AutoRaiseVpn = AutoRaiseVpn && HasVpnProfile;
+        connection.PassShortcuts = PassShortcuts;
     }
 
     /// <summary>Builds the form for an existing connection, or a blank one when <paramref name="connection"/> is null.</summary>
@@ -217,6 +221,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
             Notes = connection?.Notes ?? "",
             VpnProfile = connection?.VpnProfile ?? "",
             AutoRaiseVpn = connection?.AutoRaiseVpn ?? false,
+            PassShortcuts = connection?.PassShortcuts ?? false,
         };
 
         // A credential deleted since the connection was saved simply falls back to "(none)".

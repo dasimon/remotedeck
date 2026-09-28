@@ -487,11 +487,19 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// Ctrl+B, so the keystroke had nowhere else to go.
     /// </para>
     /// </remarks>
-    private static bool ShouldInterceptShortcut(string shortcut)
+    private bool ShouldInterceptShortcut(string shortcut)
     {
         if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == false)
         {
             return true;
+        }
+
+        // A remote desktop that runs RemoteDeck too gets RemoteDeck's shortcuts — all but
+        // Ctrl+Alt+Pause, kept here as the way back out. Without this, the RemoteDeck over there
+        // never sees Ctrl+K: this one takes it first.
+        if (shortcut is not "Ctrl+Alt+Pause" && SessionWithKeyboardFocus()?.Session.Connection.PassShortcuts == true)
+        {
+            return false;
         }
 
         bool overSessionWindow = ActiveSessionWindow() is not null;
@@ -508,6 +516,39 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
         return shortcut is not "Ctrl+W" || NotATextInput();
     }
+
+    /// <summary>
+    /// The session whose remote desktop has the keyboard, or null when the focus is anywhere else —
+    /// the pane, a dialog, another application. The control is a Win32 window inside WPF, so WPF's
+    /// own focus cannot say; Windows can: the focused window is the host's or one of its children.
+    /// Called from the hook callback on the UI thread, where GetFocus answers for this thread.
+    /// </summary>
+    private SessionTabViewModel? SessionWithKeyboardFocus()
+    {
+        var focus = GetFocus();
+        if (focus == 0)
+        {
+            return null;
+        }
+
+        foreach (var tab in _sessions.Tabs)
+        {
+            var host = tab.Session.Host.Handle;
+            if (host != 0 && (host == focus || IsChild(host, focus)))
+            {
+                return tab;
+            }
+        }
+
+        return null;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint GetFocus();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool IsChild(nint parent, nint child);
 
     /// <summary>Whether the keyboard focus is somewhere a caret would be. Qualified: UseWindowsForms
     /// puts its own TextBoxBase and ComboBox in scope through implicit usings. A read-only ComboBox

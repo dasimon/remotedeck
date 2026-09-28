@@ -1131,4 +1131,10 @@ Espaces déjà présents, laissés tels quels : {4}</value>
   <data name="Transfer_DatabaseNoExportMessage" xml:space="preserve">
     <value>La configuration ne peut pas être exportée tant que la base de données n'est pas ouverte.</value>
   </data>
+  <data name="Editor_PassShortcuts" xml:space="preserve">
+    <value>Envoyer les raccourcis RemoteDeck à ce bureau distant</value>
+  </data>
+  <data name="Editor_PassShortcutsHint" xml:space="preserve">
+    <value>Pour une machine où RemoteDeck tourne aussi : Ctrl+K, Ctrl+W, Ctrl+Tab et les autres vont au RemoteDeck distant plutôt qu'à celui-ci. Ctrl+Alt+Pause reste intercepté ici.</value>
+  </data>
 </root>

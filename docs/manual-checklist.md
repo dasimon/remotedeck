@@ -1028,6 +1028,16 @@ Shipped without a human probe: every box below is still to be ticked by hand.
 - [ ] Hand-edit the file (`"format"` changed, broken JSON): the import says it cannot read
       it and writes nothing.
 
+## RemoteDeck inside a RemoteDeck
+
+- [ ] Local RemoteDeck connected to a machine that runs RemoteDeck; tick *Send RemoteDeck's
+      shortcuts to this remote desktop* on that connection. Click into the remote desktop,
+      press `Ctrl+K`: the **remote** palette opens (its About shows the remote version).
+- [ ] Same session, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+B`: all act on the remote RemoteDeck.
+- [ ] Click the local pane: `Ctrl+K` opens the local palette again.
+- [ ] Detached and full screen: `Ctrl+Alt+Pause` still leaves full screen locally.
+- [ ] Untick the box: the local RemoteDeck takes the shortcuts again, as before.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*

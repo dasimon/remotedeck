@@ -1131,4 +1131,10 @@ Workspaces already here, left as they are: {4}</value>
   <data name="Transfer_DatabaseNoExportMessage" xml:space="preserve">
     <value>The configuration cannot be exported until the database opens.</value>
   </data>
+  <data name="Editor_PassShortcuts" xml:space="preserve">
+    <value>Send RemoteDeck's shortcuts to this remote desktop</value>
+  </data>
+  <data name="Editor_PassShortcutsHint" xml:space="preserve">
+    <value>For a machine that runs RemoteDeck too: Ctrl+K, Ctrl+W, Ctrl+Tab and the others reach the RemoteDeck over there instead of this one. Ctrl+Alt+Pause is still caught here.</value>
+  </data>
 </root>

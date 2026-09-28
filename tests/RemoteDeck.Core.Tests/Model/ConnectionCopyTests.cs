@@ -27,7 +27,7 @@ public sealed class ConnectionCopyTests
         IsFavorite = true, DisplayMode = DisplayMode.Fixed, FixedWidth = 1920, FixedHeight = 1080,
         RedirectClipboard = false, RedirectDrives = true, RedirectPrinters = true, RedirectAudio = true,
         AdminSession = true, UseWebAccount = true, WebAccountUpn = "user@contoso.com", AuthenticationLevel = 1,
-        VpnProfile = "VPN Contoso", AutoRaiseVpn = true, Notes = "notes",
+        VpnProfile = "VPN Contoso", AutoRaiseVpn = true, PassShortcuts = true, Notes = "notes",
         LastConnectedUtc = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
         CreatedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
     };

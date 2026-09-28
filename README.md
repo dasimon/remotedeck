@@ -334,6 +334,13 @@ you composed or a secret, and the app falls back to its defaults without complai
 | `F2` | Edit the selected connection | no |
 | `Delete` | Delete the selected connection — press twice; the first press only arms it, and the confirmation expires after 5 seconds | no |
 
+**RemoteDeck inside a RemoteDeck.** When the remote machine runs RemoteDeck too — a jump
+host, an admin workstation — the shortcuts marked *yes* above are caught by the RemoteDeck
+you are sitting at and never reach the one over there. Tick *Send RemoteDeck's shortcuts to
+this remote desktop* in that connection's editor (*Advanced*): while its remote desktop has
+the keyboard, they all go through to it, except `Ctrl+Alt+Pause`, which stays here as the
+way out of full screen.
+
 Shortcuts go to the **active window**. In a detached session window, `Ctrl+W` closes that
 session, `Ctrl+K` opens the palette over it, `Ctrl+Shift+D` reattaches it and `F11`
 toggles its full screen; `Ctrl+Tab`, `Ctrl+Shift+Tab` and `Ctrl+B` have nothing to act on

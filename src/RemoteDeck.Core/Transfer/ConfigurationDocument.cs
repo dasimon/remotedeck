@@ -62,6 +62,7 @@ public sealed record ExportedConnection
     public int? AuthenticationLevel { get; init; }
     public string? VpnProfile { get; init; }
     public bool AutoRaiseVpn { get; init; }
+    public bool PassShortcuts { get; init; }
     public string Notes { get; init; } = "";
 }
 
