@@ -1073,4 +1073,62 @@
   <data name="Palette_AboutSubtitle" xml:space="preserve">
     <value>Version, licence, journaux</value>
   </data>
+  <data name="Palette_ExportConfig" xml:space="preserve">
+    <value>Exporter la configuration…</value>
+  </data>
+  <data name="Palette_ExportConfigSubtitle" xml:space="preserve">
+    <value>Connexions, identifiants sans mot de passe, espaces de travail, dans un fichier</value>
+  </data>
+  <data name="Palette_ImportConfig" xml:space="preserve">
+    <value>Importer une configuration…</value>
+  </data>
+  <data name="Palette_ImportConfigSubtitle" xml:space="preserve">
+    <value>Depuis un fichier exporté par RemoteDeck</value>
+  </data>
+  <data name="Transfer_FileFilter" xml:space="preserve">
+    <value>Configuration RemoteDeck (*.json)|*.json</value>
+  </data>
+  <data name="Transfer_ExportedTitle" xml:space="preserve">
+    <value>Configuration exportée</value>
+  </data>
+  <data name="Transfer_ExportedMessage" xml:space="preserve">
+    <value>Connexions : {0} · espaces de travail : {1} · identifiants, sans leur mot de passe : {2}. Fichier : {3}</value>
+  </data>
+  <data name="Transfer_ExportFailedTitle" xml:space="preserve">
+    <value>Échec de l'export</value>
+  </data>
+  <data name="Transfer_ReadFailedTitle" xml:space="preserve">
+    <value>Configuration illisible par RemoteDeck</value>
+  </data>
+  <data name="Transfer_ImportConfirmTitle" xml:space="preserve">
+    <value>Importer cette configuration ?</value>
+  </data>
+  <data name="Transfer_ImportSummary" xml:space="preserve">
+    <value>Nouvelles connexions : {0}
+Déjà présentes, laissées telles quelles : {1}
+Refusées par les règles de l'éditeur : {2}
+Nouveaux espaces de travail : {3}
+Espaces déjà présents, laissés tels quels : {4}</value>
+  </data>
+  <data name="Transfer_MissingCredentials" xml:space="preserve">
+    <value>Aucun identifiant ne porte ici le libellé {0} : les connexions qui l'utilisent arrivent sans identifiant. Créez-le dans Gérer les identifiants, puis associez-le.</value>
+  </data>
+  <data name="Transfer_WeakenedSecurity" xml:space="preserve">
+    <value>{0} des nouvelles connexions désactivent l'authentification du serveur ou partagent tous les disques, comme là où elles ont été exportées.</value>
+  </data>
+  <data name="Transfer_NothingNewTitle" xml:space="preserve">
+    <value>Rien de nouveau à importer</value>
+  </data>
+  <data name="Transfer_ImportedTitle" xml:space="preserve">
+    <value>Configuration importée</value>
+  </data>
+  <data name="Transfer_ImportedMessage" xml:space="preserve">
+    <value>Connexions ajoutées : {0} · espaces de travail ajoutés : {1}.</value>
+  </data>
+  <data name="Transfer_ImportFailedTitle" xml:space="preserve">
+    <value>Import interrompu</value>
+  </data>
+  <data name="Transfer_DatabaseNoExportMessage" xml:space="preserve">
+    <value>La configuration ne peut pas être exportée tant que la base de données n'est pas ouverte.</value>
+  </data>
 </root>

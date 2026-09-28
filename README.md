@@ -112,6 +112,24 @@ being read. A user name found in a source is shown to you in the preview and is 
 written into the connection — create the credential yourself and pick it in the
 editor.
 
+### Moving your configuration to another machine
+
+`Ctrl+K` → *Export the configuration…* writes one `.json` file: every connection with its
+group and options, the workspaces, and the credentials **without their passwords** — a
+label, a user name and a domain. Window positions and the other entries of
+`settings.json` stay behind: they describe this machine's screens.
+
+`Ctrl+K` → *Import a configuration…* reads such a file and says what it would do before
+doing anything: how many connections and workspaces are new, how many are already here
+and left as they are, and which credentials it cannot find. Then:
+
+- a connection already present — same name, host and port — is not added again, so
+  importing the same file twice adds nothing;
+- a workspace whose name is taken is left alone, never replaced;
+- a connection is linked to the local credential **with the same label**. Passwords do
+  not travel (Windows seals each one to the account and machine that saved it), so on a
+  new machine create your credentials first, with the same labels, then import.
+
 ### Signing in with a web account (Entra)
 
 Tick **Use web account** on a connection and the session authenticates against Entra ID

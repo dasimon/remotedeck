@@ -1017,6 +1017,17 @@ Shipped without a human probe: every box below is still to be ticked by hand.
       `%APPDATA%\RemoteDeck\logs`, *Copy the details* pastes five lines. `Escape` and `Enter`
       close it. Opened from a detached window, it appears on that window's monitor.
 
+## Export and import of the configuration
+
+- [ ] *Export the configuration…*: the file opens in a text editor, lists the connections,
+      workspaces and credentials, and holds no password, blob or entropy.
+- [ ] Import that same file: the confirmation says nothing is new; nothing changes.
+- [ ] On a second Windows account (or after renaming a credential), import it: the
+      confirmation names the missing credentials; the connections arrive without one; the
+      workspaces open the right connections.
+- [ ] Hand-edit the file (`"format"` changed, broken JSON): the import says it cannot read
+      it and writes nothing.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*

@@ -2,6 +2,16 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### Export and import the configuration
+
+- **`Ctrl+K` → *Export the configuration…*** writes connections, workspaces and credentials —
+  without their passwords, which Windows seals to one account and machine — to one `.json` file.
+- **`Ctrl+K` → *Import a configuration…*** shows what it would add before adding anything, never
+  changes what is already here, and links each connection to the local credential with the same
+  label. Importing the same file twice adds nothing.
+
 ## 0.6.0 — 2026-09-25
 
 A full review of the code, and what it found: an imported `.rdp` could switch off the server

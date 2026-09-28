@@ -72,6 +72,18 @@ be a second thing to lose.
   all, because dialling would mean asking for a password RemoteDeck has promised never to
   want.
 
+## Configuration files
+
+*Export the configuration* writes no secret: a credential leaves as its label, user name
+and domain, and its DPAPI blob and entropy are never read for it. The file does hold host
+names, ports, user names, UPNs, VPN profile names and connection notes — a map of what
+you connect to. Keep it where you would keep that list.
+
+An imported configuration is shown before it is written, and the confirmation counts the
+new connections that turn server authentication off or share every drive: unlike a
+`.rdp` file, a configuration file carries those choices over, since they are the ones its
+owner made in the editor.
+
 ## Threat model — what this covers
 
 - **The database file taken on its own.** `connections.db` copied to another

@@ -19,6 +19,7 @@ using RemoteDeck.Core.Search;
 using RemoteDeck.Core.Security;
 using RemoteDeck.Core.Sessions;
 using RemoteDeck.Core.Settings;
+using RemoteDeck.Core.Transfer;
 using Wpf.Ui.Appearance;
 
 namespace RemoteDeck.App.Views;
@@ -737,6 +738,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import",
             Strings.Palette_ImportConnections, Strings.Palette_ImportSubtitle, CommandPriority,
             Group: Strings.Palette_GroupCommands, Icon: "ArrowImport24"));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:export-config",
+            Strings.Palette_ExportConfig, Strings.Palette_ExportConfigSubtitle, CommandPriority,
+            Group: Strings.Palette_GroupCommands, Icon: "ArrowExportLtr24"));
+        items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:import-config",
+            Strings.Palette_ImportConfig, Strings.Palette_ImportConfigSubtitle, CommandPriority,
+            Group: Strings.Palette_GroupCommands, Icon: "DocumentArrowLeft24"));
         items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:credentials",
             Strings.Palette_ManageCredentials, Strings.Palette_ManageCredentialsSubtitle, CommandPriority,
             Group: Strings.Palette_GroupCommands, Icon: "Key24"));
@@ -947,6 +954,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:credentials":
                 ManageCredentials();
+                break;
+
+            case "cmd:export-config":
+                ExportConfiguration((Window?)from ?? this);
+                break;
+
+            case "cmd:import-config":
+                ImportConfiguration((Window?)from ?? this);
                 break;
 
             case "cmd:about":
@@ -2503,6 +2518,126 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private void OnManageCredentials(object sender, RoutedEventArgs e) => ManageCredentials();
 
     /// <summary>Opens the credential manager, from the toolbar button or from the palette.</summary>
+    /// <summary>
+    /// Writes connections, credentials without their passwords, and workspaces to a file the user
+    /// picks. See <see cref="ConfigurationTransfer"/> for what the file holds and what it never does.
+    /// </summary>
+    private void ExportConfiguration(Window owner)
+    {
+        if (_connections is null || _credentials is null || _workspaces is null)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Transfer_DatabaseNoExportMessage);
+            return;
+        }
+
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = Strings.Transfer_FileFilter,
+            FileName = string.Create(CultureInfo.InvariantCulture, $"RemoteDeck-{DateTime.Now:yyyy-MM-dd}.json"),
+        };
+        if (dialog.ShowDialog(owner) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var document = ConfigurationTransfer.Build(
+                _connections.GetAll(), _credentials.GetAll(), _workspaces.GetAll(), DateTime.UtcNow);
+            System.IO.File.WriteAllText(dialog.FileName, ConfigurationTransfer.Serialize(document));
+            ProbeLog.Write("transfer", $"Exported {document.Connections.Count} connection(s), {document.Workspaces.Count} workspace(s), {document.Credentials.Count} credential(s)");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, Strings.Transfer_ExportedTitle,
+                Text.Of(Strings.Transfer_ExportedMessage, document.Connections.Count, document.Workspaces.Count,
+                    document.Credentials.Count, dialog.FileName));
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException)
+        {
+            ProbeLog.Write("transfer", $"Export failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Transfer_ExportFailedTitle, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Reads a configuration file, says what it would add, and adds it only once the user agrees.
+    /// Nothing already here is changed: see <see cref="ConfigurationTransfer.Plan"/>.
+    /// </summary>
+    private void ImportConfiguration(Window owner)
+    {
+        if (_connections is null || _credentials is null || _workspaces is null)
+        {
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Warning, Strings.Shell_DatabaseUnavailableTitle,
+                Strings.Shell_DatabaseNoImportMessage);
+            return;
+        }
+
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = Strings.Transfer_FileFilter };
+        if (dialog.ShowDialog(owner) != true)
+        {
+            return;
+        }
+
+        ImportPlan plan;
+        try
+        {
+            var document = ConfigurationTransfer.Read(System.IO.File.ReadAllText(dialog.FileName));
+            plan = ConfigurationTransfer.Plan(document, _connections.GetAll(), _credentials.GetAll(), _workspaces.GetAll());
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.IO.InvalidDataException)
+        {
+            ProbeLog.Write("transfer", $"Import read failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Transfer_ReadFailedTitle, ex.Message);
+            return;
+        }
+
+        var summary = Text.Of(Strings.Transfer_ImportSummary, plan.Connections.Count, plan.ConnectionsAlreadyPresent,
+            plan.ConnectionsInvalid, plan.Workspaces.Count, plan.WorkspacesAlreadyPresent);
+        if (plan.MissingCredentials.Count > 0)
+        {
+            summary += Environment.NewLine + Environment.NewLine
+                + Text.Of(Strings.Transfer_MissingCredentials, string.Join(", ", plan.MissingCredentials));
+        }
+
+        if (plan.WeakenedSecurity > 0)
+        {
+            summary += Environment.NewLine + Environment.NewLine
+                + Text.Of(Strings.Transfer_WeakenedSecurity, plan.WeakenedSecurity);
+        }
+
+        if (!plan.HasSomethingToAdd)
+        {
+            System.Windows.MessageBox.Show(owner, summary, Strings.Transfer_NothingNewTitle,
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Cancel by default: a file can come from anyone, and the summary is worth reading first.
+        if (System.Windows.MessageBox.Show(owner, summary, Strings.Transfer_ImportConfirmTitle,
+                MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        var result = new ImportResult();
+        try
+        {
+            ConfigurationTransfer.Apply(plan, _connections, _workspaces, result);
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Success, Strings.Transfer_ImportedTitle,
+                Text.Of(Strings.Transfer_ImportedMessage, result.ConnectionsAdded, result.WorkspacesAdded));
+        }
+        catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or InvalidOperationException)
+        {
+            ProbeLog.Write("transfer", $"Import failed: {ex.GetType().Name}: {ex.Message}");
+            StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Transfer_ImportFailedTitle,
+                Text.Of(Strings.Transfer_ImportedMessage, result.ConnectionsAdded, result.WorkspacesAdded) + " " + ex.Message);
+        }
+        finally
+        {
+            ProbeLog.Write("transfer", $"Imported {result.ConnectionsAdded} connection(s), {result.WorkspacesAdded} workspace(s)");
+            if (result.ConnectionsAdded + result.WorkspacesAdded > 0) _list?.Reload();
+        }
+    }
+
     private void ManageCredentials()
     {
         if (_credentials is null)
