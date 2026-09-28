@@ -282,6 +282,18 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void PassShortcuts_is_off_unless_set_and_roundtrips_through_insert_and_update()
+    {
+        var x = Make("Jump host");
+        _repo.Insert(x);
+        Assert.False(_repo.Get(x.Id)!.PassShortcuts);
+
+        x.PassShortcuts = true;
+        _repo.Update(x);
+        Assert.True(_repo.Get(x.Id)!.PassShortcuts);
+    }
+
+    [Fact]
     public void Update_carries_AutoRaiseVpn_both_ways()
     {
         var x = Make("Changes its mind");

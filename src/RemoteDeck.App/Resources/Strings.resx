@@ -1073,4 +1073,68 @@
   <data name="Palette_AboutSubtitle" xml:space="preserve">
     <value>Version, licence, logs</value>
   </data>
+  <data name="Palette_ExportConfig" xml:space="preserve">
+    <value>Export the configuration…</value>
+  </data>
+  <data name="Palette_ExportConfigSubtitle" xml:space="preserve">
+    <value>Connections, credentials without passwords, workspaces, in one file</value>
+  </data>
+  <data name="Palette_ImportConfig" xml:space="preserve">
+    <value>Import a configuration…</value>
+  </data>
+  <data name="Palette_ImportConfigSubtitle" xml:space="preserve">
+    <value>From a file exported by RemoteDeck</value>
+  </data>
+  <data name="Transfer_FileFilter" xml:space="preserve">
+    <value>RemoteDeck configuration (*.json)|*.json</value>
+  </data>
+  <data name="Transfer_ExportedTitle" xml:space="preserve">
+    <value>Configuration exported</value>
+  </data>
+  <data name="Transfer_ExportedMessage" xml:space="preserve">
+    <value>Connections: {0} · workspaces: {1} · credentials, without their passwords: {2}. File: {3}</value>
+  </data>
+  <data name="Transfer_ExportFailedTitle" xml:space="preserve">
+    <value>Export failed</value>
+  </data>
+  <data name="Transfer_ReadFailedTitle" xml:space="preserve">
+    <value>Not a configuration RemoteDeck can read</value>
+  </data>
+  <data name="Transfer_ImportConfirmTitle" xml:space="preserve">
+    <value>Import this configuration?</value>
+  </data>
+  <data name="Transfer_ImportSummary" xml:space="preserve">
+    <value>New connections: {0}
+Already here, left as they are: {1}
+Refused by the editor's rules: {2}
+New workspaces: {3}
+Workspaces already here, left as they are: {4}</value>
+  </data>
+  <data name="Transfer_MissingCredentials" xml:space="preserve">
+    <value>No credential here is labelled {0}: the connections using it arrive without one. Create it in Manage credentials, then assign it.</value>
+  </data>
+  <data name="Transfer_WeakenedSecurity" xml:space="preserve">
+    <value>{0} of the new connections turn server authentication off or share every drive, as they did where they were exported.</value>
+  </data>
+  <data name="Transfer_NothingNewTitle" xml:space="preserve">
+    <value>Nothing new to import</value>
+  </data>
+  <data name="Transfer_ImportedTitle" xml:space="preserve">
+    <value>Configuration imported</value>
+  </data>
+  <data name="Transfer_ImportedMessage" xml:space="preserve">
+    <value>Connections added: {0} · workspaces added: {1}.</value>
+  </data>
+  <data name="Transfer_ImportFailedTitle" xml:space="preserve">
+    <value>Import stopped</value>
+  </data>
+  <data name="Transfer_DatabaseNoExportMessage" xml:space="preserve">
+    <value>The configuration cannot be exported until the database opens.</value>
+  </data>
+  <data name="Editor_PassShortcuts" xml:space="preserve">
+    <value>Send RemoteDeck's shortcuts to this remote desktop</value>
+  </data>
+  <data name="Editor_PassShortcutsHint" xml:space="preserve">
+    <value>For a machine that runs RemoteDeck too: Ctrl+K, Ctrl+W, Ctrl+Tab and the others reach the RemoteDeck over there instead of this one. Ctrl+Alt+Pause is still caught here.</value>
+  </data>
 </root>

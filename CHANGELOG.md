@@ -2,6 +2,31 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## 0.7.0 — 2026-09-28
+
+Carry your configuration to another machine, and drive a RemoteDeck from inside a RemoteDeck.
+
+### Export and import the configuration
+
+- **`Ctrl+K` → *Export the configuration…*** writes connections, workspaces and credentials —
+  without their passwords, which Windows seals to one account and machine — to one `.json` file.
+- **`Ctrl+K` → *Import a configuration…*** shows what it would add before adding anything, never
+  changes what is already here, and links each connection to the local credential with the same
+  label. Importing the same file twice adds nothing.
+
+### RemoteDeck inside a RemoteDeck
+
+- **A connection can send RemoteDeck's shortcuts to its remote desktop** (editor, *Advanced*). For a
+  machine that runs RemoteDeck too: `Ctrl+K`, `Ctrl+W`, `Ctrl+Tab` and the others reached the local
+  RemoteDeck first, so the one over there never saw them. Ticked, they go through while that
+  session has the keyboard; `Ctrl+Alt+Pause` stays local, as the way out of full screen.
+
+### Upgrading
+
+- The database moves to **schema V7** (the column for the option above, off for every existing
+  connection). It is copied to `connections.v6.bak` first; 0.6.0 and earlier refuse the upgraded
+  database, and the copy is the way back.
+
 ## 0.6.0 — 2026-09-25
 
 A full review of the code, and what it found: an imported `.rdp` could switch off the server

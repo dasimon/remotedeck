@@ -3097,5 +3097,185 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Palette_AboutSubtitle", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Export the configuration….
+        /// </summary>
+        public static string Palette_ExportConfig {
+            get {
+                return ResourceManager.GetString("Palette_ExportConfig", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connections, credentials without passwords, workspaces, in one file.
+        /// </summary>
+        public static string Palette_ExportConfigSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_ExportConfigSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Import a configuration….
+        /// </summary>
+        public static string Palette_ImportConfig {
+            get {
+                return ResourceManager.GetString("Palette_ImportConfig", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to From a file exported by RemoteDeck.
+        /// </summary>
+        public static string Palette_ImportConfigSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_ImportConfigSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck configuration (*.json)|*.json.
+        /// </summary>
+        public static string Transfer_FileFilter {
+            get {
+                return ResourceManager.GetString("Transfer_FileFilter", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Configuration exported.
+        /// </summary>
+        public static string Transfer_ExportedTitle {
+            get {
+                return ResourceManager.GetString("Transfer_ExportedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connections: {0} · workspaces: {1} · credentials, without their passwords: {2}. File: {3}.
+        /// </summary>
+        public static string Transfer_ExportedMessage {
+            get {
+                return ResourceManager.GetString("Transfer_ExportedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Export failed.
+        /// </summary>
+        public static string Transfer_ExportFailedTitle {
+            get {
+                return ResourceManager.GetString("Transfer_ExportFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Not a configuration RemoteDeck can read.
+        /// </summary>
+        public static string Transfer_ReadFailedTitle {
+            get {
+                return ResourceManager.GetString("Transfer_ReadFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Import this configuration?.
+        /// </summary>
+        public static string Transfer_ImportConfirmTitle {
+            get {
+                return ResourceManager.GetString("Transfer_ImportConfirmTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to New connections: {0} Already here, left as they are: {1} Refused by the editor's rules: {2} New workspaces: {3} Workspaces already here, left as they are: {4}.
+        /// </summary>
+        public static string Transfer_ImportSummary {
+            get {
+                return ResourceManager.GetString("Transfer_ImportSummary", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No credential here is labelled {0}: the connections using it arrive without one. Create it in Manage credentials, then assign it..
+        /// </summary>
+        public static string Transfer_MissingCredentials {
+            get {
+                return ResourceManager.GetString("Transfer_MissingCredentials", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} of the new connections turn server authentication off or share every drive, as they did where they were exported..
+        /// </summary>
+        public static string Transfer_WeakenedSecurity {
+            get {
+                return ResourceManager.GetString("Transfer_WeakenedSecurity", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing new to import.
+        /// </summary>
+        public static string Transfer_NothingNewTitle {
+            get {
+                return ResourceManager.GetString("Transfer_NothingNewTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Configuration imported.
+        /// </summary>
+        public static string Transfer_ImportedTitle {
+            get {
+                return ResourceManager.GetString("Transfer_ImportedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Connections added: {0} · workspaces added: {1}..
+        /// </summary>
+        public static string Transfer_ImportedMessage {
+            get {
+                return ResourceManager.GetString("Transfer_ImportedMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Import stopped.
+        /// </summary>
+        public static string Transfer_ImportFailedTitle {
+            get {
+                return ResourceManager.GetString("Transfer_ImportFailedTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The configuration cannot be exported until the database opens..
+        /// </summary>
+        public static string Transfer_DatabaseNoExportMessage {
+            get {
+                return ResourceManager.GetString("Transfer_DatabaseNoExportMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Send RemoteDeck's shortcuts to this remote desktop.
+        /// </summary>
+        public static string Editor_PassShortcuts {
+            get {
+                return ResourceManager.GetString("Editor_PassShortcuts", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to For a machine that runs RemoteDeck too: Ctrl+K, Ctrl+W, Ctrl+Tab and the others reach the RemoteDeck over there instead of this one. Ctrl+Alt+Pause is still caught here..
+        /// </summary>
+        public static string Editor_PassShortcutsHint {
+            get {
+                return ResourceManager.GetString("Editor_PassShortcutsHint", resourceCulture);
+            }
+        }
     }
 }

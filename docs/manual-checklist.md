@@ -971,51 +971,76 @@ All in `RemoteDeck.App`, so none of it is covered by an automated test. The VPN 
 
 ## Review follow-ups (2026-09-25)
 
-Shipped without a human probe: every box below is still to be ticked by hand.
+*Ticked 2026-09-28: tested by hand on 0.7.0-preview3, client and FDC-WIN02.*
 
 ### Import and security
 
-- [ ] Import a `.rdp` holding `authentication level:i:0` and `drivestoredirect:s:*`: the
+- [x] Import a `.rdp` holding `authentication level:i:0` and `drivestoredirect:s:*`: the
       preview row warns about both, and the imported connection has drives off and the
       default server authentication. Connecting to a host with an untrusted certificate
       shows the control's warning.
-- [ ] Import `full address:s:[::1]:3390`: host `::1`, port 3390.
+- [x] Import `full address:s:[::1]:3390`: host `::1`, port 3390.
 
 ### Sessions and VPN
 
-- [ ] Detach a tab on a 1366×768 screen at 175 % (or any work area under 640×480 DIP):
+- [x] Detach a tab on a 1366×768 screen at 175 % (or any work area under 640×480 DIP):
       the window opens, sized to the screen; RemoteDeck does not close.
-- [ ] Cancel a reconnection while an attempt is in flight, on a host that stays down: the
+- [x] Cancel a reconnection while an attempt is in flight, on a host that stays down: the
       tab stays *Failed* and no new countdown starts.
-- [ ] A VPN profile with a wrong saved password: dial it twice in a row from RemoteDeck.
+- [x] A VPN profile with a wrong saved password: dial it twice in a row from RemoteDeck.
       The second attempt reports Windows' error again, not 602 "port already open".
-- [ ] Close and reopen twenty tabs: RemoteDeck's handle count (Task Manager, *Handles*
+- [x] Close and reopen twenty tabs: RemoteDeck's handle count (Task Manager, *Handles*
       column) comes back to about where it started.
 
 ### Keyboard
 
-- [ ] Inside a connected remote desktop, press `Ctrl+W` once: nothing closes, the status
+- [x] Inside a connected remote desktop, press `Ctrl+W` once: nothing closes, the status
       bar asks for a second press. Press it again within 3 s: the session closes. On a
       tab that is not connected, one press closes it.
-- [ ] Same in a detached, full-screen window.
-- [ ] `Tab` reaches the session tabs and the workspace rows. On a tab: `Enter` activates,
+- [x] Same in a detached, full-screen window.
+- [x] `Tab` reaches the session tabs and the workspace rows. On a tab: `Enter` activates,
       `Delete` closes, `Shift+F10` opens its menu. On a workspace: `Enter` opens, `Delete`
       asks to delete.
-- [ ] Credentials window: `Escape` closes, `Enter` edits, `Delete` arms then deletes
+- [x] Credentials window: `Escape` closes, `Enter` edits, `Delete` arms then deletes
       within 5 s; after 5 s the button goes back to *Delete*. An empty vault shows the
       empty-state sentence.
-- [ ] Connection editor: change a field, press `Escape`: the discard question appears,
+- [x] Connection editor: change a field, press `Escape`: the discard question appears,
       *No* is the default and keeps the form. Unchanged form: `Escape` closes at once.
       The title reads *New connection* or *Edit "…"*.
-- [ ] Palette with a connection selected in the pane: *Edit connection* opens the editor,
+- [x] Palette with a connection selected in the pane: *Edit connection* opens the editor,
       *Delete connection* arms the delete (then `Delete` confirms). *Update workspace*
       appears for each workspace while sessions are open.
-- [ ] Narrator reads every editor field by its label, and both search boxes by their
+- [x] Narrator reads every editor field by its label, and both search boxes by their
       placeholder.
-- [ ] `Ctrl+K` → *About RemoteDeck*: the version matches the release (a development build
+- [x] `Ctrl+K` → *About RemoteDeck*: the version matches the release (a development build
       reads 1.0.0+commit), the links open the browser, *Open the log folder* opens
       `%APPDATA%\RemoteDeck\logs`, *Copy the details* pastes five lines. `Escape` and `Enter`
       close it. Opened from a detached window, it appears on that window's monitor.
+
+## Export and import of the configuration
+
+*Ticked 2026-09-28: tested by hand on 0.7.0-preview3.*
+
+- [x] *Export the configuration…*: the file opens in a text editor, lists the connections,
+      workspaces and credentials, and holds no password, blob or entropy.
+- [x] Import that same file: the confirmation says nothing is new; nothing changes.
+- [x] On a second Windows account (or after renaming a credential), import it: the
+      confirmation names the missing credentials; the connections arrive without one; the
+      workspaces open the right connections.
+- [x] Hand-edit the file (`"format"` changed, broken JSON): the import says it cannot read
+      it and writes nothing.
+
+## RemoteDeck inside a RemoteDeck
+
+*Ticked 2026-09-28: tested by hand on 0.7.0-preview3.*
+
+- [x] Local RemoteDeck connected to a machine that runs RemoteDeck; tick *Send RemoteDeck's
+      shortcuts to this remote desktop* on that connection. Click into the remote desktop,
+      press `Ctrl+K`: the **remote** palette opens (its About shows the remote version).
+- [x] Same session, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+B`: all act on the remote RemoteDeck.
+- [x] Click the local pane: `Ctrl+K` opens the local palette again.
+- [x] Detached and full screen: `Ctrl+Alt+Pause` still leaves full screen locally.
+- [x] Untick the box: the local RemoteDeck takes the shortcuts again, as before.
 
 ## Build prerequisites (any lot)
 

@@ -97,6 +97,11 @@ public static class SchemaMigrator
         """
         ALTER TABLE Connection DROP COLUMN AcceptedCertThumbprint;
         """,
+        // V7 — let RemoteDeck's shortcuts through to the remote desktop. Off for every existing
+        // connection: they keep behaving as they did.
+        """
+        ALTER TABLE Connection ADD COLUMN PassShortcuts INTEGER NOT NULL DEFAULT 0;
+        """,
     ];
 
     public static int GetVersion(SqliteConnection connection)

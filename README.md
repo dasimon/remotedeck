@@ -112,6 +112,24 @@ being read. A user name found in a source is shown to you in the preview and is 
 written into the connection — create the credential yourself and pick it in the
 editor.
 
+### Moving your configuration to another machine
+
+`Ctrl+K` → *Export the configuration…* writes one `.json` file: every connection with its
+group and options, the workspaces, and the credentials **without their passwords** — a
+label, a user name and a domain. Window positions and the other entries of
+`settings.json` stay behind: they describe this machine's screens.
+
+`Ctrl+K` → *Import a configuration…* reads such a file and says what it would do before
+doing anything: how many connections and workspaces are new, how many are already here
+and left as they are, and which credentials it cannot find. Then:
+
+- a connection already present — same name, host and port — is not added again, so
+  importing the same file twice adds nothing;
+- a workspace whose name is taken is left alone, never replaced;
+- a connection is linked to the local credential **with the same label**. Passwords do
+  not travel (Windows seals each one to the account and machine that saved it), so on a
+  new machine create your credentials first, with the same labels, then import.
+
 ### Signing in with a web account (Entra)
 
 Tick **Use web account** on a connection and the session authenticates against Entra ID
@@ -315,6 +333,13 @@ you composed or a secret, and the app falls back to its defaults without complai
 | `Enter` | Connect the selected connection | no |
 | `F2` | Edit the selected connection | no |
 | `Delete` | Delete the selected connection — press twice; the first press only arms it, and the confirmation expires after 5 seconds | no |
+
+**RemoteDeck inside a RemoteDeck.** When the remote machine runs RemoteDeck too — a jump
+host, an admin workstation — the shortcuts marked *yes* above are caught by the RemoteDeck
+you are sitting at and never reach the one over there. Tick *Send RemoteDeck's shortcuts to
+this remote desktop* in that connection's editor (*Advanced*): while its remote desktop has
+the keyboard, they all go through to it, except `Ctrl+Alt+Pause`, which stays here as the
+way out of full screen.
 
 Shortcuts go to the **active window**. In a detached session window, `Ctrl+W` closes that
 session, `Ctrl+K` opens the palette over it, `Ctrl+Shift+D` reattaches it and `F11`

@@ -47,6 +47,7 @@ public static class ConnectionCopy
             AuthenticationLevel = source.AuthenticationLevel,
             VpnProfile = source.VpnProfile,
             AutoRaiseVpn = source.AutoRaiseVpn,
+            PassShortcuts = source.PassShortcuts,
             Notes = source.Notes,
         };
     }
