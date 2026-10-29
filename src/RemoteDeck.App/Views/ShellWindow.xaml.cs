@@ -2035,13 +2035,6 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         VpnGate.EnsureReadyAsync(this, connection, (severity, title, message) => StatusBar.Show(severity, title, message));
 
     /// <summary>
-    /// Opens a tab for <paramref name="connection"/> and, when <paramref name="start"/>, starts the
-    /// session. Awaitable, which <see cref="OnConnectRequested"/> cannot be: mounting a workspace
-    /// connects in series, and a series needs somewhere to wait.
-    /// </summary>
-    /// <param name="start">False for a workspace whose <c>AutoConnect</c> is off: the tab exists,
-    /// the session waits to be selected.</param>
-    /// <summary>
     /// An All monitors session the user started has logged on: into full screen across the monitors,
     /// detaching it first when it is still docked — what <c>mstsc /multimon</c> does from the start.
     /// Ignored while the shell is closing, or for a tab no longer open or no longer connected.
@@ -2066,6 +2059,13 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         DetachTab(tab, (System.Windows.Point?)null, fullScreen: true);
     }
 
+    /// <summary>
+    /// Opens a tab for <paramref name="connection"/> and, when <paramref name="start"/>, starts the
+    /// session. Awaitable, which <see cref="OnConnectRequested"/> cannot be: mounting a workspace
+    /// connects in series, and a series needs somewhere to wait.
+    /// </summary>
+    /// <param name="start">False for a workspace whose <c>AutoConnect</c> is off: the tab exists,
+    /// the session waits to be selected.</param>
     private async Task OpenConnectionAsync(Connection connection, bool start)
     {
         if (_version is null)

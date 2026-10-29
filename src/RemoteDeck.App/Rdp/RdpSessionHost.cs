@@ -163,10 +163,9 @@ internal sealed class RdpSessionHost : IDisposable
         _client.DesktopHeight = pinned && settings.FixedHeight is > 0 ? settings.FixedHeight.Value : hostHeight;
         _client.ColorDepth = 32;
 
-        if (settings.DisplayMode == DisplayMode.AllMonitors)
-        {
-            ConfigureAllMonitors();
-        }
+        // Always set, never inherited: the control is reused across attempts, so a connection edited
+        // away from All monitors must not reconnect with UseMultimon still on from the last one.
+        SetMultimon(settings.DisplayMode == DisplayMode.AllMonitors);
 
         var advanced = _client.AdvancedSettings9;      // IMsRdpClientAdvancedSettings8, inherits all previous
         advanced.RDPPort = settings.Port;
@@ -225,22 +224,26 @@ internal sealed class RdpSessionHost : IDisposable
     /// asked for is the primary monitor's: the control itself grows it to the whole layout at logon
     /// (measured 2026-10-29: 5120×1440 asked, 7040×1440 reported with a 1920×1080 monitor beside it),
     /// and the primary monitor's size stays below the 8192 px limit whatever the number of monitors.
-    /// A refusal is logged and the session carries on, on one monitor.
+    /// A refusal is logged and the session carries on, on one monitor. Off is the control's default,
+    /// set explicitly for every other mode.
     /// https://learn.microsoft.com/windows/win32/termserv/imsrdpclientnonscriptable5-usemultimon
     /// </summary>
-    private void ConfigureAllMonitors()
+    private void SetMultimon(bool on)
     {
-        var primary = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
-        _client.DesktopWidth = primary.Width;
-        _client.DesktopHeight = primary.Height;
+        if (on)
+        {
+            var primary = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
+            _client.DesktopWidth = primary.Width;
+            _client.DesktopHeight = primary.Height;
+        }
 
         try
         {
-            ((IMsRdpClientNonScriptable5)_host.Ocx).UseMultimon = true;
+            ((IMsRdpClientNonScriptable5)_host.Ocx).UseMultimon = on;
         }
         catch (Exception ex)
         {
-            ProbeLog.Write("display", $"UseMultimon refused: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            ProbeLog.Write("display", $"UseMultimon={on} refused: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
     }
 

@@ -213,6 +213,14 @@ internal sealed class RdpSession : IDisposable
     /// <summary>Set by <see cref="ArmSpan"/>, cleared when <see cref="SpanAllMonitorsRequested"/> fires.</summary>
     private bool _spanPending;
 
+    /// <summary>
+    /// Whether the current attempt was configured for every monitor. Taken at each attempt, not read
+    /// from <see cref="Connection"/> at run time: the editor writes that same instance, and a session
+    /// negotiated for every monitor stays so until its next connection — it must neither renegotiate
+    /// as a Dynamic one nor lose its full-screen marking because the row changed meanwhile.
+    /// </summary>
+    public bool SpansAllMonitors { get; private set; }
+
     /// <summary>The rectangle an All monitors session's remote monitors cover, in local
     /// virtual-screen pixels; <c>null</c> before the control exists or when it cannot say.</summary>
     public System.Drawing.Rectangle? RemoteMonitorsBounds() => _sessionHost?.ReadRemoteMonitors();
@@ -235,7 +243,7 @@ internal sealed class RdpSession : IDisposable
 
         ProbeLog.Write("session", $"'{Connection.Name}': host attached to {newParent.GetType().Name}");
 
-        if (State == SessionState.Connected && Connection.DisplayMode == DisplayMode.Dynamic)
+        if (State == SessionState.Connected && Connection.DisplayMode == DisplayMode.Dynamic && !SpansAllMonitors)
         {
             // Debounced: the new window may still be laying out, so let the timer measure it once
             // it has settled rather than reading a stale ActualWidth/ActualHeight now.
@@ -433,6 +441,10 @@ internal sealed class RdpSession : IDisposable
         (int Width, int Height)? measured = Host.ActualWidth > 0 && Host.ActualHeight > 0 ? TargetSize() : null;
         (_requestedWidth, _requestedHeight) = measured ?? TargetSize();
 
+        // Read in the same dispatcher turn as the shell's Configure, which reads the same instance:
+        // what the control is about to be configured with, whatever the editor writes later.
+        SpansAllMonitors = Connection.DisplayMode == DisplayMode.AllMonitors;
+
         RdpSessionHost host;
         try
         {
@@ -516,7 +528,7 @@ internal sealed class RdpSession : IDisposable
         _loggedOn = true;
         _displayFailures = 0;
 
-        if (Connection.DisplayMode == DisplayMode.AllMonitors)
+        if (SpansAllMonitors)
         {
             // The layout was negotiated at connection time and never follows the window: logged
             // here, the first moment the control knows what the server granted.
@@ -661,7 +673,7 @@ internal sealed class RdpSession : IDisposable
     /// </summary>
     private void OnHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (_smartSizingFallback || !_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic)
+        if (_smartSizingFallback || !_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || SpansAllMonitors)
         {
             return;
         }
@@ -691,7 +703,7 @@ internal sealed class RdpSession : IDisposable
             return;
         }
 
-        if (!_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || State != SessionState.Connected)
+        if (!_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || SpansAllMonitors || State != SessionState.Connected)
         {
             return;
         }

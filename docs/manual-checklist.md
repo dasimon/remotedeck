@@ -1059,11 +1059,16 @@ once it was marked full screen.*
 - [ ] `F11`: the window leaves full screen, shows the whole desktop shrunk, the local taskbar is
       back. `F11` again: every monitor covered again.
 - [ ] Each way out brings the local taskbar back: `Ctrl+Alt+Pause`, the bar's button, *Reattach*.
-- [ ] A short network cut: the automatic reconnection keeps full screen and still two monitors.
+- [ ] *Only once the branch carries the full-screen reconnection fix (`fix/fullscreen-reconnect`):*
+      a short network cut: the automatic reconnection keeps full screen, still two monitors, and
+      the local taskbar stays hidden during the countdown.
 - [ ] A workspace holding an *All monitors* connection saved as detached: one window only, in
       full screen over every monitor.
-- [ ] Switch the connection to *Dynamic* while its session is open: nothing changes until the next
-      connection, which then opens in a tab as any Dynamic one.
+- [ ] Switch the connection to *Dynamic* while its session is open in full screen: nothing changes
+      until the next connection — `F11` still brings the local taskbar back, `F11` again still
+      covers every monitor, and resizing the window out of full screen does not renegotiate the
+      resolution (no `UpdateDisplay` line in the log). *Reconnect*: the session is then an ordinary
+      Dynamic one, on one monitor.
 - [ ] A *Dynamic* connection, detached, `F11`: full screen on one monitor, as before.
 - [ ] Import a `.rdp` file containing `use multimon:i:1`: the connection is in *All monitors*.
 

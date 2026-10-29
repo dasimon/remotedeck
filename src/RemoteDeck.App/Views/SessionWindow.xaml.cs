@@ -247,11 +247,12 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         else
         {
             _isFullScreen = false;
-            if (SpansAllMonitors)
+            if (_markedFullScreen)
             {
                 // Before the style comes back: the taskbar must not stay under a window that is
                 // about to be an ordinary one.
                 SpanningFullScreen.MarkFullScreen(new WindowInteropHelper(this).Handle, false);
+                _markedFullScreen = false;
             }
 
             EndBar();
@@ -275,7 +276,11 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>An All monitors session: its full screen covers every monitor the server granted
     /// instead of maximizing on the one the window sits on.</summary>
-    private bool SpansAllMonitors => _tab.Session.Connection.DisplayMode == Core.Model.DisplayMode.AllMonitors;
+    private bool SpansAllMonitors => _tab.Session.SpansAllMonitors;
+
+    /// <summary>Whether this window told the Shell it is full screen. Kept rather than deduced from
+    /// the mode on the way out, so the marking is always taken back.</summary>
+    private bool _markedFullScreen;
 
     /// <summary>
     /// Covers the remote monitors' bounding box, or the local virtual screen when the control cannot
@@ -289,6 +294,7 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         nint handle = new WindowInteropHelper(this).Handle;
         SpanningFullScreen.Cover(handle, area);
         SpanningFullScreen.MarkFullScreen(handle, true);
+        _markedFullScreen = true;
         Activate();
         ProbeLog.Write("display", $"'{_tab.Title}': full screen covers {area}");
     }

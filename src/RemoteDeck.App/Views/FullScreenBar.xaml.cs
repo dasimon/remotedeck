@@ -310,7 +310,7 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
         // usings, and RemoteDeck never imports that namespace into a WPF file.
         // An All monitors session covers several screens: the bar goes to the primary one, where the
         // remote taskbar is, rather than to whichever screen holds most of the window.
-        var area = _owner.Tab.Session.Connection.DisplayMode == Core.Model.DisplayMode.AllMonitors
+        var area = _owner.Tab.Session.SpansAllMonitors
             ? System.Windows.Forms.Screen.PrimaryScreen!.Bounds
             : System.Windows.Forms.Screen.FromHandle(handle).Bounds;
         return new Rect(area.Left / dpi.DpiScaleX, area.Top / dpi.DpiScaleY,

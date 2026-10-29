@@ -15,6 +15,9 @@ public sealed class RemoteMonitorBoxTests
     [InlineData(0, 0, -1, 1079)]   // width 0
     [InlineData(0, 0, 1919, -1)]   // height 0
     [InlineData(0, 0, -5, -5)]     // both negative
+    [InlineData(0, 0, 0, 0)]       // 1×1: a control reporting zeros, which full screen would shrink to nothing
+    [InlineData(0, 0, 638, 1079)]  // narrower than any remote desktop RemoteDeck asks for
+    [InlineData(0, 0, 1919, 478)]  // lower than any remote desktop RemoteDeck asks for
     public void An_empty_box_is_no_box(int left, int top, int right, int bottom)
         => Assert.Null(RemoteMonitorBox.FromInclusive(left, top, right, bottom));
 }
