@@ -51,6 +51,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
         new(CoreDisplayMode.Dynamic, Strings.Editor_DisplayDynamic),
         new(CoreDisplayMode.Scaled, Strings.Editor_DisplayScaled),
         new(CoreDisplayMode.Fixed, Strings.Editor_DisplayFixed),
+        new(CoreDisplayMode.AllMonitors, Strings.Editor_DisplayAllMonitors),
     ];
 
     [ObservableProperty] private string _name = "";
@@ -136,8 +137,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     /// <summary>The stored foreign key: the placeholder row means "no credential".</summary>
     public long? CredentialId => SelectedCredential is { Id: > 0 } credential ? credential.Id : null;
 
-    /// <summary>Dynamic follows the window, so the fixed size is meaningless — and its boxes are disabled.</summary>
-    public bool IsFixedSizeEnabled => DisplayMode != CoreDisplayMode.Dynamic;
+    /// <summary>Dynamic follows the window and All monitors the local monitors, so the fixed size is
+    /// meaningless to both — and its boxes are disabled.</summary>
+    public bool IsFixedSizeEnabled => ConnectionRules.UsesFixedSize(DisplayMode);
 
     // An empty box stays null all the way to the rules, which report it as missing rather than out of range.
     private int? PortNumber => Port is { } port ? (int)Math.Round(port) : null;

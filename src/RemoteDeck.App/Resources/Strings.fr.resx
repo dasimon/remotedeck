@@ -623,6 +623,9 @@
   <data name="Editor_DisplayScaled" xml:space="preserve">
     <value>Mise à l'échelle</value>
   </data>
+  <data name="Editor_DisplayAllMonitors" xml:space="preserve">
+    <value>Tous les écrans</value>
+  </data>
   <data name="Editor_DisplayFixed" xml:space="preserve">
     <value>Fixe</value>
   </data>

@@ -1756,6 +1756,15 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to All monitors.
+        /// </summary>
+        public static string Editor_DisplayAllMonitors {
+            get {
+                return ResourceManager.GetString("Editor_DisplayAllMonitors", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Fixed.
         /// </summary>
         public static string Editor_DisplayFixed {
