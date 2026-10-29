@@ -192,7 +192,8 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     /// window's layout never hears about.
     ///
     /// Full screen is therefore bound to the connected state: it is only entered from it, and
-    /// <see cref="LeaveFullScreenUnlessConnected"/> ends it the moment the session leaves it. That
+    /// <see cref="LeaveFullScreenUnlessConnected"/> ends it once the session has left it for good —
+    /// an automatic retry keeps it, with the connection bar held open to say so. That
     /// is what puts the strip and the InfoBar back exactly when they have something to report — the
     /// reason, <em>Reconnect</em>, <em>Copy diagnostics</em> — instead of leaving the user in front
     /// of a black screen with no explanation. F11 and Ctrl+Alt+Pause remain the manual way out at
@@ -455,18 +456,28 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>
-    /// Ends full screen as soon as the session stops being connected — a drop, a retry, a failure, a
-    /// close. What was hidden is exactly what the user now needs: the reason in the InfoBar, and
-    /// <em>Reconnect</em> / <em>Copy diagnostics</em> in the strip.
+    /// Ends full screen once the session has stopped being connected for good — a failure, a
+    /// normal disconnect, a close. What was hidden is exactly what the user now needs: the reason in
+    /// the InfoBar, and <em>Reconnect</em> / <em>Copy diagnostics</em> in the strip.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// An automatic retry (<see cref="SessionState.Interrupted"/>, <see cref="SessionState.Reconnecting"/>)
+    /// keeps full screen, and the connection bar says what is happening instead. Leaving it there
+    /// shrank the window back to its normal bounds, so the retry reconnected the remote desktop at
+    /// that small size and Windows re-laid out every remote window into it, before full screen grew
+    /// it back — seen in the field on a 5120×1440 screen, several times a day (2026-10-14/15).
+    /// Keeping the window as it was is what lets the retry ask for the size the desktop already has.
+    /// </para>
+    /// <para>
     /// Driven by <see cref="SessionTabViewModel.Changed"/>, which this window already subscribes to —
-    /// no polling. Coming back is deliberately not automatic: a session that reconnects stays in the
-    /// window it was given, and F11 puts it back edge to edge when the user asks for it.
+    /// no polling. Coming back after a failure is deliberately not automatic: a session that is
+    /// reconnected by hand stays in the window it was given, and F11 puts it back edge to edge.
+    /// </para>
     /// </remarks>
     private void LeaveFullScreenUnlessConnected()
     {
-        if (_isFullScreen && _tab.State != SessionState.Connected)
+        if (_isFullScreen && _tab.State is not (SessionState.Connected or SessionState.Interrupted or SessionState.Reconnecting))
         {
             SetFullScreen(false);
         }
@@ -530,6 +541,12 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         _closeRequested = true;
         RefreshCaption();
         ProbeLog.Write("session", $"'{_tab.Title}': detached window close requested");
-        CloseRequested?.Invoke(this);
+
+        // Posted, not raised here: when the session is not connected the close protocol completes
+        // synchronously and closes this window from inside this very handler, which WPF refuses
+        // (InvalidOperationException, "Window is closing") and which left an empty window behind
+        // in the field. Same reason the shell defers its own second pass. Let this pass unwind.
+        // (discarded: the returned DispatcherOperation is deliberately not awaited)
+        _ = Dispatcher.BeginInvoke(() => CloseRequested?.Invoke(this));
     }
 }

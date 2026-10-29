@@ -2,6 +2,20 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### Fixes
+
+- **A full-screen session that drops and retries on its own stays full screen.** It used to leave
+  full screen at the drop, so the retry reconnected the remote desktop at the window's normal size —
+  and Windows re-laid out every remote window into that small desktop before full screen grew it
+  back. The connection bar now stays down during the retry and says what is happening; full screen
+  ends only if the session fails or is disconnected for good.
+- **A session reconnects at the size of the surface it is shown in.** A detached or full-screen
+  session was asked for the size of the shell's area instead (948×480 on a 5120×1440 screen).
+- **Closing a detached window whose session is already disconnected closes it.** It used to fail
+  and leave an empty window behind.
+
 ## 0.7.0 — 2026-09-28
 
 Carry your configuration to another machine, and drive a RemoteDeck from inside a RemoteDeck.

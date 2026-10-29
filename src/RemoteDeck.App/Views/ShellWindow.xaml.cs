@@ -2049,7 +2049,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _connecting = true;
         try
         {
-            var session = new RdpSession(connection, _version, host => SupplyAndConnectAsync(connection, host),
+            var session = new RdpSession(connection, _version, (host, size) => SupplyAndConnectAsync(connection, host, size),
                 () => VpnGate.State(connection));
             _sessions.Open(session);
             UpdateSessionsArea();
@@ -2089,7 +2089,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// only because that is the shape <see cref="RdpSession"/> asks for, and anything thrown here
     /// is caught there and turned into a failed attempt.
     /// </remarks>
-    private Task SupplyAndConnectAsync(Connection connection, RdpSessionHost host)
+    private Task SupplyAndConnectAsync(Connection connection, RdpSessionHost host, (int Width, int Height)? measured)
     {
         Credential? credential = null;
         if (connection.CredentialId is long credentialId)
@@ -2121,10 +2121,21 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             FixedWidth: connection.FixedWidth,
             FixedHeight: connection.FixedHeight);
 
-        // Every tab shares one container, so the area's size is every session's size.
-        var dpi = VisualTreeHelper.GetDpi(this);
-        int width = Math.Max(MinimumRemoteWidth, (int)(SessionsArea.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(MinimumRemoteHeight, (int)(SessionsArea.ActualHeight * dpi.DpiScaleY));
+        // The session's own surface when it has one laid out: a detached or full-screen session is
+        // not the size of the shell's area. Otherwise every docked tab shares one container, so the
+        // area's size is the session's size.
+        int width, height;
+        if (measured is { } surface)
+        {
+            (width, height) = surface;
+        }
+        else
+        {
+            var dpi = VisualTreeHelper.GetDpi(this);
+            width = Math.Max(MinimumRemoteWidth, (int)(SessionsArea.ActualWidth * dpi.DpiScaleX));
+            height = Math.Max(MinimumRemoteHeight, (int)(SessionsArea.ActualHeight * dpi.DpiScaleY));
+        }
+
         host.Configure(settings, width, height);
 
         if (!settings.UseWebAccount && credential is not null && _vault is not null)

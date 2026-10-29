@@ -84,7 +84,7 @@ internal sealed class RdpSession : IDisposable
     private static readonly TimeSpan DisplayRetryDelay = TimeSpan.FromSeconds(2);
 
     private readonly RdpControlVersion _version;
-    private readonly Func<RdpSessionHost, Task> _supplyAndConnect;
+    private readonly Func<RdpSessionHost, (int Width, int Height)?, Task> _supplyAndConnect;
 
     /// <summary>
     /// The state of the profile this connection needs, asked afresh at every decision. A session
@@ -131,11 +131,13 @@ internal sealed class RdpSession : IDisposable
     /// Configures the control, lends the secret and calls <c>Connect()</c>. Invoked for the first
     /// attempt and for every retry. Throwing out of it fails the attempt (state
     /// <see cref="SessionState.Failed"/>, message kept in <see cref="LastWindowsDescription"/>).
+    /// Its second argument is the remote size this session measured on its own surface, or
+    /// <c>null</c> when that surface has not been laid out yet and the caller must decide.
     /// </param>
     /// <param name="vpnState">Reads the state of the profile <paramref name="connection"/> names.
     /// Omitted, every drop is treated as needing no tunnel — which is what it was before the retry
     /// loop knew about VPNs at all.</param>
-    public RdpSession(Connection connection, RdpControlVersion version, Func<RdpSessionHost, Task> supplyAndConnect,
+    public RdpSession(Connection connection, RdpControlVersion version, Func<RdpSessionHost, (int Width, int Height)?, Task> supplyAndConnect,
         Func<VpnState>? vpnState = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
@@ -397,7 +399,15 @@ internal sealed class RdpSession : IDisposable
         _loggedOn = false;
         _displayFailures = 0;
         _resizeTimer.Stop();
-        (_requestedWidth, _requestedHeight) = TargetSize();
+
+        // The surface this session actually sits in — the shell's area when docked, its own window
+        // when detached, the whole screen in full screen — and not the shell's area whatever happens.
+        // Measured against the shell's area, every retry of a full-screen session on a 5120×1440
+        // screen asked for 948×480: the remote desktop shrank and re-laid out every window in it,
+        // then grew back at logon (seen in the field, 2026-10-14/15). A host never laid out yet
+        // measures zero and is left to the caller, as before.
+        (int Width, int Height)? measured = Host.ActualWidth > 0 && Host.ActualHeight > 0 ? TargetSize() : null;
+        (_requestedWidth, _requestedHeight) = measured ?? TargetSize();
 
         RdpSessionHost host;
         try
@@ -412,7 +422,7 @@ internal sealed class RdpSession : IDisposable
 
         try
         {
-            await _supplyAndConnect(host).ConfigureAwait(true);
+            await _supplyAndConnect(host, measured).ConfigureAwait(true);
         }
         catch (Exception ex)
         {

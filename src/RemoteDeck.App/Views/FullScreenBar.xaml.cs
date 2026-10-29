@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using RemoteDeck.App.Rdp;
 using RemoteDeck.App.ViewModels;
 
 namespace RemoteDeck.App.Views;
@@ -26,7 +27,8 @@ namespace RemoteDeck.App.Views;
 /// <para>
 /// The bar lives exactly as long as one full-screen episode: <see cref="SessionWindow"/> creates it
 /// when full screen is entered and <see cref="Dismiss"/>es it when full screen ends, when the
-/// session stops being connected, and when the window closes. On top of that it is
+/// session stops being connected for good, and when the window closes. During an automatic retry it
+/// stays revealed and names the retry in place of the host. On top of that it is
 /// <see cref="Window.Owner"/>ed by that window, so WPF closes it with its owner whatever happens —
 /// a <see cref="Window.Topmost"/> window left behind would float over everything with nothing left
 /// to dismiss it.
@@ -59,6 +61,7 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
     private static readonly TimeSpan EntryHold = TimeSpan.FromSeconds(3);
 
     private readonly SessionWindow _owner;
+    private readonly SessionTabViewModel _tab;
     private readonly DispatcherTimer _timer;
 
     private DateTime _holdUntil = DateTime.MinValue;
@@ -73,6 +76,7 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
         ArgumentNullException.ThrowIfNull(sessions);
 
         _owner = owner;
+        _tab = tab;
         InitializeComponent();
 
         // The dot, the name and the host all read from the tab, exactly as the caption strip does.
@@ -210,9 +214,13 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
 
         var cursor = CursorPosition();
 
+        // Full screen outlives a drop while the session retries on its own (see SessionWindow), and
+        // this bar is then the only place that says so: it stays down until the session is back.
+        bool retrying = _tab.State is SessionState.Interrupted or SessionState.Reconnecting;
+
         if (_revealed)
         {
-            if (DateTime.UtcNow < _holdUntil)
+            if (retrying || DateTime.UtcNow < _holdUntil)
             {
                 return;
             }
@@ -227,7 +235,7 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
 
         bool atTopEdge = cursor.X >= screen.Left && cursor.X <= screen.Right
             && cursor.Y >= screen.Top && cursor.Y <= screen.Top + RevealBand;
-        if (atTopEdge)
+        if (atTopEdge || retrying)
         {
             Reveal();
         }
