@@ -6,6 +6,38 @@ namespace RemoteDeck.Core.Tests.Import;
 public sealed class RdpFileImporterTests
 {
     [Fact]
+    public void Use_multimon_imports_all_monitors_over_size_and_dynamic_resolution()
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "use multimon:i:1",
+            "desktopwidth:i:1920", "desktopheight:i:1080", "dynamic resolution:i:1"]);
+
+        Assert.NotNull(c);
+        Assert.Equal(DisplayMode.AllMonitors, c.DisplayMode);
+        Assert.Null(c.FixedWidth);
+        Assert.Null(c.FixedHeight);
+    }
+
+    [Fact]
+    public void Use_multimon_off_leaves_the_mode_to_the_other_keys()
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "use multimon:i:0",
+            "desktopwidth:i:1920", "desktopheight:i:1080", "dynamic resolution:i:0"]);
+
+        Assert.Equal(DisplayMode.Scaled, c!.DisplayMode);
+        // A key RemoteDeck reads is not an unsupported one, whatever its value.
+        Assert.DoesNotContain(c.Warnings, w => w.Contains("unsupported", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_invalid_use_multimon_is_counted_as_unsupported()
+    {
+        var c = RdpFileImporter.Parse("srv.rdp", ["full address:s:srv", "use multimon:i:7"]);
+
+        Assert.Equal(DisplayMode.Dynamic, c!.DisplayMode);
+        Assert.Contains(c.Warnings, w => w.Contains("1 unsupported entry", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Complete_file_maps_every_verified_key()
     {
         string[] lines =

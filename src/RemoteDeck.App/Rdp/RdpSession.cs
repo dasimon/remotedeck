@@ -83,6 +83,10 @@ internal sealed class RdpSession : IDisposable
     /// <summary>Wait between a refused resize and the single retry that decides the fallback.</summary>
     private static readonly TimeSpan DisplayRetryDelay = TimeSpan.FromSeconds(2);
 
+    /// <summary>How long an All monitors session's control is kept after the session, before it is
+    /// destroyed: see <see cref="DisposeControlLater"/>.</summary>
+    private static readonly TimeSpan MultimonDisposeDelay = TimeSpan.FromSeconds(1);
+
     private readonly RdpControlVersion _version;
     private readonly Func<RdpSessionHost, (int Width, int Height)?, Task> _supplyAndConnect;
 
@@ -205,6 +209,27 @@ internal sealed class RdpSession : IDisposable
     public event Action<bool>? FullScreenRequested;
 
     /// <summary>
+    /// An All monitors session the user started has logged on: the shell detaches it, if it is
+    /// still docked, and puts it in full screen across the monitors. Raised once per start.
+    /// </summary>
+    public event Action? SpanAllMonitorsRequested;
+
+    /// <summary>Set by <see cref="ArmSpan"/>, cleared when <see cref="SpanAllMonitorsRequested"/> fires.</summary>
+    private bool _spanPending;
+
+    /// <summary>
+    /// Whether the current attempt was configured for every monitor. Taken at each attempt, not read
+    /// from <see cref="Connection"/> at run time: the editor writes that same instance, and a session
+    /// negotiated for every monitor stays so until its next connection — it must neither renegotiate
+    /// as a Dynamic one nor lose its full-screen marking because the row changed meanwhile.
+    /// </summary>
+    public bool SpansAllMonitors { get; private set; }
+
+    /// <summary>The rectangle an All monitors session's remote monitors cover, in local
+    /// virtual-screen pixels; <c>null</c> before the control exists or when it cannot say.</summary>
+    public System.Drawing.Rectangle? RemoteMonitorsBounds() => _sessionHost?.ReadRemoteMonitors();
+
+    /// <summary>
     /// Tells the session its host has moved to another window. The size subscription and the DPI both
     /// belong to the new parent: without this, dynamic resolution keeps measuring the old window —
     /// exactly the flaw the spike found on the alternative technique.
@@ -222,7 +247,7 @@ internal sealed class RdpSession : IDisposable
 
         ProbeLog.Write("session", $"'{Connection.Name}': host attached to {newParent.GetType().Name}");
 
-        if (State == SessionState.Connected && Connection.DisplayMode == DisplayMode.Dynamic)
+        if (State == SessionState.Connected && Connection.DisplayMode == DisplayMode.Dynamic && !SpansAllMonitors)
         {
             // Debounced: the new window may still be laying out, so let the timer measure it once
             // it has settled rather than reading a stale ActualWidth/ActualHeight now.
@@ -250,6 +275,7 @@ internal sealed class RdpSession : IDisposable
         }
 
         Attempt = 0;
+        ArmSpan();
         return RunAttemptAsync(SessionState.Connecting);
     }
 
@@ -278,10 +304,20 @@ internal sealed class RdpSession : IDisposable
         if (State != SessionState.Interrupted)
         {
             Attempt = 0;
+            // A fresh start after a failure or from Idle, not a countdown skipped: the latter is still
+            // the automatic episode, which keeps the window as it is.
+            ArmSpan();
         }
 
         return RunAttemptAsync(SessionState.Reconnecting);
     }
+
+    /// <summary>
+    /// Arms the one-shot <see cref="SpanAllMonitorsRequested"/> for an All monitors connection. Only
+    /// a start the user asked for arms it — opening, <em>Reconnect</em> after a failure, connecting an
+    /// idle tab — never an automatic retry.
+    /// </summary>
+    private void ArmSpan() => _spanPending = Connection.DisplayMode == DisplayMode.AllMonitors;
 
     /// <summary>
     /// Gives up on the scheduled reconnection: the countdown stops and the session is declared
@@ -409,6 +445,10 @@ internal sealed class RdpSession : IDisposable
         (int Width, int Height)? measured = Host.ActualWidth > 0 && Host.ActualHeight > 0 ? TargetSize() : null;
         (_requestedWidth, _requestedHeight) = measured ?? TargetSize();
 
+        // Read in the same dispatcher turn as the shell's Configure, which reads the same instance:
+        // what the control is about to be configured with, whatever the editor writes later.
+        SpansAllMonitors = Connection.DisplayMode == DisplayMode.AllMonitors;
+
         RdpSessionHost host;
         try
         {
@@ -491,6 +531,23 @@ internal sealed class RdpSession : IDisposable
     {
         _loggedOn = true;
         _displayFailures = 0;
+
+        if (SpansAllMonitors)
+        {
+            // The layout was negotiated at connection time and never follows the window: logged
+            // here, the first moment the control knows what the server granted.
+            _sessionHost?.ReadRemoteMonitors();
+
+            // Logon rather than OnConnected: Connected is implied, and the monitors' bounding box —
+            // what the full-screen window will cover — is known by now (read here in the spike).
+            if (_spanPending)
+            {
+                _spanPending = false;
+                SpanAllMonitorsRequested?.Invoke();
+            }
+
+            return;
+        }
 
         if (_smartSizingFallback || Connection.DisplayMode != DisplayMode.Dynamic)
         {
@@ -620,7 +677,7 @@ internal sealed class RdpSession : IDisposable
     /// </summary>
     private void OnHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (_smartSizingFallback || !_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic)
+        if (_smartSizingFallback || !_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || SpansAllMonitors)
         {
             return;
         }
@@ -650,7 +707,7 @@ internal sealed class RdpSession : IDisposable
             return;
         }
 
-        if (!_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || State != SessionState.Connected)
+        if (!_loggedOn || Connection.DisplayMode != DisplayMode.Dynamic || SpansAllMonitors || State != SessionState.Connected)
         {
             return;
         }
@@ -774,11 +831,47 @@ internal sealed class RdpSession : IDisposable
             // schedule, and an emptied WindowsFormsHost left in the tree is harmless whereas one
             // holding a disposed child is not.
             Host.Child = null;
+            if (SpansAllMonitors)
+            {
+                DisposeControlLater();
+                return;
+            }
+
             _ax.Dispose();
         }
         catch (Exception ex)
         {
             ProbeLog.Write("session", $"'{Connection.Name}': control disposal failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Destroys an All monitors session's control a second after the session is over, once the
+    /// application is idle, instead of straight away.
+    /// </summary>
+    /// <remarks>
+    /// Destroyed in the dispatcher turn that follows <c>OnDisconnected</c>, a control negotiated for
+    /// every monitor sometimes never returned from its own teardown, and RemoteDeck stopped
+    /// responding (measured 2026-10-29: two hangs out of three closes from full screen, the last log
+    /// line "destroying the control"). Deferred by one second, five closes out of five went through,
+    /// the control taking 25-34 ms to go. Why the control needs that time is not documented; the
+    /// session and its window are gone already, only the parked control waits.
+    /// </remarks>
+    private void DisposeControlLater()
+    {
+        var control = _ax;
+        var name = Connection.Name;
+        _ = Host.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, async () =>
+        {
+            await Task.Delay(MultimonDisposeDelay).ConfigureAwait(true);
+            try
+            {
+                control.Dispose();
+            }
+            catch (Exception ex)
+            {
+                ProbeLog.Write("session", $"'{name}': control disposal failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            }
+        });
     }
 }

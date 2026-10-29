@@ -9,4 +9,9 @@ public enum DisplayMode
     Scaled = 1,
     /// <summary>Fixed remote resolution, scrollbars when the window is smaller.</summary>
     Fixed = 2,
+    /// <summary>
+    /// The session uses every local monitor (UseMultimon, like <c>mstsc /multimon</c>) and opens
+    /// detached in full screen. The layout is fixed at connection time.
+    /// </summary>
+    AllMonitors = 3,
 }

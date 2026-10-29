@@ -163,6 +163,10 @@ internal sealed class RdpSessionHost : IDisposable
         _client.DesktopHeight = pinned && settings.FixedHeight is > 0 ? settings.FixedHeight.Value : hostHeight;
         _client.ColorDepth = 32;
 
+        // Always set, never inherited: the control is reused across attempts, so a connection edited
+        // away from All monitors must not reconnect with UseMultimon still on from the last one.
+        SetMultimon(settings.DisplayMode == DisplayMode.AllMonitors);
+
         var advanced = _client.AdvancedSettings9;      // IMsRdpClientAdvancedSettings8, inherits all previous
         advanced.RDPPort = settings.Port;
         // Kept unconditionally true: with no credential attached this is what makes the control put
@@ -185,7 +189,9 @@ internal sealed class RdpSessionHost : IDisposable
         advanced.RedirectDrives = settings.RedirectDrives;         // IMsRdpClientAdvancedSettings
         advanced.RedirectPrinters = settings.RedirectPrinters;     // IMsRdpClientAdvancedSettings
         advanced.ConnectToAdministerServer = settings.AdminSession; // IMsRdpClientAdvancedSettings6
-        advanced.SmartSizing = settings.DisplayMode == DisplayMode.Scaled;
+        // All monitors too: out of full screen, its desktop the size of every monitor is shown
+        // shrunk into the window rather than cropped.
+        advanced.SmartSizing = settings.DisplayMode is DisplayMode.Scaled or DisplayMode.AllMonitors;
 
         // Always set, never inherited. Read once per launch before it is overridden: the value the
         // control ships with is what a connection used to get when it said nothing, and the
@@ -210,6 +216,58 @@ internal sealed class RdpSessionHost : IDisposable
         if (settings.UseWebAccount)
         {
             TryEnableWebAccount();
+        }
+    }
+
+    /// <summary>
+    /// Asks the control to span every local monitor, as <c>mstsc /multimon</c> does. The desktop size
+    /// asked for is the primary monitor's: the control itself grows it to the whole layout at logon
+    /// (measured 2026-10-29: 5120×1440 asked, 7040×1440 reported with a 1920×1080 monitor beside it),
+    /// and the primary monitor's size stays below the 8192 px limit whatever the number of monitors.
+    /// A refusal is logged and the session carries on, on one monitor. Off is the control's default,
+    /// set explicitly for every other mode.
+    /// https://learn.microsoft.com/windows/win32/termserv/imsrdpclientnonscriptable5-usemultimon
+    /// </summary>
+    private void SetMultimon(bool on)
+    {
+        if (on)
+        {
+            var primary = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
+            _client.DesktopWidth = primary.Width;
+            _client.DesktopHeight = primary.Height;
+        }
+
+        try
+        {
+            ((IMsRdpClientNonScriptable5)_host.Ocx).UseMultimon = on;
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("display", $"UseMultimon={on} refused: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// What the server granted to an All monitors session: the bounding box of its monitors in local
+    /// virtual-screen pixels, or <c>null</c> when the control cannot say. Logs the monitor count and
+    /// whether the layout matches the local one.
+    /// https://learn.microsoft.com/windows/win32/termserv/imsrdpclientnonscriptable5-getremotemonitorsboundingbox
+    /// </summary>
+    public System.Drawing.Rectangle? ReadRemoteMonitors()
+    {
+        try
+        {
+            var nonScriptable = (IMsRdpClientNonScriptable5)_host.Ocx;
+            uint count = nonScriptable.RemoteMonitorCount;
+            bool matches = nonScriptable.RemoteMonitorLayoutMatchesLocal;
+            nonScriptable.GetRemoteMonitorsBoundingBox(out int left, out int top, out int right, out int bottom);
+            ProbeLog.Write("display", $"remote monitors: {count}, layout matches local: {matches}, bounding box ({left},{top})-({right},{bottom})");
+            return RemoteDeck.Core.Rdp.RemoteMonitorBox.FromInclusive(left, top, right, bottom);
+        }
+        catch (Exception ex)
+        {
+            ProbeLog.Write("display", $"remote monitors unreadable: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            return null;
         }
     }
 

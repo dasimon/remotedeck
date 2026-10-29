@@ -4,6 +4,16 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### One session on every monitor
+
+- **New display mode, *All monitors*** (editor, *Display*): the session gets every local monitor,
+  as `mstsc /multimon` does. The remote desktop sees one monitor per local one, with the same
+  layout, even when they differ in size; a maximized window fills one monitor. The connection
+  opens detached, in full screen over every monitor, once the remote desktop is up, and the local
+  taskbar goes under it. The layout is fixed at connection time.
+- **`.rdp` import** reads `use multimon:i:1` as *All monitors*.
+- **Known limitation:** monitors at different scaling factors are not handled.
+
 ### Fixes
 
 - **A full-screen session that drops and retries on its own stays full screen.** It used to leave

@@ -1862,7 +1862,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                     // failed or never answered is still detached, in a window of its own, simply not
                     // full screen — which is what a detached window whose session is down looks like
                     // anywhere else in the product.
-                    if (action.Kind == WorkspaceActionKind.OpenDetached)
+                    // Not for an All monitors connection: it detaches itself into full screen at
+                    // logon (SpanAllMonitors), whatever placement the workspace remembered, and a
+                    // second detach here would race that one.
+                    if (action.Kind == WorkspaceActionKind.OpenDetached
+                        && opened.Session.Connection.DisplayMode != DisplayMode.AllMonitors)
                     {
                         DetachTab(opened, action.Placement);
                     }
@@ -2031,6 +2035,31 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         VpnGate.EnsureReadyAsync(this, connection, (severity, title, message) => StatusBar.Show(severity, title, message));
 
     /// <summary>
+    /// An All monitors session the user started has logged on: into full screen across the monitors,
+    /// detaching it first when it is still docked — what <c>mstsc /multimon</c> does from the start.
+    /// Ignored while the shell is closing, or for a tab no longer open or no longer connected.
+    /// </summary>
+    private void SpanAllMonitors(SessionTabViewModel tab)
+    {
+        if (_closeInProgress || !_sessions.Tabs.Contains(tab) || tab.State != SessionState.Connected)
+        {
+            return;
+        }
+
+        if (_sessions.DetachedWindowOf(tab) is { } window)
+        {
+            if (!window.IsFullScreen)
+            {
+                window.ToggleFullScreen();
+            }
+
+            return;
+        }
+
+        DetachTab(tab, (System.Windows.Point?)null, fullScreen: true);
+    }
+
+    /// <summary>
     /// Opens a tab for <paramref name="connection"/> and, when <paramref name="start"/>, starts the
     /// session. Awaitable, which <see cref="OnConnectRequested"/> cannot be: mounting a workspace
     /// connects in series, and a series needs somewhere to wait.
@@ -2051,7 +2080,8 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         {
             var session = new RdpSession(connection, _version, (host, size) => SupplyAndConnectAsync(connection, host, size),
                 () => VpnGate.State(connection));
-            _sessions.Open(session);
+            var tab = _sessions.Open(session);
+            session.SpanAllMonitorsRequested += () => SpanAllMonitors(tab);
             UpdateSessionsArea();
 
             // StartAsync creates the OCX, and an AxHost only produces its COM object once it owns a
