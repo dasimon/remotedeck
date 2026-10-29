@@ -54,6 +54,7 @@ public static class RdpFileImporter
         int? height = null;
         int? sizeId = null;
         int? dynamicResolution = null;
+        var useMultimon = false;
         int? authenticationLevel = null;
         var redirectClipboard = true;
         var redirectPrinters = false;
@@ -110,6 +111,11 @@ public static class RdpFileImporter
                     break;
                 case "dynamic resolution":
                     if (TryInt(value, out var dynamicMode) && dynamicMode is 0 or 1) dynamicResolution = dynamicMode;
+                    else unsupported++;
+                    break;
+                case "use multimon":
+                    // 1 = every local monitor (mstsc /multimon), which RemoteDeck maps to AllMonitors.
+                    if (TryInt(value, out var multimon) && multimon is 0 or 1) useMultimon = multimon == 1;
                     else unsupported++;
                     break;
                 case "audiomode":
@@ -170,6 +176,14 @@ public static class RdpFileImporter
                 fixedWidth = DesktopSizes[sizeId.Value].Width;
                 fixedHeight = DesktopSizes[sizeId.Value].Height;
             }
+        }
+
+        // Every monitor wins over any size: the layout comes from the local monitors, not the file.
+        if (useMultimon)
+        {
+            displayMode = DisplayMode.AllMonitors;
+            fixedWidth = null;
+            fixedHeight = null;
         }
 
         if (unsupported > 0)
