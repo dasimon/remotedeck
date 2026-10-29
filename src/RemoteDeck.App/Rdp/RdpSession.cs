@@ -204,6 +204,10 @@ internal sealed class RdpSession : IDisposable
     /// <summary>Raised when the hosting window should enter (true) or leave (false) full screen.</summary>
     public event Action<bool>? FullScreenRequested;
 
+    /// <summary>The rectangle an All monitors session's remote monitors cover, in local
+    /// virtual-screen pixels; <c>null</c> before the control exists or when it cannot say.</summary>
+    public System.Drawing.Rectangle? RemoteMonitorsBounds() => _sessionHost?.ReadRemoteMonitors();
+
     /// <summary>
     /// Tells the session its host has moved to another window. The size subscription and the DPI both
     /// belong to the new parent: without this, dynamic resolution keeps measuring the old window —
@@ -491,6 +495,14 @@ internal sealed class RdpSession : IDisposable
     {
         _loggedOn = true;
         _displayFailures = 0;
+
+        if (Connection.DisplayMode == DisplayMode.AllMonitors)
+        {
+            // The layout was negotiated at connection time and never follows the window: logged
+            // here, the first moment the control knows what the server granted.
+            _sessionHost?.ReadRemoteMonitors();
+            return;
+        }
 
         if (_smartSizingFallback || Connection.DisplayMode != DisplayMode.Dynamic)
         {
