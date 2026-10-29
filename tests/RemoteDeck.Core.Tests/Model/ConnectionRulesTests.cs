@@ -28,6 +28,22 @@ public sealed class ConnectionRulesTests
         => Assert.Empty(ConnectionRules.Validate("Web01", "web01.corp", 3389, DisplayMode.Dynamic, null, null));
 
     [Fact]
+    public void All_monitors_needs_no_fixed_size()
+        => Assert.Empty(ConnectionRules.Validate("Desk", "desk01", 3389, DisplayMode.AllMonitors, null, null));
+
+    [Theory]
+    [InlineData(DisplayMode.Dynamic, false)]
+    [InlineData(DisplayMode.Scaled, true)]
+    [InlineData(DisplayMode.Fixed, true)]
+    [InlineData(DisplayMode.AllMonitors, false)]
+    public void Only_scaled_and_fixed_use_a_fixed_size(DisplayMode mode, bool expected)
+        => Assert.Equal(expected, ConnectionRules.UsesFixedSize(mode));
+
+    [Fact]
+    public void All_monitors_is_persisted_as_three()
+        => Assert.Equal(3, (int)DisplayMode.AllMonitors);
+
+    [Fact]
     public void Name_and_host_are_required()
     {
         var errors = ConnectionRules.Validate("  ", "", 3389, DisplayMode.Dynamic, null, null);

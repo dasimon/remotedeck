@@ -65,8 +65,9 @@ public static class ConnectionRules
         if (port is null) errors.Add(ConnectionError.PortRequired);
         else if (port is < MinPort or > MaxPort) errors.Add(ConnectionError.PortOutOfRange);
 
-        // Dynamic follows the window, so the fixed size is irrelevant — and must not block saving.
-        if (mode != DisplayMode.Dynamic)
+        // Dynamic follows the window and AllMonitors follows the local monitors, so the fixed size is
+        // irrelevant to both — and must not block saving.
+        if (UsesFixedSize(mode))
         {
             if (fixedWidth is not (>= MinFixedWidth and <= MaxFixedSide)) errors.Add(ConnectionError.FixedWidthOutOfRange);
             if (fixedHeight is not (>= MinFixedHeight and <= MaxFixedSide)) errors.Add(ConnectionError.FixedHeightOutOfRange);
@@ -74,4 +75,8 @@ public static class ConnectionRules
 
         return errors.AsReadOnly();
     }
+
+    /// <summary>Whether <paramref name="mode"/> asks for the saved FixedWidth/FixedHeight: only
+    /// Scaled and Fixed do.</summary>
+    public static bool UsesFixedSize(DisplayMode mode) => mode is DisplayMode.Scaled or DisplayMode.Fixed;
 }

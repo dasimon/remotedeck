@@ -62,6 +62,19 @@ public sealed class ConfigurationTransferTests
     }
 
     [Fact]
+    public void An_all_monitors_connection_survives_the_round_trip()
+    {
+        var desk = Sql();
+        desk.DisplayMode = DisplayMode.AllMonitors;
+        desk.FixedWidth = null;
+        desk.FixedHeight = null;
+        var built = ConfigurationTransfer.Build([desk], [Credential(10, "Domain admin")], [], Now);
+
+        Assert.Contains("\"allMonitors\"", ConfigurationTransfer.Serialize(built), StringComparison.Ordinal);
+        Assert.Equal(DisplayMode.AllMonitors, Assert.Single(RoundTrip(built).Connections).DisplayMode);
+    }
+
+    [Fact]
     public void Import_links_a_credential_with_the_same_label_and_names_the_missing_ones()
     {
         var document = RoundTrip(ConfigurationTransfer.Build(

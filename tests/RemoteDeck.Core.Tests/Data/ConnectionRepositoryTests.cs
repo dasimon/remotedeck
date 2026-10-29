@@ -64,6 +64,19 @@ public sealed class ConnectionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void An_all_monitors_connection_is_read_back_as_such()
+    {
+        var x = Make("Desk");
+        x.DisplayMode = DisplayMode.AllMonitors;
+
+        var b = _repo.Get(_repo.Insert(x))!;
+
+        Assert.Equal(DisplayMode.AllMonitors, b.DisplayMode);
+        Assert.Null(b.FixedWidth);
+        Assert.Null(b.FixedHeight);
+    }
+
+    [Fact]
     public void New_connection_defaults_match_the_model()
     {
         var id = _repo.Insert(Make("Plain"));
