@@ -2,7 +2,9 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.8.0 — 2026-10-29
+
+One session across every monitor, and full screen that holds through an automatic reconnection.
 
 ### One session on every monitor
 
