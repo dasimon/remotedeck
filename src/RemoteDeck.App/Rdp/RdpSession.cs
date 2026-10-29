@@ -83,6 +83,10 @@ internal sealed class RdpSession : IDisposable
     /// <summary>Wait between a refused resize and the single retry that decides the fallback.</summary>
     private static readonly TimeSpan DisplayRetryDelay = TimeSpan.FromSeconds(2);
 
+    /// <summary>How long an All monitors session's control is kept after the session, before it is
+    /// destroyed: see <see cref="DisposeControlLater"/>.</summary>
+    private static readonly TimeSpan MultimonDisposeDelay = TimeSpan.FromSeconds(1);
+
     private readonly RdpControlVersion _version;
     private readonly Func<RdpSessionHost, (int Width, int Height)?, Task> _supplyAndConnect;
 
@@ -827,11 +831,47 @@ internal sealed class RdpSession : IDisposable
             // schedule, and an emptied WindowsFormsHost left in the tree is harmless whereas one
             // holding a disposed child is not.
             Host.Child = null;
+            if (SpansAllMonitors)
+            {
+                DisposeControlLater();
+                return;
+            }
+
             _ax.Dispose();
         }
         catch (Exception ex)
         {
             ProbeLog.Write("session", $"'{Connection.Name}': control disposal failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Destroys an All monitors session's control a second after the session is over, once the
+    /// application is idle, instead of straight away.
+    /// </summary>
+    /// <remarks>
+    /// Destroyed in the dispatcher turn that follows <c>OnDisconnected</c>, a control negotiated for
+    /// every monitor sometimes never returned from its own teardown, and RemoteDeck stopped
+    /// responding (measured 2026-10-29: two hangs out of three closes from full screen, the last log
+    /// line "destroying the control"). Deferred by one second, five closes out of five went through,
+    /// the control taking 25-34 ms to go. Why the control needs that time is not documented; the
+    /// session and its window are gone already, only the parked control waits.
+    /// </remarks>
+    private void DisposeControlLater()
+    {
+        var control = _ax;
+        var name = Connection.Name;
+        _ = Host.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, async () =>
+        {
+            await Task.Delay(MultimonDisposeDelay).ConfigureAwait(true);
+            try
+            {
+                control.Dispose();
+            }
+            catch (Exception ex)
+            {
+                ProbeLog.Write("session", $"'{name}': control disposal failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+            }
+        });
     }
 }

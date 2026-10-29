@@ -1071,6 +1071,12 @@ once it was marked full screen.*
       Dynamic one, on one monitor.
 - [ ] A *Dynamic* connection, detached, `F11`: full screen on one monitor, as before.
 - [ ] Import a `.rdp` file containing `use multimon:i:1`: the connection is in *All monitors*.
+- [x] Close an *All monitors* session from full screen a few seconds after the remote desktop
+      appears, five times in a row: RemoteDeck never stops responding. *Ticked 2026-10-29: destroyed
+      straight away, the control hung in two closes out of three; destroyed a second later, five
+      out of five went through.*
+- [ ] Quit RemoteDeck while an *All monitors* session is open in full screen: it exits within a
+      few seconds and leaves no process behind.
 
 ## Build prerequisites (any lot)
 
