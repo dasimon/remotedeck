@@ -204,6 +204,15 @@ internal sealed class RdpSession : IDisposable
     /// <summary>Raised when the hosting window should enter (true) or leave (false) full screen.</summary>
     public event Action<bool>? FullScreenRequested;
 
+    /// <summary>
+    /// An All monitors session the user started has logged on: the shell detaches it, if it is
+    /// still docked, and puts it in full screen across the monitors. Raised once per start.
+    /// </summary>
+    public event Action? SpanAllMonitorsRequested;
+
+    /// <summary>Set by <see cref="ArmSpan"/>, cleared when <see cref="SpanAllMonitorsRequested"/> fires.</summary>
+    private bool _spanPending;
+
     /// <summary>The rectangle an All monitors session's remote monitors cover, in local
     /// virtual-screen pixels; <c>null</c> before the control exists or when it cannot say.</summary>
     public System.Drawing.Rectangle? RemoteMonitorsBounds() => _sessionHost?.ReadRemoteMonitors();
@@ -254,6 +263,7 @@ internal sealed class RdpSession : IDisposable
         }
 
         Attempt = 0;
+        ArmSpan();
         return RunAttemptAsync(SessionState.Connecting);
     }
 
@@ -282,10 +292,20 @@ internal sealed class RdpSession : IDisposable
         if (State != SessionState.Interrupted)
         {
             Attempt = 0;
+            // A fresh start after a failure or from Idle, not a countdown skipped: the latter is still
+            // the automatic episode, which keeps the window as it is.
+            ArmSpan();
         }
 
         return RunAttemptAsync(SessionState.Reconnecting);
     }
+
+    /// <summary>
+    /// Arms the one-shot <see cref="SpanAllMonitorsRequested"/> for an All monitors connection. Only
+    /// a start the user asked for arms it — opening, <em>Reconnect</em> after a failure, connecting an
+    /// idle tab — never an automatic retry.
+    /// </summary>
+    private void ArmSpan() => _spanPending = Connection.DisplayMode == DisplayMode.AllMonitors;
 
     /// <summary>
     /// Gives up on the scheduled reconnection: the countdown stops and the session is declared
@@ -501,6 +521,15 @@ internal sealed class RdpSession : IDisposable
             // The layout was negotiated at connection time and never follows the window: logged
             // here, the first moment the control knows what the server granted.
             _sessionHost?.ReadRemoteMonitors();
+
+            // Logon rather than OnConnected: Connected is implied, and the monitors' bounding box —
+            // what the full-screen window will cover — is known by now (read here in the spike).
+            if (_spanPending)
+            {
+                _spanPending = false;
+                SpanAllMonitorsRequested?.Invoke();
+            }
+
             return;
         }
 
