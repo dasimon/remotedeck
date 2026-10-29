@@ -115,13 +115,30 @@
             <!-- Muted through the token rather than through Opacity, as everywhere else: the
                  subtitle must recede by the same amount in both themes, and 0.7 of white does not
                  recede like 0.7 of black. -->
+            <!-- While an automatic retry runs, full screen is kept and this line says so in place of
+                 the host: the InfoBar that would report it is collapsed with the rest of the chrome.
+                 Text is set by the style, not on the element, because a local value would win over
+                 the triggers. -->
             <TextBlock Grid.Column="2"
-                       Text="{Binding Subtitle}"
                        VerticalAlignment="Center"
                        Margin="8,0,12,0"
                        MaxWidth="260"
                        Foreground="{DynamicResource RdTextMuted}"
-                       TextTrimming="CharacterEllipsis" />
+                       TextTrimming="CharacterEllipsis">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="{Binding Subtitle}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding State}" Value="Interrupted">
+                                <Setter Property="Text" Value="{Binding StateText}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Reconnecting">
+                                <Setter Property="Text" Value="{Binding StateText}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
 
             <!-- The other sessions, so that full screen stops being a dead end: from here the user
                  reaches any of them without leaving it first. The source is set in code — the
