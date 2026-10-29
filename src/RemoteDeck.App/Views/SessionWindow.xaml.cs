@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using CommunityToolkit.Mvvm.Input;
 using RemoteDeck.App.Controls;
+using RemoteDeck.App.Interop;
 using RemoteDeck.App.Rdp;
 using RemoteDeck.App.Resources;
 using RemoteDeck.App.Services;
@@ -228,7 +230,14 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
             // frame Windows has stopped recomputing, and the caption comes back as a black band.
             WindowState = WindowState.Normal;
             WindowStyle = WindowStyle.None;
-            WindowState = WindowState.Maximized;
+            if (SpansAllMonitors)
+            {
+                CoverRemoteMonitors();
+            }
+            else
+            {
+                WindowState = WindowState.Maximized;
+            }
 
             HostAreaBorder.Margin = new Thickness(0);
             HostAreaBorder.CornerRadius = new CornerRadius(0);
@@ -238,6 +247,13 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         else
         {
             _isFullScreen = false;
+            if (SpansAllMonitors)
+            {
+                // Before the style comes back: the taskbar must not stay under a window that is
+                // about to be an ordinary one.
+                SpanningFullScreen.MarkFullScreen(new WindowInteropHelper(this).Handle, false);
+            }
+
             EndBar();
             ShowChrome(true);
             HostAreaBorder.Margin = _restoreHostMargin;
@@ -255,6 +271,26 @@ internal sealed partial class SessionWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         ProbeLog.Write("session", $"'{_tab.Title}': full screen {(_isFullScreen ? "entered" : "left")}");
+    }
+
+    /// <summary>An All monitors session: its full screen covers every monitor the server granted
+    /// instead of maximizing on the one the window sits on.</summary>
+    private bool SpansAllMonitors => _tab.Session.Connection.DisplayMode == Core.Model.DisplayMode.AllMonitors;
+
+    /// <summary>
+    /// Covers the remote monitors' bounding box, or the local virtual screen when the control cannot
+    /// say — a box the server shrank (one monitor granted out of two) is covered as granted. Then
+    /// marks the window full screen for the Shell and activates it, since the taskbar only goes under
+    /// an <em>active</em> full-screen window.
+    /// </summary>
+    private void CoverRemoteMonitors()
+    {
+        var area = _tab.Session.RemoteMonitorsBounds() ?? System.Windows.Forms.SystemInformation.VirtualScreen;
+        nint handle = new WindowInteropHelper(this).Handle;
+        SpanningFullScreen.Cover(handle, area);
+        SpanningFullScreen.MarkFullScreen(handle, true);
+        Activate();
+        ProbeLog.Write("display", $"'{_tab.Title}': full screen covers {area}");
     }
 
     /// <summary>Shows or hides the caption strip and the InfoBar together. Collapsed rather than

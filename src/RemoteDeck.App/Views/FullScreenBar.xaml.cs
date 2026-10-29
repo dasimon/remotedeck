@@ -308,7 +308,11 @@ internal sealed partial class FullScreenBar : Wpf.Ui.Controls.FluentWindow
         var dpi = VisualTreeHelper.GetDpi(_owner);
         // Qualified: UseWindowsForms puts System.Windows.Forms.Screen in scope through the implicit
         // usings, and RemoteDeck never imports that namespace into a WPF file.
-        var area = System.Windows.Forms.Screen.FromHandle(handle).Bounds;
+        // An All monitors session covers several screens: the bar goes to the primary one, where the
+        // remote taskbar is, rather than to whichever screen holds most of the window.
+        var area = _owner.Tab.Session.Connection.DisplayMode == Core.Model.DisplayMode.AllMonitors
+            ? System.Windows.Forms.Screen.PrimaryScreen!.Bounds
+            : System.Windows.Forms.Screen.FromHandle(handle).Bounds;
         return new Rect(area.Left / dpi.DpiScaleX, area.Top / dpi.DpiScaleY,
             area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY);
     }
