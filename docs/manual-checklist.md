@@ -1042,6 +1042,31 @@ All in `RemoteDeck.App`, so none of it is covered by an automated test. The VPN 
 - [x] Detached and full screen: `Ctrl+Alt+Pause` still leaves full screen locally.
 - [x] Untick the box: the local RemoteDeck takes the shortcuts again, as before.
 
+## All monitors
+
+On a machine with two monitors or more. *Measured 2026-10-29 with a throwaway build (1920×1080 left
+of a 5120×1440 primary, both at 100 %): the server granted 2 monitors with the local layout, the
+control grew a 5120×1440 request to 7040×1440 at logon, and the taskbar only went under the window
+once it was marked full screen.*
+
+- [ ] Connection in *All monitors* display mode, opened from the pane: it connects in its tab,
+      then detaches into full screen over every monitor. The log shows
+      `[display] remote monitors: 2, layout matches local: True`.
+- [ ] On the remote side, display settings show one monitor per local one. A maximized window
+      fills one monitor; the remote taskbar is on the primary monitor.
+- [ ] The local taskbar is hidden on every monitor while the session is active.
+- [ ] The connection bar appears at the top of the **primary** monitor.
+- [ ] `F11`: the window leaves full screen, shows the whole desktop shrunk, the local taskbar is
+      back. `F11` again: every monitor covered again.
+- [ ] Each way out brings the local taskbar back: `Ctrl+Alt+Pause`, the bar's button, *Reattach*.
+- [ ] A short network cut: the automatic reconnection keeps full screen and still two monitors.
+- [ ] A workspace holding an *All monitors* connection saved as detached: one window only, in
+      full screen over every monitor.
+- [ ] Switch the connection to *Dynamic* while its session is open: nothing changes until the next
+      connection, which then opens in a tab as any Dynamic one.
+- [ ] A *Dynamic* connection, detached, `F11`: full screen on one monitor, as before.
+- [ ] Import a `.rdp` file containing `use multimon:i:1`: the connection is in *All monitors*.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*

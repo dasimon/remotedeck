@@ -305,6 +305,14 @@ desktop to match the window: resize or maximise, and after a short pause the rem
 resolution follows, sharp, instead of being stretched. Against a server that refuses
 it, the session falls back to scaling the image and says so in the log.
 
+**All monitors.** A connection in *All monitors* display mode gives its session every local
+monitor, as `mstsc /multimon` does: the remote desktop sees one monitor per local one, with the
+same layout, so a maximized window fills one monitor. It opens detached, in full screen over every
+monitor, once the remote desktop is up. The layout is fixed at connection time: a monitor plugged in
+or out during the session counts from the next connection. Out of full screen the whole desktop is
+shown shrunk into the window. Monitors at different scaling factors are not handled. A `.rdp` file
+with `use multimon:i:1` imports in this mode.
+
 Connections, credentials and workspaces live in `%APPDATA%\RemoteDeck\connections.db`.
 Before a version of RemoteDeck upgrades that file to a newer schema, it copies it to
 `connections.v<old version>.bak` beside it — the way back, since an older RemoteDeck refuses a
