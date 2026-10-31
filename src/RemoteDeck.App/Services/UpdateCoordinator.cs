@@ -139,7 +139,9 @@ internal sealed class UpdateCoordinator : IDisposable
 
     /// <summary>
     /// Called by the main window as soon as it starts closing. An update in progress then goes no
-    /// further than where it is: no sessions question, no install, no restart. A close that is
+    /// further than where it is: no sessions question, no install, no restart started from here.
+    /// An update that is already installed (<see cref="UpdatePhase.RestartPending"/>) keeps the
+    /// restart scheduled for exit, so the new version starts after this close. A close that is
     /// itself the restart after an install (<see cref="UpdatePhase.Restarting"/>) is not one of
     /// those and is ignored. The caller also cancels the download.
     /// </summary>
@@ -147,7 +149,10 @@ internal sealed class UpdateCoordinator : IDisposable
     {
         if (_closing || Phase == UpdatePhase.Restarting) return;
         _closing = true;
-        if (IsBusy) ProbeLog.Write(LogProbe, $"main window closing during {Phase}: the update goes no further");
+        if (!IsBusy) return;
+        ProbeLog.Write(LogProbe, Phase == UpdatePhase.RestartPending
+            ? "main window closing with the update installed: the new version starts after this close"
+            : $"main window closing during {Phase}: the update goes no further");
     }
 
     /// <summary>Asks GitHub for the latest release. Never throws for a network or content failure:
@@ -192,7 +197,8 @@ internal sealed class UpdateCoordinator : IDisposable
     /// after a successful install, before the window is closed, because sessions can be opened while
     /// the install waits (the UAC prompt has no time limit): false then keeps the window and its
     /// sessions open and returns <see cref="UpdateResult.RestartPending"/>, the new version starting
-    /// when the user closes RemoteDeck.</param>
+    /// when the user closes RemoteDeck. The coordinator calls it both times; it is the callback's job
+    /// not to ask again about sessions the user has already agreed to close.</param>
     /// <param name="progress">The fraction of the executable received, 0 to 1, on the UI thread. When
     /// it reaches 1 the phase becomes <see cref="UpdatePhase.Verifying"/>.</param>
     /// <param name="ct">Cancels the download; once the download is verified, it is only looked at once

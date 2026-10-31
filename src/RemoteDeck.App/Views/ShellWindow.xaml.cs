@@ -167,6 +167,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>Cancels the update in progress; null when none is.</summary>
     private CancellationTokenSource? _updateCancel;
 
+    /// <summary>The session tabs open when the user agreed to close them for the update in progress;
+    /// null before that answer and once the attempt has ended.</summary>
+    private HashSet<SessionTabViewModel>? _updateSessionsAnswered;
+
     /// <summary>The release the last click on Update went for. Kept because the coordinator forgets
     /// it once installed, and the banner still has to name it.</summary>
     private LatestRelease? _updatingTo;
@@ -2922,6 +2926,7 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         finally
         {
             _updateCancel = null;
+            _updateSessionsAnswered = null;
         }
 
         _updateNotice = outcome.Result switch
@@ -2966,7 +2971,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>
     /// The coordinator asks this just before installing, and again after a successful install in
     /// case a session was opened meanwhile. No session: true without a word. Otherwise the same
-    /// question as the editor's discard, No by default: Enter must not close sessions.
+    /// question as the editor's discard, No by default: Enter must not close sessions. A Yes is
+    /// remembered by tab, so that the second call asks only when a tab the user has not been asked
+    /// about is open; the memory is dropped when the update attempt ends.
     /// </summary>
     private bool ConfirmSessionsForUpdate()
     {
@@ -2975,11 +2982,22 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return true;
         }
 
+        if (_updateSessionsAnswered is { } answered && _sessions.Tabs.All(answered.Contains))
+        {
+            return true;
+        }
+
         var answer = System.Windows.MessageBox.Show(this,
             _settings.RestoreLastSession ? Strings.Update_ConfirmRestore : Strings.Update_ConfirmClose,
             Strings.Update_ConfirmTitle,
             MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-        return answer == MessageBoxResult.Yes;
+        if (answer != MessageBoxResult.Yes)
+        {
+            return false;
+        }
+
+        _updateSessionsAnswered = new HashSet<SessionTabViewModel>(_sessions.Tabs, ReferenceEqualityComparer.Instance);
+        return true;
     }
 
     // ---------------------------------------------------------------- settings
@@ -3185,11 +3203,19 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         // that finished meanwhile must not ask about sessions, install, or start RemoteDeck again
         // after the user quit it. Not when this close is the coordinator's own restart: that one
         // has installed already and must go through.
-        _updateTimer?.Stop();
-        if (_updates.Phase != UpdatePhase.Restarting)
+        try
         {
-            _updateCancel?.Cancel();
-            _updates.OnMainWindowClosing();
+            _updateTimer?.Stop();
+            if (_updates.Phase != UpdatePhase.Restarting)
+            {
+                _updateCancel?.Cancel();
+                _updates.OnMainWindowClosing();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Cancel() can rethrow what a cancellation callback threw: it must not keep the window open.
+            ProbeLog.Write("close", $"Stopping the update failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
         }
 
         // The window stays interactive for up to the close-all budget, so the close box can be
