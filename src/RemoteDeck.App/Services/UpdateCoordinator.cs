@@ -19,6 +19,11 @@ internal enum UpdatePhase
 
     /// <summary>Installed; the main window is closing and the new executable starts after it.</summary>
     Restarting,
+
+    /// <summary>Installed; the window stays open and the new executable starts when it closes.
+    /// Final for this process: the executable on disk is already the new one, so nothing more is
+    /// checked or installed (the coordinator stays busy).</summary>
+    RestartPending,
 }
 
 /// <summary>How a check ended.</summary>
@@ -50,6 +55,10 @@ internal enum UpdateResult
 {
     /// <summary>Installed: the main window is closing and the new version starts after it.</summary>
     Restarting,
+
+    /// <summary>Installed, but sessions opened during the install were not to be closed: the window
+    /// stays open, and the new version starts when the user closes RemoteDeck.</summary>
+    RestartPending,
 
     /// <summary>Another process runs this executable; nothing was downloaded or nothing was installed.</summary>
     OtherInstances,
@@ -159,7 +168,11 @@ internal sealed class UpdateCoordinator : IDisposable
 
     /// <summary>Downloads, verifies and installs <see cref="Available"/>, then restarts on it.</summary>
     /// <param name="confirmSessions">Asked once the download is verified, just before installing:
-    /// true to go on. It must return true without asking when no session is open.</param>
+    /// true to go on. It must return true without asking when no session is open. Asked a second time
+    /// after a successful install, before the window is closed, because sessions can be opened while
+    /// the install waits (the UAC prompt has no time limit): false then keeps the window and its
+    /// sessions open and returns <see cref="UpdateResult.RestartPending"/>, the new version starting
+    /// when the user closes RemoteDeck.</param>
     /// <param name="progress">The fraction of the executable received, 0 to 1, on the UI thread. When
     /// it reaches 1 the phase becomes <see cref="UpdatePhase.Verifying"/>.</param>
     /// <param name="ct">Cancels the download; once the download is verified, it is only looked at once
@@ -228,16 +241,30 @@ internal sealed class UpdateCoordinator : IDisposable
             switch (outcome)
             {
                 case InstallOutcome.Installed:
+                    // From here the executable on disk is the new one: whatever the answer below,
+                    // the next exit starts it, and this process offers nothing more.
                     restarting = true;
-                    SetPhase(UpdatePhase.Restarting);
+                    Available = null;
                     App.Current.RestartAfterExit(Environment.ProcessPath!);
+
+                    // Asked again: the install awaited a UAC prompt for as long as the user left it
+                    // open, and a session opened meanwhile must not be closed without warning.
+                    if (!confirmSessions())
+                    {
+                        ProbeLog.Write(LogProbe, "installed; sessions opened during the install are kept, restart on exit");
+                        SetPhase(UpdatePhase.RestartPending);
+                        return new UpdateOutcome(UpdateResult.RestartPending);
+                    }
+
+                    SetPhase(UpdatePhase.Restarting);
                     _closeMainWindow();
                     return new UpdateOutcome(UpdateResult.Restarting);
 
                 case InstallOutcome.ElevationRefused:
                     try
                     {
-                        var saved = UpdateInstaller.SaveToDownloads(download, release.Version);
+                        // Off the UI thread too: a copy and a hash of the whole executable.
+                        var saved = await Task.Run(() => UpdateInstaller.SaveToDownloads(download, release.Version));
                         return new UpdateOutcome(UpdateResult.SavedToDownloads, saved);
                     }
                     catch (Exception ex) when (ex is UpdateException or IOException or UnauthorizedAccessException)

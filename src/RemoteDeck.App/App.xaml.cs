@@ -154,6 +154,7 @@ public partial class App : System.Windows.Application
     /// </summary>
     private static void ApplyUpdateAndExit(string[] args)
     {
+        ProbeLog.Write("startup", $"RemoteDeck starting in {ApplyUpdateArguments.Verb} mode, log at {ProbeLog.Path}");
         int code;
         if (!ApplyUpdateArguments.TryParse(args, out var source, out var sha256))
         {
