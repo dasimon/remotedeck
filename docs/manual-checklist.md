@@ -1095,6 +1095,57 @@ once it was marked full screen.*
 - [ ] Quit RemoteDeck while an *All monitors* session is open in full screen: it exits within a
       few seconds and leaves no process behind.
 
+## Updates
+
+Needs a throwaway release on the test channel: build with `-p:UpdateChannel=test`
+(repository `dasimon/remotedeck-update-test`) and a version lower than the release it will find.
+Never test against a real release of `dasimon/remotedeck` from the machine in daily use.
+
+- [ ] **Writable folder.** Run the older build from a folder you own. The banner appears within
+      about 10 seconds with the release's version; *Update* shows a progress bar, then RemoteDeck
+      restarts on the new version (*About* shows it) and `RemoteDeck.exe.old` sits beside it.
+      After the next launch the `.old` file is gone, and `%LOCALAPPDATA%\RemoteDeck\update\`
+      is empty.
+- [ ] **Protected folder, elevation accepted.** Same, from `C:\Program Files\RemoteDeck` or
+      similar: the UAC prompt names RemoteDeck, the update installs, RemoteDeck restarts
+      **not elevated**.
+- [ ] **Protected folder, elevation refused.** Cancel the UAC prompt: the banner says the verified
+      file is in *Downloads*, the folder opens, the installed executable is unchanged, and the
+      offer is still there.
+- [ ] **Wrong hash.** Publish a release whose `SHA256SUMS` does not match the executable: the
+      banner says the integrity check failed, nothing is installed, no file is left in the
+      working folder.
+- [ ] **Another instance.** Start a second RemoteDeck from the same executable, then *Update*: the
+      banner says another RemoteDeck is running from this file, and nothing is downloaded.
+- [ ] **On a shared machine** (two Windows sessions on the same executable): the other user's
+      RemoteDeck blocks the update in the same way, and the banner says it may be another user's.
+- [ ] **Network cut during the download.** Disconnect after the progress bar has started: the banner
+      reports the failure, the executable is intact, the partial file is removed, and *Update*
+      works again once the network is back.
+- [ ] **Development build.** A build without `UpdateChannel`: no banner, no request to GitHub in
+      the log, no *Check for updates automatically* in the palette, and in *About* the button is
+      greyed with "Development build".
+- [ ] **A session opened while the UAC prompt is up** (protected folder): after accepting, RemoteDeck
+      asks again about the new session. *Yes*: restart. *No*: the window stays, the banner says
+      the new version starts when RemoteDeck is closed, and closing it starts that version.
+- [ ] **Open sessions at the start.** With a session open, *Update* asks first; *No* changes
+      nothing. With *Reopen last session at startup* on, the session comes back after the restart.
+- [ ] **The UAC prompt can open behind the window**: the banner stays on "Installing…" until it
+      is answered, with no timeout; the prompt is reachable from the taskbar.
+- [ ] **Folded pane.** With the connection pane folded (`Ctrl+B`), the banner is not shown; unfolded,
+      it is back.
+- [ ] **Hiding.** The close button on the banner hides that version until the next launch. *About*
+      → *Check for updates* shows it again.
+- [ ] **Manual check.** *About* → *Check for updates*: "You have the latest version." on the newest
+      release; the version and "the banner in the main window offers it" when a newer one exists;
+      "Could not reach GitHub" with the reason when the network is cut. It works with *Check for
+      updates automatically* turned off.
+- [ ] **Off switch.** Turn *Check for updates automatically* off in the palette, restart: no
+      request in the log after 10 seconds or at any later time; on again, a check follows.
+- [ ] **Managed workstation (Defender attack surface reduction).** From a folder such as
+      `C:\Programmes <company>`, with an ASR policy pushed by Intune: the update is not blocked
+      (no event 1121 for `RemoteDeck.exe` in *Microsoft-Windows-Windows Defender/Operational*), and the new executable starts.
+
 ## Build prerequisites (any lot)
 
 *Ticked 2026-09-06: the CI runs on PRs #2, #3 and #4 built a clean clone with 0 warnings, and the release publish is win-x64.*

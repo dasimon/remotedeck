@@ -4,6 +4,28 @@ All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
 ## Unreleased
 
+### Updates from inside RemoteDeck
+
+- **A banner when a newer release exists**, at the bottom of the connection pane: *Update*,
+  *What's new* (the release page) and a close button that hides that version until the next
+  launch. RemoteDeck looks 10 seconds after the window opens, then once a day.
+- **One click installs it.** The executable is downloaded from the GitHub release and installed
+  only if its SHA-256 matches both `SHA256SUMS` and, when GitHub gives one, its own digest of
+  the asset. It then replaces the running executable and restarts on it, keeping the previous
+  one as `RemoteDeck.exe.old`.
+- **Protected folders**: Windows asks for administrator rights for the replacement alone. If
+  they are refused, the verified file is saved to *Downloads* and the folder opens.
+- **Sessions are not lost without a question**: with sessions open, RemoteDeck asks first, and
+  reopens them after the restart if *Reopen last session at startup* is on. A session opened while
+  the elevation prompt was up is asked about again; saying no leaves the window as it is and
+  the new version starts when you close it.
+- **Refused while another RemoteDeck runs from the same executable**, with the reason shown
+  (on a shared computer it may be another user's).
+- **Manual check**: *About* → *Check for updates*, which works even when automatic checks are off.
+  A version found this way is shown in the banner again even if it had been hidden.
+- **Off switch**: *Check for updates automatically* in the command palette. Local builds, which
+  carry no release channel, never look.
+
 ### A connection editor that reads at a glance
 
 - **The machine on top**: name, host, port and group on one card, with the connection's

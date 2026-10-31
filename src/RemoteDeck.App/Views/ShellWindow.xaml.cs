@@ -1052,7 +1052,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:about":
                 // Owned by the window the palette was opened from, so it appears on that monitor.
-                new AboutWindow { Owner = (Window?)from ?? this }.ShowDialog();
+                // A release found by hand is shown again even if its banner was hidden: the user asked.
+                new AboutWindow(_updates, () =>
+                {
+                    _updateDismissed = null;
+                    RefreshUpdateBar();
+                }) { Owner = (Window?)from ?? this }.ShowDialog();
                 break;
 
             case "cmd:pane":

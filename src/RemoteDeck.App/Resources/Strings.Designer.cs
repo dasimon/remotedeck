@@ -3082,6 +3082,69 @@ namespace RemoteDeck.App.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Check for updates.
+        /// </summary>
+        public static string About_CheckUpdates {
+            get {
+                return ResourceManager.GetString("About_CheckUpdates", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Checking….
+        /// </summary>
+        public static string About_Checking {
+            get {
+                return ResourceManager.GetString("About_Checking", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to You have the latest version..
+        /// </summary>
+        public static string About_UpToDate {
+            get {
+                return ResourceManager.GetString("About_UpToDate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck {0} is available: the banner in the main window offers it..
+        /// </summary>
+        public static string About_UpdateAvailable {
+            get {
+                return ResourceManager.GetString("About_UpdateAvailable", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Could not reach GitHub: {0}.
+        /// </summary>
+        public static string About_CheckFailed {
+            get {
+                return ResourceManager.GetString("About_CheckFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Development build: no updates..
+        /// </summary>
+        public static string About_DevBuild {
+            get {
+                return ResourceManager.GetString("About_DevBuild", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to An update is already being checked or installed..
+        /// </summary>
+        public static string About_UpdateBusy {
+            get {
+                return ResourceManager.GetString("About_UpdateBusy", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to About RemoteDeck.
         /// </summary>
         public static string Palette_About {

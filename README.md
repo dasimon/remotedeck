@@ -483,6 +483,34 @@ release workflow from the tagged commit:
 
     gh attestation verify RemoteDeck.exe --repo dasimon/remotedeck
 
+### Built-in update
+
+RemoteDeck can look for a newer release itself, so that an unsigned executable does not
+have to be fetched and checked by hand each time. It talks to GitHub, and only GitHub.
+
+- **What it asks.** Ten seconds after the window opens, then once a day, it reads the
+  latest release of `dasimon/remotedeck` from the GitHub API. Only a tag of the form
+  `vMAJOR.MINOR.PATCH` that is higher than the running version is offered, as a banner at
+  the bottom of the connection pane. *About* → *Check for updates* asks on demand.
+  A build that was not stamped by the release workflow (a local build) asks nothing.
+- **What it checks.** It downloads `RemoteDeck.exe` and the `SHA256SUMS` file of that release
+  over HTTPS, from GitHub's own hosts only, with a size cap on each. The executable is
+  installed only if its SHA-256 matches `SHA256SUMS` **and**, when GitHub states one, the
+  digest GitHub computed for the asset. Otherwise nothing is touched. It does not verify the
+  provenance attestation: that remains the `gh attestation verify` above.
+- **What it does.** It replaces the executable in place and starts the new version, keeping
+  the previous one beside it as `RemoteDeck.exe.old` until the next launch. If the folder is
+  protected (`C:\Program Files`, say), Windows asks for administrator rights for that one
+  step; if you refuse, the verified file is saved to your *Downloads* folder instead and the
+  folder opens. Your open sessions are closed for the restart, and reopened if *Reopen last
+  session at startup* is on. If you opened a session while the elevation prompt was up,
+  RemoteDeck asks again, and the new version otherwise starts when you close RemoteDeck.
+- **When it refuses.** While another RemoteDeck is running from the same executable (on a
+  shared computer, possibly another user's), since Windows cannot replace a file in use.
+- **How to turn it off.** Command palette (`Ctrl+K`) → *Check for updates automatically*. The
+  setting is per user and stops the automatic checks only; *About* → *Check for updates* still
+  works.
+
 ## License
 
 MIT — see `LICENSE`.

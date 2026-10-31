@@ -1067,6 +1067,27 @@
   <data name="About_Close" xml:space="preserve">
     <value>Fermer</value>
   </data>
+  <data name="About_CheckUpdates" xml:space="preserve">
+    <value>Rechercher les mises à jour</value>
+  </data>
+  <data name="About_Checking" xml:space="preserve">
+    <value>Recherche en cours…</value>
+  </data>
+  <data name="About_UpToDate" xml:space="preserve">
+    <value>Vous avez la dernière version.</value>
+  </data>
+  <data name="About_UpdateAvailable" xml:space="preserve">
+    <value>RemoteDeck {0} est disponible : le bandeau de la fenêtre principale la propose.</value>
+  </data>
+  <data name="About_CheckFailed" xml:space="preserve">
+    <value>Impossible de joindre GitHub : {0}</value>
+  </data>
+  <data name="About_DevBuild" xml:space="preserve">
+    <value>Version de développement : pas de mise à jour.</value>
+  </data>
+  <data name="About_UpdateBusy" xml:space="preserve">
+    <value>Une mise à jour est déjà en cours de recherche ou d'installation.</value>
+  </data>
   <data name="Palette_About" xml:space="preserve">
     <value>À propos de RemoteDeck</value>
   </data>

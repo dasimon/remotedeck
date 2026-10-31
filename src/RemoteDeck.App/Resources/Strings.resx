@@ -1067,6 +1067,27 @@
   <data name="About_Close" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="About_CheckUpdates" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="About_Checking" xml:space="preserve">
+    <value>Checking…</value>
+  </data>
+  <data name="About_UpToDate" xml:space="preserve">
+    <value>You have the latest version.</value>
+  </data>
+  <data name="About_UpdateAvailable" xml:space="preserve">
+    <value>RemoteDeck {0} is available: the banner in the main window offers it.</value>
+  </data>
+  <data name="About_CheckFailed" xml:space="preserve">
+    <value>Could not reach GitHub: {0}</value>
+  </data>
+  <data name="About_DevBuild" xml:space="preserve">
+    <value>Development build: no updates.</value>
+  </data>
+  <data name="About_UpdateBusy" xml:space="preserve">
+    <value>An update is already being checked or installed.</value>
+  </data>
   <data name="Palette_About" xml:space="preserve">
     <value>About RemoteDeck</value>
   </data>
