@@ -63,7 +63,7 @@ internal enum UpdateResult
     /// <summary>Another process runs this executable; nothing was downloaded or nothing was installed.</summary>
     OtherInstances,
 
-    /// <summary>The caller's token was cancelled; nothing was changed.</summary>
+    /// <summary>The caller's token was cancelled, or the main window started closing; nothing was changed.</summary>
     Cancelled,
 
     /// <summary>The user did not confirm closing the open sessions; the download was deleted.</summary>
@@ -83,6 +83,10 @@ internal enum UpdateResult
 
     /// <summary>Another check or an update was running; nothing was done.</summary>
     Busy,
+
+    /// <summary>Installed while the main window was closing for another reason than this update:
+    /// RemoteDeck is not restarted, and the new version is what the next start runs.</summary>
+    InstalledOnClose,
 
     /// <summary>No release is available (<see cref="UpdateCoordinator.Available"/> is null).</summary>
     NothingAvailable,
@@ -111,6 +115,9 @@ internal sealed class UpdateCoordinator : IDisposable
     private readonly UpdateClient _client = new();
     private readonly Action _closeMainWindow;
 
+    /// <summary>Set once the main window has started closing on the user's (or Windows') request.</summary>
+    private bool _closing;
+
     /// <param name="closeMainWindow">Closes the main window, which ends the application through its
     /// normal close (settings, last session, graceful close of the sessions). Called once, after a
     /// successful install.</param>
@@ -129,6 +136,19 @@ internal sealed class UpdateCoordinator : IDisposable
 
     /// <summary>The newer release found by the last successful check; null when there is none.</summary>
     public LatestRelease? Available { get; private set; }
+
+    /// <summary>
+    /// Called by the main window as soon as it starts closing. An update in progress then goes no
+    /// further than where it is: no sessions question, no install, no restart. A close that is
+    /// itself the restart after an install (<see cref="UpdatePhase.Restarting"/>) is not one of
+    /// those and is ignored. The caller also cancels the download.
+    /// </summary>
+    public void OnMainWindowClosing()
+    {
+        if (_closing || Phase == UpdatePhase.Restarting) return;
+        _closing = true;
+        if (IsBusy) ProbeLog.Write(LogProbe, $"main window closing during {Phase}: the update goes no further");
+    }
 
     /// <summary>Asks GitHub for the latest release. Never throws for a network or content failure:
     /// an automatic check (<paramref name="manual"/> false) only logs it, a manual one also returns
@@ -176,7 +196,8 @@ internal sealed class UpdateCoordinator : IDisposable
     /// <param name="progress">The fraction of the executable received, 0 to 1, on the UI thread. When
     /// it reaches 1 the phase becomes <see cref="UpdatePhase.Verifying"/>.</param>
     /// <param name="ct">Cancels the download; once the download is verified, it is only looked at once
-    /// more, before the sessions confirmation. The install itself is never interrupted.</param>
+    /// more, before the sessions confirmation. The install itself is never interrupted. See also
+    /// <see cref="OnMainWindowClosing"/>.</param>
     public async Task<UpdateOutcome> UpdateAsync(Func<bool> confirmSessions, IProgress<double> progress, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(confirmSessions);
@@ -223,7 +244,7 @@ internal sealed class UpdateCoordinator : IDisposable
 
             SetPhase(UpdatePhase.Installing);
             if (RefusedForOtherInstances("after downloading")) return new UpdateOutcome(UpdateResult.OtherInstances);
-            if (ct.IsCancellationRequested)
+            if (ct.IsCancellationRequested || _closing)
             {
                 ProbeLog.Write(LogProbe, "update cancelled after the download");
                 return new UpdateOutcome(UpdateResult.Cancelled);
@@ -235,9 +256,25 @@ internal sealed class UpdateCoordinator : IDisposable
                 return new UpdateOutcome(UpdateResult.Declined);
             }
 
+            // Looked at once more: the question above waits for as long as the user leaves it open.
+            if (_closing)
+            {
+                ProbeLog.Write(LogProbe, "update cancelled before installing: RemoteDeck is closing");
+                return new UpdateOutcome(UpdateResult.Cancelled);
+            }
+
             // Off the UI thread: the swap hashes the whole file, and the elevated route waits for a process.
             var outcome = await Task.Run(() => UpdateInstaller.Install(download));
             ProbeLog.Write(LogProbe, $"install of {release.Version}: {outcome}");
+
+            // The window started closing while the install ran (the UAC prompt has no time limit):
+            // the user is leaving, so nothing is asked, saved, opened or restarted.
+            if (_closing)
+            {
+                ProbeLog.Write(LogProbe, "RemoteDeck is closing: no restart and nothing more");
+                return new UpdateOutcome(outcome == InstallOutcome.Installed ? UpdateResult.InstalledOnClose : UpdateResult.Cancelled);
+            }
+
             switch (outcome)
             {
                 case InstallOutcome.Installed:

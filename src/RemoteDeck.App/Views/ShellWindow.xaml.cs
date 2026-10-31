@@ -2826,9 +2826,19 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             return;
         }
 
-        // The outcome is the coordinator's to log; a failure shows nothing (spec), and a release
-        // found reaches the banner through Changed.
-        await _updates.CheckAsync(manual: false);
+        try
+        {
+            // The outcome is the coordinator's to log; a failure shows nothing (spec), and a release
+            // found reaches the banner through Changed.
+            await _updates.CheckAsync(manual: false);
+        }
+        catch (Exception ex)
+        {
+            // The coordinator catches the failures it knows; anything else from the network stack
+            // would end an async void, and with it the sessions the user has open, over a check
+            // nobody asked for. Logged with its type, so that it gets known; the next tick tries again.
+            ProbeLog.Write("update", $"automatic check failed unexpectedly: {ex.GetType().FullName}: {ex.Message}");
+        }
     }
 
     /// <summary>Draws the banner from the coordinator's phase and what this window remembers of the
@@ -2923,8 +2933,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             // Restarting and RestartPending are told by the phase. Cancelled and Declined were the
             // user's own answer, and the offer simply stands again. Busy and NothingAvailable cannot
             // follow a click the button only takes when neither holds.
+            // InstalledOnClose only happens while the window is closing.
             UpdateResult.Restarting or UpdateResult.RestartPending or UpdateResult.Cancelled
-                or UpdateResult.Declined or UpdateResult.Busy or UpdateResult.NothingAvailable => null,
+                or UpdateResult.Declined or UpdateResult.Busy or UpdateResult.NothingAvailable
+                or UpdateResult.InstalledOnClose => null,
             _ => null,
         };
         RefreshUpdateBar();
@@ -3169,6 +3181,17 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // First thing, on the first pass: the close-all below can take thirty seconds, and a download
+        // that finished meanwhile must not ask about sessions, install, or start RemoteDeck again
+        // after the user quit it. Not when this close is the coordinator's own restart: that one
+        // has installed already and must go through.
+        _updateTimer?.Stop();
+        if (_updates.Phase != UpdatePhase.Restarting)
+        {
+            _updateCancel?.Cancel();
+            _updates.OnMainWindowClosing();
+        }
+
         // The window stays interactive for up to the close-all budget, so the close box can be
         // clicked again while the protocol runs. Re-entering the first pass would start a second
         // RequestClose, orphan the first waiter and let Dispose run under the pending await.
@@ -3215,11 +3238,9 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 _shortcuts?.Dispose();
                 _sessions.DisposeAll();
 
-                // A download still running is cancelled. A request still in flight keeps its
-                // client to the process exit: disposing it under the await would surface as an
-                // exception the coordinator does not expect, on the way out.
-                _updateTimer?.Stop();
-                _updateCancel?.Cancel();
+                // The download was cancelled at the start of the close. A request still in flight
+                // keeps its client to the process exit: disposing it under the await would surface
+                // as an exception the coordinator does not expect, on the way out.
                 if (_updates.Phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Verifying))
                 {
                     _updates.Dispose();
