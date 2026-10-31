@@ -35,7 +35,7 @@ public sealed class ReleaseWorkflowTests
         var step = Regex.Match(workflow, @"- name: Refuse to ship a binary that is not on the release channel\r?\n(?:[ \t]+[^\r\n]*\r?\n?)*");
 
         Assert.True(step.Success, "release.yml has no step checking the UpdateChannel stamp of the published executable.");
-        Assert.Contains("publish/RemoteDeck.exe", step.Value, StringComparison.Ordinal);
+        Assert.Contains("obj/Release/net10.0-windows/win-x64/RemoteDeck.dll", step.Value, StringComparison.Ordinal);
         Assert.Contains("@(1, 0, 13)", step.Value, StringComparison.Ordinal);
         Assert.Contains("GetBytes('UpdateChannel')", step.Value, StringComparison.Ordinal);
         Assert.Contains("@(7) + [Text.Encoding]::UTF8.GetBytes('release')", step.Value, StringComparison.Ordinal);
