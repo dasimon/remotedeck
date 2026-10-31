@@ -60,11 +60,16 @@ jobs:
       - run: dotnet build RemoteDeck.sln --configuration Release --no-restore
       - run: dotnet run --project tests/RemoteDeck.Core.Tests --configuration Release --no-build
 
+      # UpdateChannel=release is what makes the shipped executable look for updates, and only in
+      # this repository's releases. It is compiled in as assembly metadata, so no setting on the
+      # user's machine can redirect it; a build without it never checks and never updates. The
+      # "test" channel, which reads a throw-away repository, is deliberately never stamped here --
+      # a test in the repository fails if this file ever mentions it.
       - name: Publish single-file executable (x64, self-contained)
         run: >
           dotnet publish src/RemoteDeck.App -c Release -r win-x64
           --self-contained true -p:PublishSingleFile=true -p:DebugType=none
-          -p:Version=${{ env.VERSION }} -o publish
+          -p:UpdateChannel=release -p:Version=${{ env.VERSION }} -o publish
 
       # Stamping is worth nothing unheard: -p:Version can be silently ignored by a property the
       # project sets later, and the release would ship a binary claiming 1.0.0 with a green run.
@@ -118,3 +123,8 @@ jobs:
             publish/RemoteDeck.exe
             SHA256SUMS
           generate_release_notes: true
+          # A tag with a hyphen (v1.2.0-rc.1) is a pre-release. The tag filter above lets those
+          # through and the version step accepts them, so the flag has to follow the tag: GitHub's
+          # "latest release" -- what the built-in update reads -- never points at a pre-release,
+          # and without the flag a release candidate would take that place and be offered to everyone.
+          prerelease: ${{ contains(github.ref_name, '-') }}

@@ -50,6 +50,26 @@
   </ItemGroup>
 
   <!-- ===================================================================================
+       The update channel, fixed when the executable is built.
+
+       The built-in update looks for a newer release only if this assembly says which channel it
+       belongs to; with no stamp it neither checks nor updates. The stamp is an assembly attribute
+       and not a setting, an environment variable or a file beside the exe, so that nothing on a
+       user's machine can point an installed copy at another repository: a different channel is a
+       different build.
+
+       Only .github/workflows/release.yml passes -p:UpdateChannel=release, and a convention test
+       holds it there. "test" is for trying the mechanism end to end against a throw-away
+       repository: dotnet publish ... -p:UpdateChannel=test -p:Version=0.0.1. A plain build, which
+       is what a source checkout and CI produce, carries no stamp at all.
+
+       Read at run time by Services\BuildInfo.
+       ================================================================================== -->
+  <ItemGroup Condition="'$(UpdateChannel)' != ''">
+    <AssemblyMetadata Include="UpdateChannel" Value="$(UpdateChannel)" />
+  </ItemGroup>
+
+  <!-- ===================================================================================
        The title-bar bitmap. ui:TitleBar and the detached window's caption strip draw no icon
        at all unless one is handed to them: ExtendsContentIntoTitleBar replaces the system
        caption, so the ApplicationIcon above never appears there.
