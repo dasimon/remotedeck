@@ -31,6 +31,14 @@ public sealed class AppSettings
     public bool RestoreLastSession { get; set; }
 
     /// <summary>
+    /// Ask GitHub for a newer release shortly after startup, then once a day while the app stays
+    /// open. True by default, including for a file written before this setting existed (a missing
+    /// key keeps the initializer). The manual check in the About window ignores it. A development
+    /// build never checks, whatever it says.
+    /// </summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>
     /// What was open at the last clean close, in tab strip order. Rewritten on every clean close and
     /// only then: a crash leaves the previous one in place, which is the useful behaviour. Never
     /// null after a <c>Load()</c>.

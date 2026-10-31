@@ -45,6 +45,11 @@
         </ui:TitleBar>
 
         <Grid x:Name="PaneHost" Grid.Row="1" Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
             <views:ConnectionPane x:Name="Pane" />
             <!-- Shown instead of the pane when the database could not be opened: the
                  window stays usable, there is simply nothing saved to connect to. -->
@@ -54,6 +59,78 @@
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="{x:Static res:Strings.Pane_Unavailable}" />
+
+            <!-- The update banner. Under the connection list rather than over the sessions: it takes
+                 its height from the list, so arriving or leaving never resizes the remote desktop
+                 and never makes a session renegotiate its resolution. Its own surface, not the
+                 shared StatusBar, which any other message would overwrite. A Border and not a
+                 ui:InfoBar: measured on WPF-UI 4.3.0, the InfoBar template draws its Title and
+                 Message only, with no ContentPresenter, so it has nowhere to put a button. -->
+            <Border x:Name="UpdateBar" Grid.Row="1"
+                    Visibility="Collapsed"
+                    Margin="12,8,12,12" Padding="12,10,8,12"
+                    CornerRadius="{StaticResource RdRadiusLg}"
+                    Background="{DynamicResource RdSurface1}"
+                    BorderBrush="{DynamicResource RdBorder}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <ui:SymbolIcon Symbol="ArrowDownload24"
+                                   Foreground="{DynamicResource RdAccent}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock x:Name="UpdateTitle" Grid.Column="1"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold" TextWrapping="Wrap"
+                               Foreground="{DynamicResource RdText}" />
+                    <ui:Button x:Name="UpdateDismissButton" Grid.Column="2"
+                               Width="{StaticResource RdControlHeight}" Height="{StaticResource RdControlHeight}"
+                               Padding="0" Margin="4,0,0,0" VerticalAlignment="Top"
+                               Appearance="Transparent"
+                               Icon="{ui:SymbolIcon Dismiss24}"
+                               ToolTip="{x:Static res:Strings.Update_Dismiss}"
+                               AutomationProperties.Name="{x:Static res:Strings.Update_Dismiss}"
+                               Click="OnUpdateDismissClick" />
+
+                    <!-- What is happening, or how the last attempt ended. -->
+                    <TextBlock x:Name="UpdateMessage" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                               Margin="0,4,4,0" TextWrapping="Wrap"
+                               FontSize="{StaticResource RdFontMd}"
+                               Foreground="{DynamicResource RdTextMuted}"
+                               Visibility="Collapsed" />
+
+                    <ProgressBar x:Name="UpdateProgress" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                 Margin="0,8,4,0" Minimum="0" Maximum="1"
+                                 Visibility="Collapsed" />
+
+                    <WrapPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                        <ui:Button x:Name="UpdateInstallButton" Margin="0,0,12,0"
+                                   Appearance="Primary"
+                                   Content="{x:Static res:Strings.Update_Install}"
+                                   Click="OnUpdateInstallClick" />
+                        <ui:Button x:Name="UpdateCancelButton" Margin="0,0,12,0"
+                                   Content="{x:Static res:Strings.Update_Cancel}"
+                                   Visibility="Collapsed"
+                                   Click="OnUpdateCancelClick" />
+                        <!-- A hyperlink, as in the About window: it leaves for the browser. Its address
+                             is set from code, and only once it passed UpdateHosts.IsAllowed. -->
+                        <TextBlock x:Name="UpdateNotes" VerticalAlignment="Center" Visibility="Collapsed">
+                            <Hyperlink x:Name="UpdateNotesLink" RequestNavigate="OnUpdateNotesNavigate">
+                                <Run Text="{x:Static res:Strings.Update_ReleaseNotes}" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </WrapPanel>
+                </Grid>
+            </Border>
         </Grid>
 
         <GridSplitter x:Name="PaneSplitter"

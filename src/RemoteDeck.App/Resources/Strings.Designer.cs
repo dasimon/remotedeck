@@ -3350,5 +3350,221 @@ namespace RemoteDeck.App.Resources {
                 return ResourceManager.GetString("Editor_SummaryDefaults", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck {0} is available.
+        /// </summary>
+        public static string Update_AvailableTitle {
+            get {
+                return ResourceManager.GetString("Update_AvailableTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck {0} is installed.
+        /// </summary>
+        public static string Update_InstalledTitle {
+            get {
+                return ResourceManager.GetString("Update_InstalledTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Update.
+        /// </summary>
+        public static string Update_Install {
+            get {
+                return ResourceManager.GetString("Update_Install", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to What's new.
+        /// </summary>
+        public static string Update_ReleaseNotes {
+            get {
+                return ResourceManager.GetString("Update_ReleaseNotes", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Downloading… {0}%.
+        /// </summary>
+        public static string Update_Downloading {
+            get {
+                return ResourceManager.GetString("Update_Downloading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Checking the download….
+        /// </summary>
+        public static string Update_Verifying {
+            get {
+                return ResourceManager.GetString("Update_Verifying", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Installing….
+        /// </summary>
+        public static string Update_Installing {
+            get {
+                return ResourceManager.GetString("Update_Installing", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Restarting RemoteDeck….
+        /// </summary>
+        public static string Update_Restarting {
+            get {
+                return ResourceManager.GetString("Update_Restarting", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The new version starts when you close RemoteDeck..
+        /// </summary>
+        public static string Update_RestartPending {
+            get {
+                return ResourceManager.GetString("Update_RestartPending", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        public static string Update_Cancel {
+            get {
+                return ResourceManager.GetString("Update_Cancel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Hide until the next launch.
+        /// </summary>
+        public static string Update_Dismiss {
+            get {
+                return ResourceManager.GetString("Update_Dismiss", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Another RemoteDeck is running from this same file, possibly another user's on a shared computer. It must be closed before the update can be installed..
+        /// </summary>
+        public static string Update_OtherInstances {
+            get {
+                return ResourceManager.GetString("Update_OtherInstances", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Update RemoteDeck.
+        /// </summary>
+        public static string Update_ConfirmTitle {
+            get {
+                return ResourceManager.GetString("Update_ConfirmTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck has to restart to finish the update: your open sessions will be closed, then reopened when it starts again. Continue?.
+        /// </summary>
+        public static string Update_ConfirmRestore {
+            get {
+                return ResourceManager.GetString("Update_ConfirmRestore", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck has to restart to finish the update: your open sessions will be closed and will not reopen. Continue?.
+        /// </summary>
+        public static string Update_ConfirmClose {
+            get {
+                return ResourceManager.GetString("Update_ConfirmClose", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The update failed ({0}). RemoteDeck is unchanged..
+        /// </summary>
+        public static string Update_Failed {
+            get {
+                return ResourceManager.GetString("Update_Failed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The downloaded file failed its integrity check. Nothing was installed..
+        /// </summary>
+        public static string Update_HashMismatch {
+            get {
+                return ResourceManager.GetString("Update_HashMismatch", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The update needs administrator rights, which were not granted. The verified new version is saved as {0}, in the folder now open..
+        /// </summary>
+        public static string Update_SavedToDownloads {
+            get {
+                return ResourceManager.GetString("Update_SavedToDownloads", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Check for updates automatically.
+        /// </summary>
+        public static string Palette_ToggleUpdates {
+            get {
+                return ResourceManager.GetString("Palette_ToggleUpdates", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Currently: {0}.
+        /// </summary>
+        public static string Palette_ToggleUpdatesSubtitle {
+            get {
+                return ResourceManager.GetString("Palette_ToggleUpdatesSubtitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Automatic update checks are on.
+        /// </summary>
+        public static string Shell_UpdatesOnTitle {
+            get {
+                return ResourceManager.GetString("Shell_UpdatesOnTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to RemoteDeck looks for a new version on GitHub at startup, then once a day..
+        /// </summary>
+        public static string Shell_UpdatesOnMessage {
+            get {
+                return ResourceManager.GetString("Shell_UpdatesOnMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Automatic update checks are off.
+        /// </summary>
+        public static string Shell_UpdatesOffTitle {
+            get {
+                return ResourceManager.GetString("Shell_UpdatesOffTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to You can still check by hand from the About window..
+        /// </summary>
+        public static string Shell_UpdatesOffMessage {
+            get {
+                return ResourceManager.GetString("Shell_UpdatesOffMessage", resourceCulture);
+            }
+        }
     }
 }

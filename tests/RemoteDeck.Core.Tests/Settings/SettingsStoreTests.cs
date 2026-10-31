@@ -83,6 +83,27 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void CheckForUpdates_reads_as_true_when_the_file_does_not_have_the_key()
+    {
+        // A settings file written before the setting existed must not turn the checks off.
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(File_, """{ "paneWidth": 280, "restoreLastSession": true }""");
+
+        var read = new SettingsStore(File_).Load();
+
+        Assert.True(read.CheckForUpdates);
+    }
+
+    [Fact]
+    public void CheckForUpdates_round_trips_when_turned_off()
+    {
+        var store = new SettingsStore(File_);
+        store.Save(new AppSettings { CheckForUpdates = false });
+
+        Assert.False(store.Load().CheckForUpdates);
+    }
+
+    [Fact]
     public void LastSession_round_trips()
     {
         var store = new SettingsStore(File_);

@@ -1161,4 +1161,76 @@ Workspaces already here, left as they are: {4}</value>
   <data name="Editor_SummaryDefaults" xml:space="preserve">
     <value>Defaults</value>
   </data>
+  <data name="Update_AvailableTitle" xml:space="preserve">
+    <value>RemoteDeck {0} is available</value>
+  </data>
+  <data name="Update_InstalledTitle" xml:space="preserve">
+    <value>RemoteDeck {0} is installed</value>
+  </data>
+  <data name="Update_Install" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="Update_ReleaseNotes" xml:space="preserve">
+    <value>What's new</value>
+  </data>
+  <data name="Update_Downloading" xml:space="preserve">
+    <value>Downloading… {0}%</value>
+  </data>
+  <data name="Update_Verifying" xml:space="preserve">
+    <value>Checking the download…</value>
+  </data>
+  <data name="Update_Installing" xml:space="preserve">
+    <value>Installing…</value>
+  </data>
+  <data name="Update_Restarting" xml:space="preserve">
+    <value>Restarting RemoteDeck…</value>
+  </data>
+  <data name="Update_RestartPending" xml:space="preserve">
+    <value>The new version starts when you close RemoteDeck.</value>
+  </data>
+  <data name="Update_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Update_Dismiss" xml:space="preserve">
+    <value>Hide until the next launch</value>
+  </data>
+  <data name="Update_OtherInstances" xml:space="preserve">
+    <value>Another RemoteDeck is running from this same file, possibly another user's on a shared computer. It must be closed before the update can be installed.</value>
+  </data>
+  <data name="Update_ConfirmTitle" xml:space="preserve">
+    <value>Update RemoteDeck</value>
+  </data>
+  <data name="Update_ConfirmRestore" xml:space="preserve">
+    <value>RemoteDeck has to restart to finish the update: your open sessions will be closed, then reopened when it starts again. Continue?</value>
+  </data>
+  <data name="Update_ConfirmClose" xml:space="preserve">
+    <value>RemoteDeck has to restart to finish the update: your open sessions will be closed and will not reopen. Continue?</value>
+  </data>
+  <data name="Update_Failed" xml:space="preserve">
+    <value>The update failed ({0}). RemoteDeck is unchanged.</value>
+  </data>
+  <data name="Update_HashMismatch" xml:space="preserve">
+    <value>The downloaded file failed its integrity check. Nothing was installed.</value>
+  </data>
+  <data name="Update_SavedToDownloads" xml:space="preserve">
+    <value>The update needs administrator rights, which were not granted. The verified new version is saved as {0}, in the folder now open.</value>
+  </data>
+  <data name="Palette_ToggleUpdates" xml:space="preserve">
+    <value>Check for updates automatically</value>
+  </data>
+  <data name="Palette_ToggleUpdatesSubtitle" xml:space="preserve">
+    <value>Currently: {0}</value>
+  </data>
+  <data name="Shell_UpdatesOnTitle" xml:space="preserve">
+    <value>Automatic update checks are on</value>
+  </data>
+  <data name="Shell_UpdatesOnMessage" xml:space="preserve">
+    <value>RemoteDeck looks for a new version on GitHub at startup, then once a day.</value>
+  </data>
+  <data name="Shell_UpdatesOffTitle" xml:space="preserve">
+    <value>Automatic update checks are off</value>
+  </data>
+  <data name="Shell_UpdatesOffMessage" xml:space="preserve">
+    <value>You can still check by hand from the About window.</value>
+  </data>
 </root>
