@@ -66,6 +66,26 @@ public sealed class ReleaseClientTests : IDisposable
         Assert.False(File.Exists(Target + ".partial"));
     }
 
+    // --- Handler -------------------------------------------------------------------------------
+
+    [Fact]
+    public void A_handler_that_follows_redirections_itself_is_refused()
+    {
+        // Both default to following redirections, which would take each hop past the host check.
+        using var sockets = new SocketsHttpHandler();
+        using var classic = new HttpClientHandler();
+
+        Assert.Throws<ArgumentException>("handler", () => new ReleaseClient(sockets, "0.0.1"));
+        Assert.Throws<ArgumentException>("handler", () => new ReleaseClient(classic, "0.0.1"));
+    }
+
+    [Fact]
+    public void A_handler_that_does_not_follow_redirections_is_accepted()
+    {
+        using var sockets = new ReleaseClient(new SocketsHttpHandler { AllowAutoRedirect = false }, "0.0.1");
+        using var classic = new ReleaseClient(new HttpClientHandler { AllowAutoRedirect = false }, "0.0.1");
+    }
+
     // --- Check ---------------------------------------------------------------------------------
 
     [Fact]

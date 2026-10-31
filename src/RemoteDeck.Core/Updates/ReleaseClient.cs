@@ -47,8 +47,15 @@ public sealed class ReleaseClient : IDisposable
     /// <param name="handler">Owned and disposed by this client. It must not follow redirections.</param>
     /// <param name="version">The running version, sent as <c>User-Agent: RemoteDeck/&lt;version&gt;</c>
     /// (GitHub's API refuses requests without one).</param>
+    /// <exception cref="ArgumentException"><paramref name="handler"/> is a <see cref="SocketsHttpHandler"/>
+    /// or an <see cref="HttpClientHandler"/> that follows redirections itself, which would take each hop
+    /// past the host check.</exception>
     public ReleaseClient(HttpMessageHandler handler, string version)
     {
+        ArgumentNullException.ThrowIfNull(handler);
+        if (handler is SocketsHttpHandler { AllowAutoRedirect: true } or HttpClientHandler { AllowAutoRedirect: true })
+            throw new ArgumentException("The handler follows redirections itself; set AllowAutoRedirect to false.", nameof(handler));
+
         _http = new HttpClient(handler, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
         _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("RemoteDeck", version));
     }
