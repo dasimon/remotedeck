@@ -1067,6 +1067,27 @@
   <data name="About_Close" xml:space="preserve">
     <value>Fermer</value>
   </data>
+  <data name="About_CheckUpdates" xml:space="preserve">
+    <value>Rechercher les mises à jour</value>
+  </data>
+  <data name="About_Checking" xml:space="preserve">
+    <value>Recherche en cours…</value>
+  </data>
+  <data name="About_UpToDate" xml:space="preserve">
+    <value>Vous avez la dernière version.</value>
+  </data>
+  <data name="About_UpdateAvailable" xml:space="preserve">
+    <value>RemoteDeck {0} est disponible : le bandeau de la fenêtre principale la propose.</value>
+  </data>
+  <data name="About_CheckFailed" xml:space="preserve">
+    <value>Impossible de joindre GitHub : {0}</value>
+  </data>
+  <data name="About_DevBuild" xml:space="preserve">
+    <value>Version de développement : pas de mise à jour.</value>
+  </data>
+  <data name="About_UpdateBusy" xml:space="preserve">
+    <value>Une mise à jour est déjà en cours de recherche ou d'installation.</value>
+  </data>
   <data name="Palette_About" xml:space="preserve">
     <value>À propos de RemoteDeck</value>
   </data>
@@ -1160,5 +1181,77 @@ Espaces déjà présents, laissés tels quels : {4}</value>
   </data>
   <data name="Editor_SummaryDefaults" xml:space="preserve">
     <value>Valeurs par défaut</value>
+  </data>
+  <data name="Update_AvailableTitle" xml:space="preserve">
+    <value>RemoteDeck {0} est disponible</value>
+  </data>
+  <data name="Update_InstalledTitle" xml:space="preserve">
+    <value>RemoteDeck {0} est installé</value>
+  </data>
+  <data name="Update_Install" xml:space="preserve">
+    <value>Mettre à jour</value>
+  </data>
+  <data name="Update_ReleaseNotes" xml:space="preserve">
+    <value>Nouveautés</value>
+  </data>
+  <data name="Update_Downloading" xml:space="preserve">
+    <value>Téléchargement… {0} %</value>
+  </data>
+  <data name="Update_Verifying" xml:space="preserve">
+    <value>Vérification du téléchargement…</value>
+  </data>
+  <data name="Update_Installing" xml:space="preserve">
+    <value>Installation…</value>
+  </data>
+  <data name="Update_Restarting" xml:space="preserve">
+    <value>Redémarrage de RemoteDeck…</value>
+  </data>
+  <data name="Update_RestartPending" xml:space="preserve">
+    <value>La nouvelle version démarrera à la fermeture de RemoteDeck.</value>
+  </data>
+  <data name="Update_Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Update_Dismiss" xml:space="preserve">
+    <value>Masquer jusqu'au prochain démarrage</value>
+  </data>
+  <data name="Update_OtherInstances" xml:space="preserve">
+    <value>Un autre RemoteDeck est ouvert à partir de ce même fichier, peut-être celui d'un autre utilisateur sur un ordinateur partagé. Il doit être fermé avant que la mise à jour puisse s'installer.</value>
+  </data>
+  <data name="Update_ConfirmTitle" xml:space="preserve">
+    <value>Mettre à jour RemoteDeck</value>
+  </data>
+  <data name="Update_ConfirmRestore" xml:space="preserve">
+    <value>RemoteDeck doit redémarrer pour terminer la mise à jour : vos sessions ouvertes seront fermées, puis rouvertes au redémarrage. Continuer ?</value>
+  </data>
+  <data name="Update_ConfirmClose" xml:space="preserve">
+    <value>RemoteDeck doit redémarrer pour terminer la mise à jour : vos sessions ouvertes seront fermées et ne seront pas rouvertes. Continuer ?</value>
+  </data>
+  <data name="Update_Failed" xml:space="preserve">
+    <value>La mise à jour a échoué ({0}). RemoteDeck n'a pas été modifié.</value>
+  </data>
+  <data name="Update_HashMismatch" xml:space="preserve">
+    <value>Le fichier téléchargé n'a pas passé le contrôle d'intégrité. Rien n'a été installé.</value>
+  </data>
+  <data name="Update_SavedToDownloads" xml:space="preserve">
+    <value>La mise à jour demande des droits d'administrateur, qui n'ont pas été accordés. La nouvelle version, vérifiée, est enregistrée sous {0}, dans le dossier qui vient de s'ouvrir.</value>
+  </data>
+  <data name="Palette_ToggleUpdates" xml:space="preserve">
+    <value>Rechercher automatiquement les mises à jour</value>
+  </data>
+  <data name="Palette_ToggleUpdatesSubtitle" xml:space="preserve">
+    <value>Actuellement : {0}</value>
+  </data>
+  <data name="Shell_UpdatesOnTitle" xml:space="preserve">
+    <value>Recherche automatique des mises à jour activée</value>
+  </data>
+  <data name="Shell_UpdatesOnMessage" xml:space="preserve">
+    <value>RemoteDeck recherche une nouvelle version sur GitHub au démarrage, puis une fois par jour.</value>
+  </data>
+  <data name="Shell_UpdatesOffTitle" xml:space="preserve">
+    <value>Recherche automatique des mises à jour désactivée</value>
+  </data>
+  <data name="Shell_UpdatesOffMessage" xml:space="preserve">
+    <value>Vous pouvez toujours lancer une recherche depuis la fenêtre À propos.</value>
   </data>
 </root>

@@ -20,6 +20,7 @@ using RemoteDeck.Core.Security;
 using RemoteDeck.Core.Sessions;
 using RemoteDeck.Core.Settings;
 using RemoteDeck.Core.Transfer;
+using RemoteDeck.Core.Updates;
 using Wpf.Ui.Appearance;
 
 namespace RemoteDeck.App.Views;
@@ -154,6 +155,35 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     private bool _reentrantCloseLogged;
     private bool _closeConfirmed;
 
+    /// <summary>The first automatic update check after the window is shown, then the gap between two.</summary>
+    private static readonly TimeSpan FirstUpdateCheckDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromHours(24);
+
+    private readonly UpdateCoordinator _updates;
+
+    /// <summary>The automatic checks; null in a build that can never update.</summary>
+    private DispatcherTimer? _updateTimer;
+
+    /// <summary>Cancels the update in progress; null when none is.</summary>
+    private CancellationTokenSource? _updateCancel;
+
+    /// <summary>The session tabs open when the user agreed to close them for the update in progress;
+    /// null before that answer and once the attempt has ended.</summary>
+    private HashSet<SessionTabViewModel>? _updateSessionsAnswered;
+
+    /// <summary>The release the last click on Update went for. Kept because the coordinator forgets
+    /// it once installed, and the banner still has to name it.</summary>
+    private LatestRelease? _updatingTo;
+
+    private double _updateFraction;
+
+    /// <summary>How the last attempt ended, when the user has to be told; null otherwise.</summary>
+    private string? _updateNotice;
+
+    /// <summary>The version whose banner was closed: hidden until the next launch, unless a newer
+    /// one turns up.</summary>
+    private ReleaseVersion? _updateDismissed;
+
     public ShellWindow()
     {
         InitializeComponent();
@@ -177,6 +207,11 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         TabStrip.ViewModel = _sessions;
         TabStrip.DetachRequested += OnDetachRequested;
         TabStrip.ActionRequested += OnTabActionRequested;
+
+        // Close is what an installed update calls to restart: the normal close, with its settings,
+        // its last-session snapshot and the graceful end of every session.
+        _updates = new UpdateCoordinator(Close);
+        _updates.Changed += RefreshUpdateBar;
 
         // Window-level shortcuts. They fire whenever the WPF side owns the keyboard; while the RDP
         // control has focus nothing reaches WPF at all, which is what ShortcutInterceptor is for —
@@ -214,6 +249,10 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         _vault = App.Current.Services.GetService<ICredentialVault>();
         BuildPane();
         UpdateSessionsArea();
+
+        // Before the early return below: a machine with no usable RDP control is one that most
+        // needs to hear of a newer RemoteDeck.
+        StartUpdateChecks();
 
         // All that remains of the old single-control startup: which version the sessions will use.
         // Creating a control is now each RdpSession's own business, so a class factory that refuses
@@ -802,6 +841,16 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
             Text.Of(Strings.Palette_ToggleRestoreSubtitle,
                 _settings.RestoreLastSession ? Strings.Palette_On : Strings.Palette_Off),
             CommandPriority, Group: Strings.Palette_GroupCommands, Icon: "History24"));
+        // The same shape for the automatic update checks. Absent from a build that can never
+        // update: a switch there would change nothing.
+        if (BuildInfo.CanUpdate)
+        {
+            items.Add(new PaletteItem(PaletteItemKind.Command, "cmd:update-toggle",
+                Strings.Palette_ToggleUpdates,
+                Text.Of(Strings.Palette_ToggleUpdatesSubtitle,
+                    _settings.CheckForUpdates ? Strings.Palette_On : Strings.Palette_Off),
+                CommandPriority, Group: Strings.Palette_GroupCommands, Icon: "ArrowSync24"));
+        }
         // The session this palette is about: the one the window it was opened from is showing, or
         // the docked tab. Active is never a detached tab — Activate refuses them — so `from` is the
         // only thing that can name the session in front of the user here, and offering these two
@@ -1007,7 +1056,12 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
 
             case "cmd:about":
                 // Owned by the window the palette was opened from, so it appears on that monitor.
-                new AboutWindow { Owner = (Window?)from ?? this }.ShowDialog();
+                // A release found by hand is shown again even if its banner was hidden: the user asked.
+                new AboutWindow(_updates, () =>
+                {
+                    _updateDismissed = null;
+                    RefreshUpdateBar();
+                }) { Owner = (Window?)from ?? this }.ShowDialog();
                 break;
 
             case "cmd:pane":
@@ -1031,6 +1085,23 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
                     _settings.RestoreLastSession ? Strings.Shell_RestoreOnTitle : Strings.Shell_RestoreOffTitle,
                     _settings.RestoreLastSession ? Strings.Shell_RestoreOnMessage : Strings.Shell_RestoreOffMessage);
+                break;
+
+            case "cmd:update-toggle":
+                _settings.CheckForUpdates = !_settings.CheckForUpdates;
+                // Saved now and with rememberDetached: false, for the reasons given for the resume.
+                SaveSettings(rememberDetached: false);
+
+                // Turned on: the first check comes as at startup, not up to a day later. Setting the
+                // interval of a running timer restarts it.
+                if (_settings.CheckForUpdates && _updateTimer is not null)
+                {
+                    _updateTimer.Interval = FirstUpdateCheckDelay;
+                }
+
+                StatusBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Informational,
+                    _settings.CheckForUpdates ? Strings.Shell_UpdatesOnTitle : Strings.Shell_UpdatesOffTitle,
+                    _settings.CheckForUpdates ? Strings.Shell_UpdatesOnMessage : Strings.Shell_UpdatesOffMessage);
                 break;
 
             case "cmd:workspace-save":
@@ -2734,6 +2805,201 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
         new CredentialsWindow { Owner = this }.ShowDialog();
     }
 
+    // ---------------------------------------------------------------- updates
+
+    /// <summary>Arms the automatic checks: <see cref="FirstUpdateCheckDelay"/> after the window is
+    /// shown, then every <see cref="UpdateCheckInterval"/>. Nothing at all in a build that can never
+    /// update. The setting is read at each tick, so turning it off stops the next check.</summary>
+    private void StartUpdateChecks()
+    {
+        if (!BuildInfo.CanUpdate || _updateTimer is not null)
+        {
+            return;
+        }
+
+        _updateTimer = new DispatcherTimer { Interval = FirstUpdateCheckDelay };
+        _updateTimer.Tick += OnUpdateTimerTick;
+        _updateTimer.Start();
+    }
+
+    private async void OnUpdateTimerTick(object? sender, EventArgs e)
+    {
+        _updateTimer!.Interval = UpdateCheckInterval;
+        if (!_settings.CheckForUpdates)
+        {
+            return;
+        }
+
+        try
+        {
+            // The outcome is the coordinator's to log; a failure shows nothing (spec), and a release
+            // found reaches the banner through Changed.
+            await _updates.CheckAsync(manual: false);
+        }
+        catch (Exception ex)
+        {
+            // The coordinator catches the failures it knows; anything else from the network stack
+            // would end an async void, and with it the sessions the user has open, over a check
+            // nobody asked for. Logged with its type, so that it gets known; the next tick tries again.
+            ProbeLog.Write("update", $"automatic check failed unexpectedly: {ex.GetType().FullName}: {ex.Message}");
+        }
+    }
+
+    /// <summary>Draws the banner from the coordinator's phase and what this window remembers of the
+    /// last attempt. The one place its state is decided.</summary>
+    private void RefreshUpdateBar()
+    {
+        var phase = _updates.Phase;
+        var working = phase is UpdatePhase.Downloading or UpdatePhase.Verifying
+            or UpdatePhase.Installing or UpdatePhase.Restarting;
+        var installed = phase is UpdatePhase.Restarting or UpdatePhase.RestartPending;
+
+        // Once installed the coordinator no longer has a release to offer; the banner still names
+        // the one that was installed.
+        var release = _updates.Available ?? (installed ? _updatingTo : null);
+        if (release is null || (!working && release.Version == _updateDismissed))
+        {
+            UpdateBar.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        UpdateBar.Visibility = Visibility.Visible;
+        UpdateTitle.Text = Text.Of(installed ? Strings.Update_InstalledTitle : Strings.Update_AvailableTitle, release.Version);
+
+        string? message = phase switch
+        {
+            // Never 100 %: the last report moves the phase to Verifying, and a rounding up to 100
+            // while bytes are still missing would say done when it is not.
+            UpdatePhase.Downloading => Text.Of(Strings.Update_Downloading, Math.Min(99, (int)Math.Floor(_updateFraction * 100))),
+            UpdatePhase.Verifying => Strings.Update_Verifying,
+            UpdatePhase.Installing => Strings.Update_Installing,
+            UpdatePhase.Restarting => Strings.Update_Restarting,
+            UpdatePhase.RestartPending => Strings.Update_RestartPending,
+            _ => _updateNotice,
+        };
+        UpdateMessage.Text = message ?? string.Empty;
+        UpdateMessage.Visibility = message is null ? Visibility.Collapsed : Visibility.Visible;
+
+        UpdateProgress.Visibility = working ? Visibility.Visible : Visibility.Collapsed;
+        UpdateProgress.IsIndeterminate = phase != UpdatePhase.Downloading;
+        UpdateProgress.Value = _updateFraction;
+
+        // Offered while nothing is under way; greyed during a check, which would answer Busy.
+        UpdateInstallButton.Visibility = working || installed ? Visibility.Collapsed : Visibility.Visible;
+        UpdateInstallButton.IsEnabled = !_updates.IsBusy;
+        // The token is looked at up to the end of the verification, never during the install.
+        UpdateCancelButton.Visibility = phase is UpdatePhase.Downloading or UpdatePhase.Verifying
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        UpdateDismissButton.Visibility = working ? Visibility.Collapsed : Visibility.Visible;
+
+        // The page address comes from GitHub's answer: opened only if it points where the update
+        // itself is allowed to come from, and not offered otherwise.
+        var page = UpdateHosts.IsAllowed(release.PageUrl) ? release.PageUrl : null;
+        UpdateNotesLink.NavigateUri = page;
+        UpdateNotes.Visibility = page is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private async void OnUpdateInstallClick(object sender, RoutedEventArgs e)
+    {
+        if (_updates.Available is not { } release || _updates.IsBusy)
+        {
+            return;
+        }
+
+        _updatingTo = release;
+        _updateNotice = null;
+        _updateFraction = 0;
+        using var cancel = new CancellationTokenSource();
+        _updateCancel = cancel;
+        UpdateOutcome outcome;
+        try
+        {
+            outcome = await _updates.UpdateAsync(ConfirmSessionsForUpdate,
+                new Progress<double>(fraction =>
+                {
+                    _updateFraction = fraction;
+                    RefreshUpdateBar();
+                }),
+                cancel.Token);
+        }
+        finally
+        {
+            _updateCancel = null;
+            _updateSessionsAnswered = null;
+        }
+
+        _updateNotice = outcome.Result switch
+        {
+            UpdateResult.OtherInstances => Strings.Update_OtherInstances,
+            UpdateResult.DownloadFailed or UpdateResult.Failed => Text.Of(Strings.Update_Failed, outcome.Detail),
+            UpdateResult.HashMismatch => Strings.Update_HashMismatch,
+            UpdateResult.SavedToDownloads => Text.Of(Strings.Update_SavedToDownloads, outcome.Detail),
+            // Restarting and RestartPending are told by the phase. Cancelled and Declined were the
+            // user's own answer, and the offer simply stands again. Busy and NothingAvailable cannot
+            // follow a click the button only takes when neither holds.
+            // InstalledOnClose only happens while the window is closing.
+            UpdateResult.Restarting or UpdateResult.RestartPending or UpdateResult.Cancelled
+                or UpdateResult.Declined or UpdateResult.Busy or UpdateResult.NothingAvailable
+                or UpdateResult.InstalledOnClose => null,
+            _ => null,
+        };
+        RefreshUpdateBar();
+    }
+
+    private void OnUpdateCancelClick(object sender, RoutedEventArgs e) => _updateCancel?.Cancel();
+
+    private void OnUpdateDismissClick(object sender, RoutedEventArgs e)
+    {
+        _updateDismissed = (_updates.Available ?? _updatingTo)?.Version;
+        RefreshUpdateBar();
+    }
+
+    private void OnUpdateNotesNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            ProbeLog.Write("update", $"Could not open {e.Uri}: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// The coordinator asks this just before installing, and again after a successful install in
+    /// case a session was opened meanwhile. No session: true without a word. Otherwise the same
+    /// question as the editor's discard, No by default: Enter must not close sessions. A Yes is
+    /// remembered by tab, so that the second call asks only when a tab the user has not been asked
+    /// about is open; the memory is dropped when the update attempt ends.
+    /// </summary>
+    private bool ConfirmSessionsForUpdate()
+    {
+        if (_sessions.Tabs.Count == 0)
+        {
+            return true;
+        }
+
+        if (_updateSessionsAnswered is { } answered && _sessions.Tabs.All(answered.Contains))
+        {
+            return true;
+        }
+
+        var answer = System.Windows.MessageBox.Show(this,
+            _settings.RestoreLastSession ? Strings.Update_ConfirmRestore : Strings.Update_ConfirmClose,
+            Strings.Update_ConfirmTitle,
+            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes)
+        {
+            return false;
+        }
+
+        _updateSessionsAnswered = new HashSet<SessionTabViewModel>(_sessions.Tabs, ReferenceEqualityComparer.Instance);
+        return true;
+    }
+
     // ---------------------------------------------------------------- settings
 
     /// <summary>
@@ -2933,6 +3199,25 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // First thing, on the first pass: the close-all below can take thirty seconds, and a download
+        // that finished meanwhile must not ask about sessions, install, or start RemoteDeck again
+        // after the user quit it. Not when this close is the coordinator's own restart: that one
+        // has installed already and must go through.
+        try
+        {
+            _updateTimer?.Stop();
+            if (_updates.Phase != UpdatePhase.Restarting)
+            {
+                _updateCancel?.Cancel();
+                _updates.OnMainWindowClosing();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Cancel() can rethrow what a cancellation callback threw: it must not keep the window open.
+            ProbeLog.Write("close", $"Stopping the update failed: {ex.GetType().Name} 0x{ex.HResult:X8} {ex.Message}");
+        }
+
         // The window stays interactive for up to the close-all budget, so the close box can be
         // clicked again while the protocol runs. Re-entering the first pass would start a second
         // RequestClose, orphan the first waiter and let Dispose run under the pending await.
@@ -2978,6 +3263,14 @@ public partial class ShellWindow : Wpf.Ui.Controls.FluentWindow
                 _deleteDisarm.Stop();
                 _shortcuts?.Dispose();
                 _sessions.DisposeAll();
+
+                // The download was cancelled at the start of the close. A request still in flight
+                // keeps its client to the process exit: disposing it under the await would surface
+                // as an exception the coordinator does not expect, on the way out.
+                if (_updates.Phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Verifying))
+                {
+                    _updates.Dispose();
+                }
             }
             catch (Exception ex)
             {

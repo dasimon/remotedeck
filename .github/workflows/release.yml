@@ -60,11 +60,16 @@ jobs:
       - run: dotnet build RemoteDeck.sln --configuration Release --no-restore
       - run: dotnet run --project tests/RemoteDeck.Core.Tests --configuration Release --no-build
 
+      # UpdateChannel=release is what makes the shipped executable look for updates, and only in
+      # this repository's releases. It is compiled in as assembly metadata, so no setting on the
+      # user's machine can redirect it; a build without it never checks and never updates. The
+      # "test" channel, which reads a throw-away repository, is deliberately never stamped here --
+      # a test in the repository fails if this file ever mentions it.
       - name: Publish single-file executable (x64, self-contained)
         run: >
           dotnet publish src/RemoteDeck.App -c Release -r win-x64
           --self-contained true -p:PublishSingleFile=true -p:DebugType=none
-          -p:Version=${{ env.VERSION }} -o publish
+          -p:UpdateChannel=release -p:Version=${{ env.VERSION }} -o publish
 
       # Stamping is worth nothing unheard: -p:Version can be silently ignored by a property the
       # project sets later, and the release would ship a binary claiming 1.0.0 with a green run.
@@ -78,6 +83,28 @@ jobs:
             exit 1
           }
           Write-Host "RemoteDeck.exe reports $($file.FileVersion) / $($file.ProductVersion)."
+
+      # The channel stamp has the same weakness and a worse symptom: without it the executable never
+      # looks for an update, so the users of this release would never be offered the next one, and
+      # nothing anywhere would say so. It is an assembly attribute, AssemblyMetadata("UpdateChannel",
+      # "release"), which the compiler stores in RemoteDeck.dll as a fixed byte sequence: prolog 01 00,
+      # each string prefixed with its length, no named arguments (00 00). The single file does not
+      # compress what it bundles (EnableCompressionInSingleFile is not set), so the sequence is in
+      # the .exe as is. Looking for the whole blob, not the two words, keeps a stray string from
+      # passing for the stamp.
+      - name: Refuse to ship a binary that is not on the release channel
+        shell: pwsh
+        run: |
+          [byte[]] $blob = @(1, 0, 13) + [Text.Encoding]::UTF8.GetBytes('UpdateChannel') +
+                           @(7) + [Text.Encoding]::UTF8.GetBytes('release') + @(0, 0)
+          # Latin-1 maps each byte to one character, so a string search is a byte search.
+          $latin1 = [Text.Encoding]::Latin1
+          $exe = $latin1.GetString([IO.File]::ReadAllBytes("$PWD/publish/RemoteDeck.exe"))
+          if ($exe.IndexOf($latin1.GetString($blob), [StringComparison]::Ordinal) -lt 0) {
+            Write-Host '::error::RemoteDeck.exe does not carry AssemblyMetadata("UpdateChannel", "release"): it would never look for an update.'
+            exit 1
+          }
+          Write-Host 'RemoteDeck.exe carries the release update channel.'
 
       # The release attaches publish/RemoteDeck.exe and nothing else, so a publish that leaves
       # anything beside it ships a binary that cannot start: native libraries are not bundled
@@ -118,3 +145,8 @@ jobs:
             publish/RemoteDeck.exe
             SHA256SUMS
           generate_release_notes: true
+          # A tag with a hyphen (v1.2.0-rc.1) is a pre-release. The tag filter above lets those
+          # through and the version step accepts them, so the flag has to follow the tag: GitHub's
+          # "latest release" -- what the built-in update reads -- never points at a pre-release,
+          # and without the flag a release candidate would take that place and be offered to everyone.
+          prerelease: ${{ contains(github.ref_name, '-') }}

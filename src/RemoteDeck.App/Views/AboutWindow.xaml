@@ -19,6 +19,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0" Title="{x:Static res:Strings.About_Title}" ShowMaximize="False" ShowMinimize="False" />
@@ -40,9 +41,18 @@
             <TextBlock x:Name="CopyrightText" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource RdTextMuted}" />
         </StackPanel>
 
+        <!-- Works whatever the "check automatically" setting says: that setting is about RemoteDeck
+             asking on its own, this button is the user asking. A development build has nothing to ask. -->
+        <DockPanel Grid.Row="3" Margin="16,12,16,0">
+            <ui:Button x:Name="CheckUpdatesButton" DockPanel.Dock="Left" VerticalAlignment="Top"
+                       Content="{x:Static res:Strings.About_CheckUpdates}" Click="OnCheckUpdates" />
+            <TextBlock x:Name="UpdateStatus" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
+                       Foreground="{DynamicResource RdTextMuted}" AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+
         <!-- Hyperlinks rather than buttons: they leave the application for the browser, and say so
              by looking like links. Tab reaches them, Enter follows them. -->
-        <TextBlock Grid.Row="3" Margin="16,12,16,16">
+        <TextBlock Grid.Row="4" Margin="16,12,16,16">
             <Hyperlink x:Name="SourceLink" RequestNavigate="OnNavigate">
                 <Run Text="{x:Static res:Strings.About_SourceCode}" />
             </Hyperlink>
@@ -52,7 +62,7 @@
             </Hyperlink>
         </TextBlock>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,0">
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,0">
             <ui:Button Margin="0,0,8,0" Content="{x:Static res:Strings.About_OpenLogs}" Click="OnOpenLogs" />
             <ui:Button x:Name="CopyButton" Margin="0,0,8,0" Content="{x:Static res:Strings.About_CopyDetails}" Click="OnCopy" />
             <ui:Button MinWidth="96" Appearance="Primary" Content="{x:Static res:Strings.About_Close}"
