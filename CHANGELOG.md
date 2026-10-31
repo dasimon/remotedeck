@@ -2,6 +2,31 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### A connection editor that reads at a glance
+
+- **The machine on top**: name, host, port and group on one card, with the connection's
+  initials as a badge and *Favorite* as a star.
+- **Sections that fold, with a summary**: *Sign-in*, *Display*, *Redirections* and *Advanced*
+  each say what they hold on a second line, so a folded form still shows the whole connection.
+  *Sign-in* and *Display* open unfolded.
+- **Display modes as drawn tiles**: each tile shows what the mode does to the remote desktop,
+  with one sentence under them. The fixed size only appears for *Scaled* and *Fixed*.
+- **Redirections as icon toggles**, and on/off settings as switches.
+- **Fix:** the editor no longer grows past the bottom of the screen when its sections unfold;
+  it moves up to stay inside the work area.
+
+### Groups in colour
+
+- **Each group has a colour**, picked from its name: nothing to set, and the same group gets the
+  same colour on every machine. It shows on the badge of each connection in the pane, as a square
+  on the group's header and on the session's tab, and on the editor's badge.
+- **Badges with the distinctive end of the name**: `FDC-VM-WIN07` shows `W7`, `FDCSQL-RECETTE`
+  shows `RE`, so machines of one fleet no longer share the same letters.
+- **Group headers show how many connections they hold.**
+- **The session bar is grouped**: session actions, tools, then *Disconnect*, now with an icon.
+
 ## 0.8.0 — 2026-10-29
 
 One session across every monitor, and full screen that holds through an automatic reconnection.

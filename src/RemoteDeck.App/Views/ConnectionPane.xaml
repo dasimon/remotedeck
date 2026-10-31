@@ -8,6 +8,7 @@
              PreviewKeyDown="OnPanePreviewKeyDown">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <controls:GroupBrushConverter x:Key="GroupBrush" />
 
         <!-- The grouped view of ConnectionListViewModel.Items. A CollectionViewSource declared in the
              resources of the element that uses it inherits that element's DataContext (Freezable
@@ -369,9 +370,28 @@
                                         BorderThickness="1"
                                         CornerRadius="{StaticResource RdRadiusSm}"
                                         Padding="8,3" Margin="6,6,6,2">
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="{StaticResource RdFontMd}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource RdTextMuted}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- The group's hue, the one its rows' badges carry. Favorites and
+                                             Ungrouped are not groups and have none. -->
+                                        <Rectangle Width="8" Height="8" RadiusX="2" RadiusY="2" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                   Fill="{Binding Name, Converter={StaticResource GroupBrush}}">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Name, Converter={StaticResource GroupBrush}}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="{StaticResource RdFontMd}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource RdTextMuted}" />
+                                        <TextBlock Text="{Binding ItemCount}" Margin="6,0,0,0"
+                                                   FontSize="{StaticResource RdFontMd}"
+                                                   Foreground="{DynamicResource RdTextMuted}" />
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </GroupStyle.HeaderTemplate>
@@ -387,21 +407,42 @@
                                  one element here that must never be half-read. Weighted 3:2 so the
                                  name, which is what the user searches by, keeps the larger half. -->
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="32" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="3*" />
                                 <ColumnDefinition Width="2*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
+                            <!-- The badge: initials on the group's hue, the same on every row of the
+                                 group and wherever the connection appears. No group, no hue: a quiet
+                                 surface, so a coloured badge always means something. -->
+                            <Border Grid.Column="0" Width="24" Height="24" HorizontalAlignment="Left" CornerRadius="{StaticResource RdRadius}"
+                                    Background="{Binding GroupName, Converter={StaticResource GroupBrush}, TargetNullValue={StaticResource RdSurface2}}">
+                                <TextBlock Text="{Binding Monogram}" FontSize="{StaticResource RdFontSm}" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource RdOnGroup}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding GroupName, Converter={StaticResource GroupBrush}}" Value="{x:Null}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+
                             <!-- U+E735 = FavoriteStarFill (Segoe Fluent Icons, Segoe MDL2 Assets on Win10). -->
-                            <TextBlock Grid.Column="0" Text="&#xE735;"
+                            <TextBlock Grid.Column="1" Margin="0,0,6,0" Text="&#xE735;"
                                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                        FontSize="{StaticResource RdFontMd}" VerticalAlignment="Center"
                                        Foreground="{DynamicResource RdAccent}"
                                        Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibility}}" />
 
-                            <controls:HighlightTextBlock Grid.Column="1"
+                            <controls:HighlightTextBlock Grid.Column="2"
                                                          Text="{Binding Name}"
                                                          Ranges="{Binding Match.NameRanges}"
                                                          VerticalAlignment="Center"
@@ -411,7 +452,7 @@
                             <!-- Muted through the token rather than through Opacity: the host must
                                  recede by the same amount in both themes, and 0.7 of white does not
                                  recede like 0.7 of black. -->
-                            <controls:HighlightTextBlock Grid.Column="2"
+                            <controls:HighlightTextBlock Grid.Column="3"
                                                          Margin="8,0,0,0"
                                                          Text="{Binding Host}"
                                                          Ranges="{Binding Match.HostRanges}"
@@ -425,12 +466,12 @@
                             <!-- Before the state pill: the tunnel is a precondition of the session, so
                                  it reads first. Collapsed, and width-free, on a connection with no
                                  profile. -->
-                            <controls:VpnTag Grid.Column="3"
+                            <controls:VpnTag Grid.Column="4"
                                              Margin="8,0,0,0"
                                              State="{Binding Vpn}"
                                              Profile="{Binding VpnProfile}" />
 
-                            <controls:StatusTag Grid.Column="4"
+                            <controls:StatusTag Grid.Column="5"
                                                 Margin="8,0,0,0"
                                                 Status="{Binding Status}" />
                         </Grid>

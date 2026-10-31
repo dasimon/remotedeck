@@ -5,19 +5,132 @@
                  xmlns:res="clr-namespace:RemoteDeck.App.Resources"
                  xmlns:controls="clr-namespace:RemoteDeck.App.Controls"
                  xmlns:model="clr-namespace:RemoteDeck.Core.Model;assembly=RemoteDeck.Core"
-                 Title="{x:Static res:Strings.Editor_Title}" Width="520" SizeToContent="Height"
+                 Title="{x:Static res:Strings.Editor_Title}" Width="560" SizeToContent="Height"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round"
                  WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <controls:GroupBrushConverter x:Key="GroupBrush" />
+
+        <!-- The four display modes, drawn on an 80 × 50 board: what each one does to the remote
+             desktop, so the choice is made by looking rather than by reading. -->
+        <Geometry x:Key="DynamicGlyph">M6,4 H54 V36 H6 Z M60,20 H74 M70,16 L74,20 L70,24 M30,40 V48 M26,44 L30,48 L34,44</Geometry>
+        <Geometry x:Key="ScaledGlyph">M3,3 H77 V47 H3 Z M20,13 H60 V37 H20 Z M8,8 L15,12 M72,8 L65,12 M8,42 L15,38 M72,42 L65,38</Geometry>
+        <Geometry x:Key="FixedGlyph">M3,3 H63 V47 H3 Z M69,3 H77 V47 H69 Z M73,8 V22 M11,13 H43 M11,21 H51 M11,29 H35</Geometry>
+        <Geometry x:Key="AllMonitorsGlyph">M2,6 H37 V32 H2 Z M43,6 H78 V32 H43 Z M14,42 H25 M55,42 H66 M19.5,32 V42 M60.5,32 V42</Geometry>
+
+        <!-- A tile, for the display modes. The ListBox keeps what a picker needs — arrow keys,
+             one selection, a name per item for a screen reader — and only the look is replaced. -->
+        <Style x:Key="ModeTile" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Tile" CornerRadius="{StaticResource RdRadiusLg}" BorderThickness="1" Padding="6,10,6,8"
+                                BorderBrush="{DynamicResource RdBorder}" Background="{DynamicResource RdSurface1}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource RdSurface2}" />
+                            </Trigger>
+                            <!-- Thicker edge, thinner padding: the tile does not move when picked. -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource RdAccent}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource RdAccent}" />
+                                <Setter TargetName="Tile" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="Tile" Property="Padding" Value="5,9,5,7" />
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource RdAccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A redirection: a toggle with its device's icon. On, it takes the accent and a dot, so
+             the state reads by shape as well as by colour. -->
+        <Style x:Key="RedirectToggle" TargetType="ToggleButton">
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="Tile" CornerRadius="{StaticResource RdRadiusLg}" BorderThickness="1" Padding="4,10,4,8"
+                                    BorderBrush="{DynamicResource RdBorder}" Background="{DynamicResource RdSurface1}">
+                                <ContentPresenter HorizontalAlignment="Center" />
+                            </Border>
+                            <Ellipse x:Name="Dot" Width="6" Height="6" Margin="0,7,7,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                     Fill="{DynamicResource RdAccent}" Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource RdSurface2}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource RdAccent}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource RdAccent}" />
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource RdAccentSoft}" />
+                                <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The favourite star of the header: hollow and muted off, filled and warm on. -->
+        <Style x:Key="FavoriteToggle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="{StaticResource RdRowHeight}" />
+            <Setter Property="Height" Value="{StaticResource RdRowHeight}" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Back" CornerRadius="{StaticResource RdRadius}" Background="Transparent">
+                            <Viewbox Width="18" Height="18">
+                                <ui:SymbolIcon x:Name="Star" Symbol="Star24" Foreground="{DynamicResource RdTextMuted}" />
+                            </Viewbox>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Back" Property="Background" Value="{DynamicResource RdSurface2}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Star" Property="Filled" Value="True" />
+                                <Setter TargetName="Star" Property="Foreground" Value="{DynamicResource RdWarn}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The caption above a field and the line of help under a setting. -->
+        <Style x:Key="FieldCaption" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,0,0,3" />
+            <Setter Property="FontSize" Value="{StaticResource RdFontMd}" />
+            <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+        </Style>
+        <Style x:Key="SettingHint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,12,0" />
+            <Setter Property="FontSize" Value="{StaticResource RdFontMd}" />
+            <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
     </ui:FluentWindow.Resources>
-    <!-- Every control styles itself inline: an explicit Style= would replace the implicit WPF-UI
-         style each ui: control gets from ControlsDictionary, template included. -->
+    <!-- Every ui: control styles itself inline: an explicit Style= would replace the implicit WPF-UI
+         style each one gets from ControlsDictionary, template included. The keyed styles above are
+         for plain WPF controls whose look is replaced on purpose. -->
     <!-- A Grid, not a StackPanel: the form is the one part allowed to scroll. Measured on
-         2026-09-06, this window is about 990 px tall at 100 %, with no scroll and no resize — on a
+         2026-09-06, this window was about 990 px tall at 100 %, with no scroll and no resize — on a
          1366×768 laptop, or a 1080p one at 150 %, the Save button was simply off the screen with
          no way to reach it. The code-behind caps MaxHeight to the monitor's work area; past it,
-         the title bar and the buttons stay where they are and the form scrolls between them. -->
+         the title bar and the buttons stay where they are and the form scrolls between them. The
+         folded sections below keep it well under that most of the time. -->
     <Grid Margin="0,0,0,12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -28,127 +141,304 @@
         <ui:TitleBar Grid.Row="0" x:Name="EditorTitleBar" Title="{x:Static res:Strings.Editor_Title}" ShowMinimize="False" ShowMaximize="False" />
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="16,0,16,0">
-            <TextBlock Text="{x:Static res:Strings.Editor_SectionGeneral}" FontWeight="SemiBold" Margin="0,8,0,2" />
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_Name}" VerticalAlignment="Center" />
-                <ui:TextBox Grid.Row="0" Grid.Column="1" x:Name="NameInput" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_Name}" MaxLength="{x:Static model:ConnectionRules.MaxNameLength}" controls:Mark.Invalid="{Binding NameInvalid}"
-                            Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_Host}" VerticalAlignment="Center" />
-                <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_Host}" controls:Mark.Invalid="{Binding HostInvalid}" PlaceholderText="{x:Static res:Strings.Editor_HostPlaceholder}"
-                            Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBlock Grid.Row="2" Text="{x:Static res:Strings.Editor_Port}" VerticalAlignment="Center" />
-                <ui:NumberBox Grid.Row="2" Grid.Column="1" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_Port}" Width="120" HorizontalAlignment="Left" controls:Mark.Invalid="{Binding PortInvalid}"
-                              Minimum="1" Maximum="65535" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden"
-                              Value="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBlock Grid.Row="3" Text="{x:Static res:Strings.Editor_Group}" VerticalAlignment="Center" />
-                <!-- Editable: pick an existing group or type a new one; KnownGroups is only a shortcut. -->
-                <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,3" IsEditable="True" AutomationProperties.Name="{x:Static res:Strings.Editor_Group}"
-                          ItemsSource="{Binding KnownGroups}"
-                          Text="{Binding GroupName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <CheckBox Grid.Row="4" Grid.Column="1" Margin="0,6,0,0" Content="{x:Static res:Strings.Editor_Favorite}"
-                          IsChecked="{Binding IsFavorite}" />
-            </Grid>
+        <StackPanel Margin="16,4,16,0">
 
-            <TextBlock Text="{x:Static res:Strings.Editor_SectionSignIn}" FontWeight="SemiBold" Margin="0,12,0,2" />
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_Credential}" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_Credential}"
-                          ItemsSource="{Binding Credentials}" SelectedItem="{Binding SelectedCredential}" />
-                <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_Authentication}" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_Authentication}"
-                          ItemsSource="{Binding AuthenticationLevels}" SelectedItem="{Binding SelectedAuthenticationLevel}" />
-                <CheckBox Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Content="{x:Static res:Strings.Editor_UseWebAccount}"
-                          IsChecked="{Binding UseWebAccount}" />
-                <!-- The account hint of a web-account connection: what mstsc keeps as UsernameHint for
-                     the server. An identity, not a secret — no password is ever attached to it. Only
-                     meaningful under the box above, so it shows only then. -->
-                <TextBlock Grid.Row="3" Text="{x:Static res:Strings.Editor_WebAccountUpn}" VerticalAlignment="Center"
-                           Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
-                <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,3" AutomationProperties.Name="{x:Static res:Strings.Editor_WebAccountUpn}" PlaceholderText="{x:Static res:Strings.Editor_WebAccountUpnPlaceholder}"
-                            Text="{Binding WebAccountUpn, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
-                           Text="{x:Static res:Strings.Editor_WebAccountUpnHint}"
-                           Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}" />
-            </Grid>
+            <!-- The machine: badge, name, favourite star, then where it lives. Always open — these
+                 are the fields every connection needs and the ones validation points at most. -->
+            <Border Background="{DynamicResource RdSurface1}" BorderBrush="{DynamicResource RdBorder}" BorderThickness="1"
+                    CornerRadius="{StaticResource RdRadiusLg}" Padding="14,12" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <!-- The badge the pane shows for this connection: the group's hue, and the
+                         surface the pane uses for no group. It follows the group box as it is typed. -->
+                    <Border Grid.Row="0" Width="40" Height="40" Margin="0,0,12,0" VerticalAlignment="Bottom" CornerRadius="{StaticResource RdRadiusLg}"
+                            Background="{Binding GroupName, Converter={StaticResource GroupBrush}, TargetNullValue={StaticResource RdSurface2}}">
+                        <Grid>
+                            <TextBlock Text="{Binding Monogram}" FontWeight="SemiBold" FontSize="{StaticResource RdFont}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource RdOnGroup}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding GroupName, Converter={StaticResource GroupBrush}}" Value="{x:Null}">
+                                                <Setter Property="Foreground" Value="{DynamicResource RdTextMuted}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <!-- Until the name has a letter, a machine stands in for the initials. -->
+                            <Viewbox Width="20" Height="20">
+                                <Viewbox.Style>
+                                    <Style TargetType="Viewbox">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Monogram}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Viewbox.Style>
+                                <ui:SymbolIcon Symbol="Desktop24" Foreground="{DynamicResource RdTextMuted}" />
+                            </Viewbox>
+                        </Grid>
+                    </Border>
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_Name}" />
+                        <ui:TextBox x:Name="NameInput" AutomationProperties.Name="{x:Static res:Strings.Editor_Name}" MaxLength="{x:Static model:ConnectionRules.MaxNameLength}" controls:Mark.Invalid="{Binding NameInvalid}"
+                                    Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <ToggleButton Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource FavoriteToggle}"
+                                  ToolTip="{x:Static res:Strings.Editor_Favorite}" AutomationProperties.Name="{x:Static res:Strings.Editor_Favorite}"
+                                  IsChecked="{Binding IsFavorite}" />
 
-            <TextBlock Text="{x:Static res:Strings.Editor_SectionDisplay}" FontWeight="SemiBold" Margin="0,12,0,2" />
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Editor_DisplayMode}" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,3" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_DisplayMode}"
-                          ItemsSource="{Binding DisplayModes}" SelectedItem="{Binding SelectedDisplayMode}" />
-                <TextBlock Grid.Row="1" Text="{x:Static res:Strings.Editor_FixedSize}" VerticalAlignment="Center" />
-                <!-- Dynamic follows the window, so both boxes stay disabled until Scaled or Fixed. -->
-                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,3" Orientation="Horizontal"
-                            IsEnabled="{Binding IsFixedSizeEnabled}">
-                    <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_WidthPlaceholder}" controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_WidthPlaceholder}" Minimum="640" Maximum="8192" MaxDecimalPlaces="0"
-                                  SpinButtonPlacementMode="Hidden"
-                                  Value="{Binding FixedWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Text="×" Margin="8,0" VerticalAlignment="Center" />
-                    <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_HeightPlaceholder}" controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_HeightPlaceholder}" Minimum="480" Maximum="8192" MaxDecimalPlaces="0"
-                                  SpinButtonPlacementMode="Hidden"
-                                  Value="{Binding FixedHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="96" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_Host}" />
+                            <ui:TextBox AutomationProperties.Name="{x:Static res:Strings.Editor_Host}" controls:Mark.Invalid="{Binding HostInvalid}" PlaceholderText="{x:Static res:Strings.Editor_HostPlaceholder}"
+                                        Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="8,0">
+                            <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_Port}" />
+                            <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_Port}" controls:Mark.Invalid="{Binding PortInvalid}"
+                                          Minimum="1" Maximum="65535" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden" ClearButtonEnabled="False"
+                                          Value="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_Group}" />
+                            <!-- Editable: pick an existing group or type a new one; KnownGroups is only a shortcut. -->
+                            <ComboBox IsEditable="True" AutomationProperties.Name="{x:Static res:Strings.Editor_Group}"
+                                      ItemsSource="{Binding KnownGroups}"
+                                      Text="{Binding GroupName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- The rest folds, and each folded section says what it holds on its second line:
+                 the whole connection reads without opening anything. -->
+            <ui:CardExpander x:Name="SignInSection" Icon="{ui:SymbolIcon Person24}" IsExpanded="True" Margin="0,0,0,4">
+                <ui:CardExpander.Header>
+                    <StackPanel>
+                        <TextBlock Text="{x:Static res:Strings.Editor_SectionSignIn}" />
+                        <TextBlock Text="{Binding SignInSummary}" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdTextMuted}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="300" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Static res:Strings.Editor_Credential}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_Credential}"
+                                  ItemsSource="{Binding Credentials}" SelectedItem="{Binding SelectedCredential}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="300" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Static res:Strings.Editor_Authentication}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static res:Strings.Editor_Authentication}"
+                                  ItemsSource="{Binding AuthenticationLevels}" SelectedItem="{Binding SelectedAuthenticationLevel}" />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Static res:Strings.Editor_UseWebAccount}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Column="1" AutomationProperties.Name="{x:Static res:Strings.Editor_UseWebAccount}" IsChecked="{Binding UseWebAccount}" />
+                    </Grid>
+                    <!-- The account hint of a web-account connection: what mstsc keeps as UsernameHint for
+                         the server. An identity, not a secret — no password is ever attached to it. Only
+                         meaningful under the switch above, so it shows only then. -->
+                    <StackPanel Margin="0,8,0,0" Visibility="{Binding UseWebAccount, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_WebAccountUpn}" />
+                        <ui:TextBox AutomationProperties.Name="{x:Static res:Strings.Editor_WebAccountUpn}" PlaceholderText="{x:Static res:Strings.Editor_WebAccountUpnPlaceholder}"
+                                    Text="{Binding WebAccountUpn, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource SettingHint}" Text="{x:Static res:Strings.Editor_WebAccountUpnHint}" />
+                    </StackPanel>
                 </StackPanel>
-            </Grid>
+            </ui:CardExpander>
 
-            <TextBlock Text="{x:Static res:Strings.Editor_SectionRedirections}" FontWeight="SemiBold" Margin="0,12,0,2" />
-            <UniformGrid Columns="2">
-                <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_RedirectClipboard}" IsChecked="{Binding RedirectClipboard}" />
-                <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_RedirectDrives}" IsChecked="{Binding RedirectDrives}" />
-                <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_RedirectPrinters}" IsChecked="{Binding RedirectPrinters}" />
-                <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_RedirectAudio}" IsChecked="{Binding RedirectAudio}" />
-            </UniformGrid>
+            <ui:CardExpander x:Name="DisplaySection" Icon="{ui:SymbolIcon Desktop24}" IsExpanded="True" Margin="0,0,0,4">
+                <ui:CardExpander.Header>
+                    <StackPanel>
+                        <TextBlock Text="{x:Static res:Strings.Editor_SectionDisplay}" />
+                        <TextBlock Text="{Binding DisplaySummary}" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdTextMuted}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <ListBox AutomationProperties.Name="{x:Static res:Strings.Editor_DisplayMode}" Margin="-3,0"
+                             Background="Transparent" BorderThickness="0" Padding="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                             ItemsSource="{Binding DisplayModes}" SelectedItem="{Binding SelectedDisplayMode}"
+                             ItemContainerStyle="{StaticResource ModeTile}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <!-- A fixed board scaled as a whole, so all four drawings share one scale. -->
+                                    <Viewbox Height="30" HorizontalAlignment="Center">
+                                        <Canvas Width="80" Height="50">
+                                            <Path x:Name="Glyph" Data="{StaticResource DynamicGlyph}" StrokeThickness="2.5"
+                                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" />
+                                        </Canvas>
+                                    </Viewbox>
+                                    <TextBlock Text="{Binding Label}" Margin="0,6,0,0" HorizontalAlignment="Center" TextAlignment="Center"
+                                               TextWrapping="Wrap" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdText}" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Value}" Value="{x:Static model:DisplayMode.Scaled}">
+                                        <Setter TargetName="Glyph" Property="Data" Value="{StaticResource ScaledGlyph}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Value}" Value="{x:Static model:DisplayMode.Fixed}">
+                                        <Setter TargetName="Glyph" Property="Data" Value="{StaticResource FixedGlyph}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Value}" Value="{x:Static model:DisplayMode.AllMonitors}">
+                                        <Setter TargetName="Glyph" Property="Data" Value="{StaticResource AllMonitorsGlyph}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Style="{StaticResource SettingHint}" Margin="0,6,0,0" Text="{Binding SelectedDisplayMode.Hint}" />
+                    <!-- Only Scaled and Fixed use a size, so only they show the boxes. -->
+                    <StackPanel Margin="0,10,0,0" Visibility="{Binding IsFixedSizeEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_FixedSize}" />
+                        <StackPanel Orientation="Horizontal">
+                            <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_WidthPlaceholder}" controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_WidthPlaceholder}" Minimum="640" Maximum="8192" MaxDecimalPlaces="0"
+                                          SpinButtonPlacementMode="Hidden"
+                                          Value="{Binding FixedWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="×" Margin="8,0" VerticalAlignment="Center" />
+                            <ui:NumberBox AutomationProperties.Name="{x:Static res:Strings.Editor_HeightPlaceholder}" controls:Mark.Invalid="{Binding SizeInvalid}" Width="110" PlaceholderText="{x:Static res:Strings.Editor_HeightPlaceholder}" Minimum="480" Maximum="8192" MaxDecimalPlaces="0"
+                                          SpinButtonPlacementMode="Hidden"
+                                          Value="{Binding FixedHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </ui:CardExpander>
 
-            <TextBlock Text="{x:Static res:Strings.Editor_SectionAdvanced}" FontWeight="SemiBold" Margin="0,12,0,2" />
-            <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_AdminSession}" IsChecked="{Binding AdminSession}" />
-            <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_PassShortcuts}" IsChecked="{Binding PassShortcuts}" />
-            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
-                       Text="{x:Static res:Strings.Editor_PassShortcutsHint}" />
-            <TextBlock Margin="0,8,0,2" Text="{x:Static res:Strings.Editor_VpnProfile}" />
-            <!-- Editable on purpose: the list is a convenience, not a contract. RemoteDeck reads the
-                 RAS phonebook to fill it, and that file's location has never been verified on a
-                 machine that has one — so a profile it fails to discover must still be reachable by
-                 typing, exactly as before the list existed. -->
-            <ComboBox Margin="0,0,0,2" AutomationProperties.Name="{x:Static res:Strings.Editor_VpnProfile}"
-                      IsEditable="True"
-                      ItemsSource="{Binding AvailableVpnProfiles}"
-                      Text="{Binding VpnProfile, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
-                       Text="{x:Static res:Strings.Editor_VpnProfileHint}" />
-            <!-- Greyed without a profile rather than hidden: the option stays discoverable, and the
-                 tick is saved as off in that case (see ApplyTo). -->
-            <CheckBox Margin="0,3" Content="{x:Static res:Strings.Editor_AutoRaiseVpn}"
-                      IsChecked="{Binding AutoRaiseVpn}" IsEnabled="{Binding HasVpnProfile}" />
-            <TextBlock Margin="0,0,0,4" Opacity="0.7" FontSize="{StaticResource RdFontMd}" TextWrapping="Wrap"
-                       Text="{x:Static res:Strings.Editor_AutoRaiseVpnHint}" />
-            <ui:TextBox Margin="0,6,0,0" Height="72" AcceptsReturn="True" AutomationProperties.Name="{x:Static res:Strings.Editor_NotesPlaceholder}" TextWrapping="Wrap"
-                        VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
-                        PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Margin="0,4,0,0" Opacity="0.7" FontSize="{StaticResource RdFontMd}" Text="{x:Static res:Strings.Common_RequiredHint}" />
+            <ui:CardExpander Icon="{ui:SymbolIcon ArrowSwap24}" Margin="0,0,0,4">
+                <ui:CardExpander.Header>
+                    <StackPanel>
+                        <TextBlock Text="{x:Static res:Strings.Editor_SectionRedirections}" />
+                        <TextBlock Text="{Binding RedirectionsSummary}" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdTextMuted}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </ui:CardExpander.Header>
+                <UniformGrid Rows="1" Margin="-3,0">
+                    <ToggleButton Style="{StaticResource RedirectToggle}" IsChecked="{Binding RedirectClipboard}" AutomationProperties.Name="{x:Static res:Strings.Editor_RedirectClipboard}">
+                        <StackPanel>
+                            <Viewbox Width="20" Height="20">
+                                <ui:SymbolIcon Symbol="ClipboardPaste24" />
+                            </Viewbox>
+                            <TextBlock Text="{x:Static res:Strings.Editor_RedirectClipboard}" Margin="0,6,0,0" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdText}" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource RedirectToggle}" IsChecked="{Binding RedirectDrives}" AutomationProperties.Name="{x:Static res:Strings.Editor_RedirectDrives}">
+                        <StackPanel>
+                            <Viewbox Width="20" Height="20">
+                                <ui:SymbolIcon Symbol="Storage24" />
+                            </Viewbox>
+                            <TextBlock Text="{x:Static res:Strings.Editor_RedirectDrives}" Margin="0,6,0,0" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdText}" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource RedirectToggle}" IsChecked="{Binding RedirectPrinters}" AutomationProperties.Name="{x:Static res:Strings.Editor_RedirectPrinters}">
+                        <StackPanel>
+                            <Viewbox Width="20" Height="20">
+                                <ui:SymbolIcon Symbol="Print24" />
+                            </Viewbox>
+                            <TextBlock Text="{x:Static res:Strings.Editor_RedirectPrinters}" Margin="0,6,0,0" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdText}" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource RedirectToggle}" IsChecked="{Binding RedirectAudio}" AutomationProperties.Name="{x:Static res:Strings.Editor_RedirectAudio}">
+                        <StackPanel>
+                            <Viewbox Width="20" Height="20">
+                                <ui:SymbolIcon Symbol="Speaker224" />
+                            </Viewbox>
+                            <TextBlock Text="{x:Static res:Strings.Editor_RedirectAudio}" Margin="0,6,0,0" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdText}" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ToggleButton>
+                </UniformGrid>
+            </ui:CardExpander>
+
+            <ui:CardExpander Icon="{ui:SymbolIcon Settings24}" Margin="0,0,0,4">
+                <ui:CardExpander.Header>
+                    <StackPanel>
+                        <TextBlock Text="{x:Static res:Strings.Editor_SectionAdvanced}" />
+                        <TextBlock Text="{Binding AdvancedSummary}" FontSize="{StaticResource RdFontMd}" Foreground="{DynamicResource RdTextMuted}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Static res:Strings.Editor_AdminSession}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Column="1" AutomationProperties.Name="{x:Static res:Strings.Editor_AdminSession}" IsChecked="{Binding AdminSession}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{x:Static res:Strings.Editor_PassShortcuts}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource SettingHint}" Text="{x:Static res:Strings.Editor_PassShortcutsHint}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="{x:Static res:Strings.Editor_PassShortcuts}" IsChecked="{Binding PassShortcuts}" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Editor_VpnProfile}" />
+                    <!-- Editable on purpose: the list is a convenience, not a contract. RemoteDeck reads the
+                         RAS phonebook to fill it, and that file's location has never been verified on a
+                         machine that has one — so a profile it fails to discover must still be reachable by
+                         typing, exactly as before the list existed. -->
+                    <ComboBox AutomationProperties.Name="{x:Static res:Strings.Editor_VpnProfile}"
+                              IsEditable="True"
+                              ItemsSource="{Binding AvailableVpnProfiles}"
+                              Text="{Binding VpnProfile, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,10" Text="{x:Static res:Strings.Editor_VpnProfileHint}" />
+                    <!-- Greyed without a profile rather than hidden: the option stays discoverable, and the
+                         switch is saved as off in that case (see ApplyTo). -->
+                    <Grid Margin="0,0,0,10" IsEnabled="{Binding HasVpnProfile}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{x:Static res:Strings.Editor_AutoRaiseVpn}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource SettingHint}" Text="{x:Static res:Strings.Editor_AutoRaiseVpnHint}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="{x:Static res:Strings.Editor_AutoRaiseVpn}" IsChecked="{Binding AutoRaiseVpn}" />
+                    </Grid>
+                    <ui:TextBox Height="72" AcceptsReturn="True" AutomationProperties.Name="{x:Static res:Strings.Editor_NotesPlaceholder}" TextWrapping="Wrap"
+                                VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
+                                PlaceholderText="{x:Static res:Strings.Editor_NotesPlaceholder}" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+            </ui:CardExpander>
+
+            <TextBlock Margin="0,4,0,0" Style="{StaticResource FieldCaption}" Text="{x:Static res:Strings.Common_RequiredHint}" />
         </StackPanel>
         </ScrollViewer>
 

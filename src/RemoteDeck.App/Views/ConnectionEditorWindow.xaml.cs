@@ -35,7 +35,11 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         // form; this only caps it, and past the cap the form scrolls between the title bar and the
         // buttons (see the Grid in the markup). Measured: ~990 px at 100 %, taller than a 768 px
         // laptop screen, and Save was unreachable there.
-        SourceInitialized += (_, _) => MaxHeight = WorkAreaHeight() - 48;
+        SourceInitialized += (_, _) => MaxHeight = WorkArea().Height - 48;
+        // The sections fold and unfold after the window is placed, and a window that grows keeps
+        // its top: unfolding them all on a 1200 px screen pushed Save under the taskbar. Growing
+        // now moves the window up as far as it takes to stay inside the work area.
+        SizeChanged += (_, _) => KeepOnScreen();
         _repository = App.Current.Services.GetRequiredService<ConnectionRepository>();
         var credentials = App.Current.Services.GetRequiredService<CredentialRepository>().GetAll();
         _existing = existing;
@@ -93,6 +97,9 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (!_viewModel.Validate())
         {
+            // The size boxes are the only checked fields inside a section that folds: a folded
+            // section would leave the user reading an error about a field they cannot see.
+            if (_viewModel.SizeInvalid) DisplaySection.IsExpanded = true;
             ErrorBar.Show(Wpf.Ui.Controls.InfoBarSeverity.Error, Strings.Editor_CheckFormTitle, _viewModel.Errors);
             return;
         }
@@ -121,15 +128,22 @@ public partial class ConnectionEditorWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
+    private void KeepOnScreen()
+    {
+        var area = WorkArea();
+        if (Top + ActualHeight > area.Bottom) Top = Math.Max(area.Top, area.Bottom - ActualHeight);
+    }
+
     /// <summary>
-    /// The usable height of the monitor this window is on, in device-independent pixels — the
+    /// The usable area of the monitor this window is on, in device-independent pixels — the
     /// screen minus the taskbar. The monitor is the one the handle sits on, not the primary: the
     /// editor opens centred on its owner, and the owner may be anywhere.
     /// </summary>
-    private double WorkAreaHeight()
+    private Rect WorkArea()
     {
         var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         var area = System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
-        return area.Height / VisualTreeHelper.GetDpi(this).DpiScaleY;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        return new Rect(area.X / dpi.DpiScaleX, area.Y / dpi.DpiScaleY, area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY);
     }
 }

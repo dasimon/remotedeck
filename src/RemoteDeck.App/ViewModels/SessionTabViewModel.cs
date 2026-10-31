@@ -43,6 +43,7 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
         _session = session;
         Title = session.Connection.Name;
         Subtitle = $"{session.Connection.Host}:{session.Connection.Port}";
+        GroupName = session.Connection.GroupName;
         CloseCommand = new RelayCommand(() => CloseRequested?.Invoke(this));
 
         _session.Changed += OnSessionChanged;
@@ -58,6 +59,9 @@ internal sealed partial class SessionTabViewModel : ObservableObject, IDisposabl
 
     /// <summary>Host and port, shown in the session bar and as the tab's tooltip.</summary>
     public string Subtitle { get; }
+
+    /// <summary>The connection's group, which colours the square before the caption.</summary>
+    public string GroupName { get; }
 
     /// <summary>Mirror of <see cref="RdpSession.State"/>.</summary>
     [ObservableProperty]

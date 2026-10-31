@@ -14,12 +14,13 @@ namespace RemoteDeck.App.ViewModels;
 /// <param name="Label">What the combo shows.</param>
 public sealed record AuthenticationLevelOption(int? Value, string Label);
 
-/// <summary>One entry of the display-mode combo. <see cref="Value"/> is the persisted enum value;
-/// <see cref="Label"/> is its localised wording, which is why the combo can no longer bind the enum
+/// <summary>One tile of the display-mode picker. <see cref="Value"/> is the persisted enum value;
+/// <see cref="Label"/> is its localised wording, which is why the picker cannot bind the enum
 /// directly (it would show the member name, in English, whatever the UI language).</summary>
 /// <param name="Value">The persisted display mode.</param>
-/// <param name="Label">What the combo shows.</param>
-public sealed record DisplayModeOption(CoreDisplayMode Value, string Label);
+/// <param name="Label">What the tile shows.</param>
+/// <param name="Hint">One sentence under the tiles saying what the selected mode does.</param>
+public sealed record DisplayModeOption(CoreDisplayMode Value, string Label, string Hint);
 
 /// <summary>
 /// Form state for the connection editor: one observable property per <see cref="Connection"/> column
@@ -48,13 +49,15 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
 
     private static readonly IReadOnlyList<DisplayModeOption> AllDisplayModes =
     [
-        new(CoreDisplayMode.Dynamic, Strings.Editor_DisplayDynamic),
-        new(CoreDisplayMode.Scaled, Strings.Editor_DisplayScaled),
-        new(CoreDisplayMode.Fixed, Strings.Editor_DisplayFixed),
-        new(CoreDisplayMode.AllMonitors, Strings.Editor_DisplayAllMonitors),
+        new(CoreDisplayMode.Dynamic, Strings.Editor_DisplayDynamic, Strings.Editor_DisplayDynamicHint),
+        new(CoreDisplayMode.Scaled, Strings.Editor_DisplayScaled, Strings.Editor_DisplayScaledHint),
+        new(CoreDisplayMode.Fixed, Strings.Editor_DisplayFixed, Strings.Editor_DisplayFixedHint),
+        new(CoreDisplayMode.AllMonitors, Strings.Editor_DisplayAllMonitors, Strings.Editor_DisplayAllMonitorsHint),
     ];
 
-    [ObservableProperty] private string _name = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Monogram))]
+    private string _name = "";
 
     /// <summary>Set by <see cref="Validate"/>; each one paints its field's edge through <c>Mark.Invalid</c>.</summary>
     [ObservableProperty] private bool _nameInvalid;
@@ -64,7 +67,9 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private string _host = "";
     [ObservableProperty] private double? _port = DefaultPort;
     [ObservableProperty] private string _groupName = "";
-    [ObservableProperty] private Credential? _selectedCredential = NoCredential;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SignInSummary))]
+    private Credential? _selectedCredential = NoCredential;
     [ObservableProperty] private bool _isFavorite;
 
     /// <summary>The row the display-mode combo shows. Bound through <c>SelectedItem</c>, like the two
@@ -72,16 +77,17 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DisplayMode))]
     [NotifyPropertyChangedFor(nameof(IsFixedSizeEnabled))]
+    [NotifyPropertyChangedFor(nameof(DisplaySummary))]
     private DisplayModeOption _selectedDisplayMode = AllDisplayModes[0];
 
-    [ObservableProperty] private double? _fixedWidth;
-    [ObservableProperty] private double? _fixedHeight;
-    [ObservableProperty] private bool _redirectClipboard = true;
-    [ObservableProperty] private bool _redirectDrives;
-    [ObservableProperty] private bool _redirectPrinters;
-    [ObservableProperty] private bool _redirectAudio;
-    [ObservableProperty] private bool _adminSession;
-    [ObservableProperty] private bool _useWebAccount;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(DisplaySummary))] private double? _fixedWidth;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(DisplaySummary))] private double? _fixedHeight;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(RedirectionsSummary))] private bool _redirectClipboard = true;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(RedirectionsSummary))] private bool _redirectDrives;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(RedirectionsSummary))] private bool _redirectPrinters;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(RedirectionsSummary))] private bool _redirectAudio;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(AdvancedSummary))] private bool _adminSession;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(SignInSummary))] private bool _useWebAccount;
     /// <summary>The Entra account (UPN) of a web-account connection, or blank to let the control
     /// ask. Stored trimmed, and blank is normalised to null by the repository.</summary>
     [ObservableProperty] private string _webAccountUpn = "";
@@ -90,6 +96,7 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     /// and blank is normalised to null by the repository.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasVpnProfile))]
+    [NotifyPropertyChangedFor(nameof(AdvancedSummary))]
     private string _vpnProfile = "";
 
     /// <summary>Raise the profile without asking when it is down at connect. Meaningless without a
@@ -97,7 +104,49 @@ public sealed partial class ConnectionEditorViewModel : ObservableObject
     [ObservableProperty] private bool _autoRaiseVpn;
 
     /// <summary>Let RemoteDeck's shortcuts through to this remote desktop, for a nested RemoteDeck.</summary>
-    [ObservableProperty] private bool _passShortcuts;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AdvancedSummary))]
+    private bool _passShortcuts;
+
+    /// <summary>The two letters on the badge at the top of the form.</summary>
+    public string Monogram => RemoteDeck.Core.Model.Monogram.Of(Name);
+
+    // One line per collapsed section, so a folded form still shows what it holds. They describe,
+    // they never decide: ApplyTo reads the fields, not these.
+
+    /// <summary>The account, and whether the web account is on.</summary>
+    public string SignInSummary => Joined(SelectedCredential?.Label, UseWebAccount ? Strings.Editor_SummaryWebAccount : null);
+
+    /// <summary>The mode, and the size when the mode uses one and both numbers are there.</summary>
+    public string DisplaySummary => Joined(SelectedDisplayMode.Label,
+        IsFixedSizeEnabled && FixedWidthNumber is { } width && FixedHeightNumber is { } height ? $"{width} × {height}" : null);
+
+    /// <summary>The redirected devices, or "None".</summary>
+    public string RedirectionsSummary
+    {
+        get
+        {
+            var on = Joined(
+                RedirectClipboard ? Strings.Editor_RedirectClipboard : null,
+                RedirectDrives ? Strings.Editor_RedirectDrives : null,
+                RedirectPrinters ? Strings.Editor_RedirectPrinters : null,
+                RedirectAudio ? Strings.Editor_RedirectAudio : null);
+            return on.Length == 0 ? Strings.Editor_SummaryNone : on;
+        }
+    }
+
+    /// <summary>What departs from the defaults among the advanced settings, or "Defaults".</summary>
+    public string AdvancedSummary
+    {
+        get
+        {
+            // "/admin" is mstsc's own switch, the same word in every language.
+            var on = Joined(AdminSession ? "/admin" : null, PassShortcuts ? Strings.Editor_SummaryShortcuts : null, HasVpnProfile ? VpnProfile.Trim() : null);
+            return on.Length == 0 ? Strings.Editor_SummaryDefaults : on;
+        }
+    }
+
+    private static string Joined(params string?[] parts) => string.Join(" · ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
 
     /// <summary>Whether a profile is named at all — what enables the auto-raise box.</summary>
     public bool HasVpnProfile => !string.IsNullOrWhiteSpace(VpnProfile);
