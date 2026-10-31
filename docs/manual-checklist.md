@@ -1108,7 +1108,13 @@ Never test against a real release of `dasimon/remotedeck` from the machine in da
       is gone or empty.
 - [ ] **Protected folder, elevation accepted.** Same, from `C:\Program Files\RemoteDeck` or
       similar: the UAC prompt names RemoteDeck, the update installs, RemoteDeck restarts
-      **not elevated**.
+      **not elevated**. `RemoteDeck.exe.old` stays beside it after the next launch and is gone
+      after the next Windows restart. The elevated step logs to
+      `%APPDATA%\RemoteDeck\logs\probe-l0-apply-update.log` (the main log names that file) and
+      says the `.old` file will be deleted at the next restart.
+- [ ] **Closed during the download.** With a session open, *Update*, then close RemoteDeck while
+      the progress bar runs: it closes, nothing is asked about sessions, the executable is
+      unchanged, and RemoteDeck does not start again on its own.
 - [ ] **Protected folder, elevation refused.** Cancel the UAC prompt: the banner says the verified
       file is in *Downloads*, the folder opens, the installed executable is unchanged, and the
       offer is still there.

@@ -29,12 +29,36 @@ internal static class ProbeLog
     private static readonly object Gate = new();
     private static StreamWriter? _writer;
 
-    public static string Path { get; } = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "RemoteDeck", "logs", "probe-l0.log");
+    private static readonly string Folder = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RemoteDeck", "logs");
+
+    /// <summary>The file this process writes to: <c>probe-l0.log</c>, or <see cref="ApplyUpdatePath"/>
+    /// once <see cref="UseApplyUpdateLog"/> has been called.</summary>
+    public static string Path { get; private set; } = System.IO.Path.Combine(Folder, "probe-l0.log");
+
+    /// <summary>
+    /// The log of the elevated <c>--apply-update</c> step, beside the main one. A file of its own
+    /// because that step runs while the RemoteDeck that started it waits with <c>probe-l0.log</c>
+    /// open: two processes appending to one file each write at their own position, and the
+    /// waiting one's next line lands on top of the elevated one's (measured). For an elevation by
+    /// another administrator account, it is in that account's application data.
+    /// </summary>
+    public static string ApplyUpdatePath { get; } = System.IO.Path.Combine(Folder, "probe-l0-apply-update.log");
 
     /// <summary>Where the previous log goes when the current one rolls.</summary>
-    public static string PreviousPath { get; } = Path + ".1";
+    public static string PreviousPath => Path + ".1";
+
+    /// <summary>Sends every later line to <see cref="ApplyUpdatePath"/>. Called by the
+    /// <c>--apply-update</c> mode before it writes anything.</summary>
+    public static void UseApplyUpdateLog()
+    {
+        lock (Gate)
+        {
+            _writer?.Dispose();
+            _writer = null;
+            Path = ApplyUpdatePath;
+        }
+    }
 
     public static void Write(string probe, string message)
     {
@@ -85,7 +109,7 @@ internal static class ProbeLog
 
     private static StreamWriter Open()
     {
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+        Directory.CreateDirectory(Folder);
         var stream = new FileStream(Path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
         return new StreamWriter(stream) { AutoFlush = true };
     }

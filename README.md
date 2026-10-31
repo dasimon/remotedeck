@@ -499,7 +499,8 @@ have to be fetched and checked by hand each time. It talks to GitHub, and only G
   digest GitHub computed for the asset. Otherwise nothing is touched. It does not verify the
   provenance attestation: that remains the `gh attestation verify` above.
 - **What it does.** It replaces the executable in place and starts the new version, keeping
-  the previous one beside it as `RemoteDeck.exe.old` until the next launch. If the folder is
+  the previous one beside it as `RemoteDeck.exe.old`: removed at the next launch in a folder
+  you can write to, at the next Windows restart in a protected one. If the folder is
   protected (`C:\Program Files`, say), Windows asks for administrator rights for that one
   step; if you refuse, the verified file is saved to your *Downloads* folder instead and the
   folder opens. Your open sessions are closed for the restart, and reopened if *Reopen last

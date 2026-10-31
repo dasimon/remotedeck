@@ -45,6 +45,9 @@ internal static class UpdateInstaller
     public const int ExitHashMismatch = 2;
     public const int ExitBadArguments = 3;
 
+    /// <summary>MOVEFILE_DELAY_UNTIL_REBOOT: Windows performs the move, here a deletion, at its next start.</summary>
+    private const uint MoveFileDelayUntilReboot = 0x4;
+
     /// <summary>ERROR_CANCELLED: the user answered no to the UAC prompt.</summary>
     private const int ErrorCancelled = 1223;
 
@@ -120,7 +123,9 @@ internal static class UpdateInstaller
             };
         }
 
-        ProbeLog.Write(LogProbe, $"install: {Path.GetDirectoryName(target)} is not writable, asking for elevation");
+        // The elevated step writes a log of its own, named here so that this one leads to it.
+        ProbeLog.Write(LogProbe, $"install: {Path.GetDirectoryName(target)} is not writable, asking for elevation; "
+            + $"the elevated step logs to {ProbeLog.ApplyUpdatePath}");
         var start = new ProcessStartInfo(target)
         {
             Verb = "runas",
@@ -191,6 +196,27 @@ internal static class UpdateInstaller
         return result;
     }
 
+    /// <summary>
+    /// Has Windows delete <c>target.old</c> at its next restart. For the elevated step, after a
+    /// successful swap: in a protected folder the clean-up at the next launch runs as the user and is
+    /// refused, and the file cannot be deleted now, since both RemoteDeck processes still run from it.
+    /// Windows records the request in the machine's registry, which takes administrator rights. A
+    /// failure is logged and nothing more: the new executable is already in place.
+    /// </summary>
+    public static void DeleteOldAtReboot(string target)
+    {
+        var old = target + ".old";
+        if (MoveFileEx(old, null, MoveFileDelayUntilReboot))
+        {
+            ProbeLog.Write(LogProbe, $"swap: {old} will be deleted at the next Windows restart");
+        }
+        else
+        {
+            ProbeLog.Write(LogProbe, $"swap: {old} could not be scheduled for deletion at restart "
+                + $"(error {Marshal.GetLastPInvokeError()}); it stays until the next update replaces it");
+        }
+    }
+
     /// <summary>The exit code of the <c>--apply-update</c> mode for a swap result.</summary>
     public static int ExitCodeOf(SwapResult result) => result switch
     {
@@ -237,6 +263,10 @@ internal static class UpdateInstaller
 
         return destination;
     }
+
+    [DllImport("kernel32.dll", EntryPoint = "MoveFileExW", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool MoveFileEx(string existingFileName, string? newFileName, uint flags);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, PreserveSig = true)]
     private static extern int SHGetKnownFolderPath(ref Guid folderId, uint flags, nint token, out string? path);

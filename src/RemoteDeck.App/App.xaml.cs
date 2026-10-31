@@ -51,7 +51,8 @@ public partial class App : System.Windows.Application
         }
 
         // What a previous update left: the old executable, a staged copy, the downloads. Only the
-        // update work folder, never the RemoteDeck data folder that contains it.
+        // update work folder, never the RemoteDeck data folder that contains it. In a protected folder
+        // the old executable is refused here; the elevated step had Windows delete it at its restart.
         if (Environment.ProcessPath is { } exe)
         {
             UpdateSwap.CleanUp(exe, UpdateClient.WorkDirectory);
@@ -154,6 +155,8 @@ public partial class App : System.Windows.Application
     /// </summary>
     private static void ApplyUpdateAndExit(string[] args)
     {
+        // A file of its own: the RemoteDeck waiting for this process has the main log open.
+        ProbeLog.UseApplyUpdateLog();
         ProbeLog.Write("startup", $"RemoteDeck starting in {ApplyUpdateArguments.Verb} mode, log at {ProbeLog.Path}");
         int code;
         if (!ApplyUpdateArguments.TryParse(args, out var source, out var sha256))
@@ -169,7 +172,14 @@ public partial class App : System.Windows.Application
         else
         {
             ProbeLog.Write("update", $"--apply-update: installing {source} as {target}");
-            code = UpdateInstaller.ExitCodeOf(UpdateInstaller.SwapAndLog(source, sha256, target));
+            var result = UpdateInstaller.SwapAndLog(source, sha256, target);
+            if (result == SwapResult.Done)
+            {
+                // The user-level clean-up at the next launch cannot delete it in a protected folder.
+                UpdateInstaller.DeleteOldAtReboot(target);
+            }
+
+            code = UpdateInstaller.ExitCodeOf(result);
         }
 
         // Environment.Exit rather than Shutdown: StartupUri cannot be cleared (its setter refuses
