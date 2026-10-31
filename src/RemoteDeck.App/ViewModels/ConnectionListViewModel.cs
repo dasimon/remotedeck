@@ -36,6 +36,13 @@ public sealed partial class ConnectionItem : ObservableObject
     public string Host => Match.Connection.Host;
     public bool IsFavorite => Match.Connection.IsFavorite;
 
+    /// <summary>The connection's own group, which colours its badge — unlike <see cref="Group"/>,
+    /// which is the header it sits under and is "Favorites" for a favourite.</summary>
+    public string GroupName => Match.Connection.GroupName;
+
+    /// <summary>The two letters on the row's badge.</summary>
+    public string Monogram => RemoteDeck.Core.Model.Monogram.Of(Name);
+
     /// <summary>What the row's state pill says. <see cref="ConnectionStatus.None"/> — the default —
     /// hides the pill, which is the right answer for a connection nobody has opened.</summary>
     [ObservableProperty] private ConnectionStatus _status;

@@ -1431,14 +1431,6 @@ namespace RemoteDeck.App.Resources {
             }
         }
 
-        /// <summary>
-        ///   Looks up a localized string similar to General.
-        /// </summary>
-        public static string Editor_SectionGeneral {
-            get {
-                return ResourceManager.GetString("Editor_SectionGeneral", resourceCulture);
-            }
-        }
 
         /// <summary>
         ///   Looks up a localized string similar to Name *.
@@ -3284,6 +3276,78 @@ namespace RemoteDeck.App.Resources {
         public static string Editor_PassShortcutsHint {
             get {
                 return ResourceManager.GetString("Editor_PassShortcutsHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The remote resolution follows the window..
+        /// </summary>
+        public static string Editor_DisplayDynamicHint {
+            get {
+                return ResourceManager.GetString("Editor_DisplayDynamicHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Fixed remote resolution, scaled to fit the window..
+        /// </summary>
+        public static string Editor_DisplayScaledHint {
+            get {
+                return ResourceManager.GetString("Editor_DisplayScaledHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Fixed remote resolution, with scroll bars when the window is smaller..
+        /// </summary>
+        public static string Editor_DisplayFixedHint {
+            get {
+                return ResourceManager.GetString("Editor_DisplayFixedHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Every local monitor, full screen and detached. The layout is fixed at connection time..
+        /// </summary>
+        public static string Editor_DisplayAllMonitorsHint {
+            get {
+                return ResourceManager.GetString("Editor_DisplayAllMonitorsHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to None.
+        /// </summary>
+        public static string Editor_SummaryNone {
+            get {
+                return ResourceManager.GetString("Editor_SummaryNone", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to web account.
+        /// </summary>
+        public static string Editor_SummaryWebAccount {
+            get {
+                return ResourceManager.GetString("Editor_SummaryWebAccount", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to shortcuts passed on.
+        /// </summary>
+        public static string Editor_SummaryShortcuts {
+            get {
+                return ResourceManager.GetString("Editor_SummaryShortcuts", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Defaults.
+        /// </summary>
+        public static string Editor_SummaryDefaults {
+            get {
+                return ResourceManager.GetString("Editor_SummaryDefaults", resourceCulture);
             }
         }
     }

@@ -2,9 +2,11 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             xmlns:res="clr-namespace:RemoteDeck.App.Resources">
+             xmlns:res="clr-namespace:RemoteDeck.App.Resources"
+             xmlns:controls="clr-namespace:RemoteDeck.App.Controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <controls:GroupBrushConverter x:Key="GroupBrush" />
 
         <!-- The 8 px status dot. The view-model publishes a resource *key* (StatusBrushKey) rather
              than a Brush, and the mapping key -> brush happens here through DynamicResource: a
@@ -213,6 +215,20 @@
                                             Margin="10,0,6,0"
                                             VerticalAlignment="Center">
                                     <Ellipse Style="{StaticResource StatusDotStyle}" />
+                                    <!-- The group, drawn as in the pane's headers: a square is a group,
+                                         a circle is a state. No group, no square, and no width taken. -->
+                                    <Rectangle Width="8" Height="8" RadiusX="2" RadiusY="2" Margin="0,0,6,0" VerticalAlignment="Center"
+                                               Fill="{Binding GroupName, Converter={StaticResource GroupBrush}}">
+                                        <Rectangle.Style>
+                                            <Style TargetType="Rectangle">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding GroupName, Converter={StaticResource GroupBrush}}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Rectangle.Style>
+                                    </Rectangle>
                                     <TextBlock x:Name="TabTitle"
                                                Text="{Binding Title}"
                                                VerticalAlignment="Center"

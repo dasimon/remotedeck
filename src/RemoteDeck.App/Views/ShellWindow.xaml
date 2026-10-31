@@ -83,6 +83,8 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <!-- U+E700 = GlobalNavButton (Segoe Fluent Icons, Segoe MDL2 Assets on Win10):
@@ -116,21 +118,31 @@
                            ToolTip="{x:Static res:Strings.Shell_CancelRetryToolTip}"
                            Click="OnCancelRetryClick" />
 
-                <ui:Button x:Name="DiagnosticsButton" Grid.Column="4" Margin="8,0,0,0"
+                <!-- Three groups, read left to right: what to do with this session, the tools, and
+                     leaving it. The hairlines say where one stops; the tools go quiet (transparent)
+                     so the two text buttons carry the bar. -->
+                <Rectangle Grid.Column="4" Width="1" Height="20" Margin="10,0,2,0" Fill="{DynamicResource RdBorder}" />
+
+                <ui:Button x:Name="DiagnosticsButton" Grid.Column="5" Margin="8,0,0,0"
+                           Appearance="Transparent"
                            Icon="{ui:SymbolIcon Copy24}"
                            IsEnabled="False"
                            ToolTip="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                            AutomationProperties.Name="{x:Static res:Strings.Shell_DiagnosticsToolTip}"
                            Click="OnCopyDiagnosticsClick" />
 
-                <ui:Button Grid.Column="5" Margin="8,0,0,0"
+                <ui:Button Grid.Column="6" Margin="4,0,0,0"
+                           Appearance="Transparent"
                            Icon="{ui:SymbolIcon Key24}"
                            ToolTip="{x:Static res:Strings.Shell_CredentialsToolTip}"
                            AutomationProperties.Name="{x:Static res:Strings.Shell_CredentialsToolTip}"
                            Click="OnManageCredentials" />
 
-                <ui:Button x:Name="DisconnectButton" Grid.Column="6" Margin="8,0,0,0"
+                <Rectangle Grid.Column="7" Width="1" Height="20" Margin="10,0,2,0" Fill="{DynamicResource RdBorder}" />
+
+                <ui:Button x:Name="DisconnectButton" Grid.Column="8" Margin="8,0,0,0"
                            Content="{x:Static res:Strings.Shell_Disconnect}" IsEnabled="False"
+                           Icon="{ui:SymbolIcon PlugDisconnected24}"
                            ToolTip="{x:Static res:Strings.Session_CloseToolTip}"
                            Click="OnDisconnectClick" />
             </Grid>

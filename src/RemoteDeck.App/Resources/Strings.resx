@@ -515,9 +515,6 @@
   <data name="Editor_Title" xml:space="preserve">
     <value>Connection</value>
   </data>
-  <data name="Editor_SectionGeneral" xml:space="preserve">
-    <value>General</value>
-  </data>
   <data name="Editor_Name" xml:space="preserve">
     <value>Name *</value>
   </data>
@@ -1139,5 +1136,29 @@ Workspaces already here, left as they are: {4}</value>
   </data>
   <data name="Editor_PassShortcutsHint" xml:space="preserve">
     <value>For a machine that runs RemoteDeck too: Ctrl+K, Ctrl+W, Ctrl+Tab and the others reach the RemoteDeck over there instead of this one. Ctrl+Alt+Pause is still caught here.</value>
+  </data>
+  <data name="Editor_DisplayDynamicHint" xml:space="preserve">
+    <value>The remote resolution follows the window.</value>
+  </data>
+  <data name="Editor_DisplayScaledHint" xml:space="preserve">
+    <value>Fixed remote resolution, scaled to fit the window.</value>
+  </data>
+  <data name="Editor_DisplayFixedHint" xml:space="preserve">
+    <value>Fixed remote resolution, with scroll bars when the window is smaller.</value>
+  </data>
+  <data name="Editor_DisplayAllMonitorsHint" xml:space="preserve">
+    <value>Every local monitor, full screen and detached. The layout is fixed at connection time.</value>
+  </data>
+  <data name="Editor_SummaryNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Editor_SummaryWebAccount" xml:space="preserve">
+    <value>web account</value>
+  </data>
+  <data name="Editor_SummaryShortcuts" xml:space="preserve">
+    <value>shortcuts passed on</value>
+  </data>
+  <data name="Editor_SummaryDefaults" xml:space="preserve">
+    <value>Defaults</value>
   </data>
 </root>

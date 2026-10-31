@@ -98,11 +98,27 @@ proven; what remains yours is whether the French **reads** well and fits its con
 - [x] `Ctrl+N` opens the connection editor. Saving with an empty name, an empty host, a
       host containing a space, or a port outside 1–65535 is **refused**, and every reason
       is listed at once in the editor's InfoBar — no `MessageBox`, no partial save.
-- [ ] With the display mode set to *Dynamic*, the fixed width/height fields are disabled
-      and their content never blocks saving. Switching to *Fixed* re-enables them and a
-      size below 640×480 (or above 8192) is refused.
+- [ ] With the display mode set to *Dynamic* or *All monitors*, the fixed width/height fields
+      are hidden and their content never blocks saving. Picking the *Scaled* or *Fixed* tile
+      shows them, and a size below 640×480 (or above 8192) is refused. Fold *Display*, enter a
+      bad size, save: the section unfolds by itself next to the error.
+- [ ] The display-mode tiles and the redirection toggles work from the keyboard alone: `Tab`
+      reaches them, the arrow keys move between tiles, `Space` flips a redirection.
+- [ ] Each folded section says what it holds on its second line (account, mode and size,
+      redirected devices, advanced settings), and the line follows every change at once.
+- [ ] Unfold every section on a 1366×768 screen (or 1080p at 150 %): the window moves up as
+      it grows, never past the bottom of the work area, and *Save* stays reachable.
 - [ ] A saved connection reappears in the pane immediately, in the right group, with the
-      star set if *Favorite* was ticked.
+      star set if the header's star was on.
+- [ ] **Group colours.** Every row of a group carries the same coloured badge, the group's
+      header shows the same colour as a square, and the editor's badge takes it as the group is
+      typed. *Favorites* and *Ungrouped* headers have no square; a connection with no group has
+      a grey badge. Restart RemoteDeck: every group keeps its colour. Switch Windows to the
+      light theme: badges and squares still stand out, initials still read.
+- [ ] **Badges tell machines apart**: names that share a beginning (`FDC-VM-WIN01`,
+      `FDC-VM-WIN03`) get different badges (`W1`, `W3`).
+- [ ] Open a session on a connection that has a group: its tab shows the group's square after
+      the state dot. A connection with no group shows no square and the caption does not move.
 
 ### Connecting from the list
 
@@ -341,10 +357,11 @@ success criteria of the design.
       status message **reads** like French someone would write. *"No missing string" and "no
       leftover English" are now proven by the convention tests — what is left here is whether
       the wording is any good.*
-- [ ] **Watch for truncation**: the label columns of the connection editor and the
-      credential editor are fixed at **120 px** and **110 px**. French labels are longer
-      than English ones — check that none is cut off or ellipsised at those widths, at
-      the default window size and after a resize.
+- [ ] **Watch for truncation**: the connection editor's combo boxes are fixed at **300 px**
+      and its display-mode tiles share the width four ways; the credential editor's label
+      column is fixed at **110 px**. French labels are longer than English ones — check that
+      none is cut off or ellipsised at those widths, at the default window size and after a
+      resize.
 - [ ] Also check the import window's column headers (200/200/180/180 px) and its summary
       line, and the palette's placeholder and empty-state lines.
 - [ ] **Known and expected**: disconnect reasons and validation messages come from
