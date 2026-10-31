@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RemoteDeck.App.Services;
 using RemoteDeck.Core.Data;
 using RemoteDeck.Core.Security;
+using RemoteDeck.Core.Updates;
 
 namespace RemoteDeck.App;
 
@@ -32,10 +34,28 @@ public partial class App : System.Windows.Application
     /// <summary>True only once the database has been created and migrated without error; the shell must not read it otherwise.</summary>
     public bool DatabaseReady { get; private set; }
 
+    /// <summary>The executable to start once the application has exited; see <see cref="RestartAfterExit"/>.</summary>
+    private string? _restartPath;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         LogCrashes();
+
+        // The elevated half of an update: copy, check, swap, exit. Before everything else, so that
+        // this administrator process never opens the database, a theme watcher or a window.
+        if (e.Args is [ApplyUpdateArguments.Verb, ..])
+        {
+            ApplyUpdateAndExit(e.Args);
+            return;
+        }
+
+        // What a previous update left: the old executable, a staged copy, the downloads. Only the
+        // update work folder, never the RemoteDeck data folder that contains it.
+        if (Environment.ProcessPath is { } exe)
+        {
+            UpdateSwap.CleanUp(exe, UpdateClient.WorkDirectory);
+        }
 
         // Detached session windows are deliberately owner-less — an owned window is always painted
         // above its owner and minimises with it, which is the opposite of a session torn onto a
@@ -87,6 +107,74 @@ public partial class App : System.Windows.Application
         }
         services.AddSingleton<ICredentialVault, DpapiCredentialVault>();
         Services = services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// Starts <paramref name="exePath"/> once this instance has exited: from <see cref="System.Windows.Application.Exit"/>,
+    /// that is after the main window's close has written the settings and the last session, which the
+    /// new instance then reads. Not elevated: it is started as the user running this instance.
+    /// </summary>
+    public void RestartAfterExit(string exePath)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(exePath);
+        if (_restartPath is null)
+        {
+            Exit += OnExitRestart;
+        }
+
+        _restartPath = exePath;
+        ProbeLog.Write("update", $"restart scheduled on exit: {exePath}");
+    }
+
+    private void OnExitRestart(object sender, ExitEventArgs e)
+    {
+        if (_restartPath is not { } path)
+        {
+            return;
+        }
+
+        try
+        {
+            using var _ = Process.Start(new ProcessStartInfo(path) { UseShellExecute = false });
+            ProbeLog.Write("update", $"restarted {path}");
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // The new executable is in place; the user starts it by hand.
+            ProbeLog.Write("update", $"restart of {path} failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// The <c>--apply-update "&lt;source&gt;" &lt;sha256&gt;</c> mode, run elevated by the installed
+    /// executable: swaps <paramref name="args"/>' source in place of this very executable (never a path
+    /// from the command line) and ends the process with <see cref="UpdateInstaller.ExitCodeOf"/>. A malformed
+    /// command line exits too, with <see cref="UpdateInstaller.ExitBadArguments"/>, rather than
+    /// opening an elevated window.
+    /// </summary>
+    private static void ApplyUpdateAndExit(string[] args)
+    {
+        int code;
+        if (!ApplyUpdateArguments.TryParse(args, out var source, out var sha256))
+        {
+            ProbeLog.Write("update", $"--apply-update: malformed command line ({args.Length} arguments)");
+            code = UpdateInstaller.ExitBadArguments;
+        }
+        else if (Environment.ProcessPath is not { } target)
+        {
+            ProbeLog.Write("update", "--apply-update: the executable's own path is unknown");
+            code = UpdateInstaller.ExitFailed;
+        }
+        else
+        {
+            ProbeLog.Write("update", $"--apply-update: installing {source} as {target}");
+            code = UpdateInstaller.ExitCodeOf(UpdateInstaller.SwapAndLog(source, sha256, target));
+        }
+
+        // Environment.Exit rather than Shutdown: StartupUri cannot be cleared (its setter refuses
+        // null), and nothing documents that Shutdown called from OnStartup keeps WPF from loading the
+        // shell window once this method returns. Ending the process here means no window is ever built.
+        Environment.Exit(code);
     }
 
     /// <summary>
