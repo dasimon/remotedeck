@@ -1105,7 +1105,7 @@ Never test against a real release of `dasimon/remotedeck` from the machine in da
       about 10 seconds with the release's version; *Update* shows a progress bar, then RemoteDeck
       restarts on the new version (*About* shows it) and `RemoteDeck.exe.old` sits beside it.
       After the next launch the `.old` file is gone, and `%LOCALAPPDATA%\RemoteDeck\update\`
-      is empty.
+      is gone or empty.
 - [ ] **Protected folder, elevation accepted.** Same, from `C:\Program Files\RemoteDeck` or
       similar: the UAC prompt names RemoteDeck, the update installs, RemoteDeck restarts
       **not elevated**.
@@ -1113,8 +1113,13 @@ Never test against a real release of `dasimon/remotedeck` from the machine in da
       file is in *Downloads*, the folder opens, the installed executable is unchanged, and the
       offer is still there.
 - [ ] **Wrong hash.** Publish a release whose `SHA256SUMS` does not match the executable: the
-      banner says the integrity check failed, nothing is installed, no file is left in the
-      working folder.
+      banner says "The update failed (the downloaded RemoteDeck.exe does not have the hash
+      SHA256SUMS lists). RemoteDeck is unchanged.", nothing is installed, and the downloaded
+      file is removed.
+- [ ] **Digest that disagrees with `SHA256SUMS`.** Publish a release where GitHub's digest of the
+      asset differs from the `SHA256SUMS` line (for instance a `SHA256SUMS` edited after upload):
+      the banner says the update failed because `SHA256SUMS` and the GitHub API give different
+      hashes, refused before the executable is downloaded (no progress bar), nothing installed.
 - [ ] **Another instance.** Start a second RemoteDeck from the same executable, then *Update*: the
       banner says another RemoteDeck is running from this file, and nothing is downloaded.
 - [ ] **On a shared machine** (two Windows sessions on the same executable): the other user's
