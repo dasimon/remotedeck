@@ -2,7 +2,9 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
-## Unreleased
+## 0.9.0 — 2026-10-31
+
+RemoteDeck updates itself from GitHub, the connection editor reads at a glance, and groups have a colour.
 
 ### Updates from inside RemoteDeck
 
