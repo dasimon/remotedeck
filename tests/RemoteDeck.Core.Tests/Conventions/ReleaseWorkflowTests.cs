@@ -3,9 +3,10 @@ using System.Text.RegularExpressions;
 namespace RemoteDeck.Core.Tests.Conventions;
 
 /// <summary>
-/// Guards the two lines of <c>release.yml</c> the built-in update depends on. Neither fails a build
-/// when it is wrong: a missing channel stamp ships an executable that never looks for an update,
-/// and a missing <c>prerelease</c> flag lets a release candidate be offered to everyone.
+/// Guards the parts of <c>release.yml</c> the built-in update depends on. None fails a build when it
+/// is wrong: a missing channel stamp ships an executable that never looks for an update, which the
+/// step checking the published executable exists to catch, and a missing <c>prerelease</c> flag lets
+/// a release candidate be offered to everyone.
 /// </summary>
 public sealed class ReleaseWorkflowTests
 {
@@ -21,6 +22,28 @@ public sealed class ReleaseWorkflowTests
 
         Assert.True(publish.Success, "release.yml has no 'dotnet publish' command.");
         Assert.Contains("-p:UpdateChannel=release", publish.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_published_executable_is_checked_for_the_release_channel_stamp()
+    {
+        // The stamp can be lost without any build failing (a property set later, a condition that no
+        // longer matches); the step after the publish is what turns that into a failed release. It
+        // looks for the attribute's serialised bytes: length-prefixed "UpdateChannel" (13) then
+        // "release" (7).
+        var workflow = Workflow();
+        var step = Regex.Match(workflow, @"- name: Refuse to ship a binary that is not on the release channel\r?\n(?:[ \t]+[^\r\n]*\r?\n?)*");
+
+        Assert.True(step.Success, "release.yml has no step checking the UpdateChannel stamp of the published executable.");
+        Assert.Contains("publish/RemoteDeck.exe", step.Value, StringComparison.Ordinal);
+        Assert.Contains("@(1, 0, 13)", step.Value, StringComparison.Ordinal);
+        Assert.Contains("GetBytes('UpdateChannel')", step.Value, StringComparison.Ordinal);
+        Assert.Contains("@(7) + [Text.Encoding]::UTF8.GetBytes('release')", step.Value, StringComparison.Ordinal);
+        Assert.Contains("exit 1", step.Value, StringComparison.Ordinal);
+        Assert.True(workflow.IndexOf(step.Value, StringComparison.Ordinal) > workflow.IndexOf("dotnet publish", StringComparison.Ordinal),
+            "The UpdateChannel check must run after the publish.");
+        Assert.True(workflow.IndexOf(step.Value, StringComparison.Ordinal) < workflow.IndexOf("action-gh-release", StringComparison.Ordinal),
+            "The UpdateChannel check must run before the release is created.");
     }
 
     [Fact]
