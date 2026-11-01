@@ -26,6 +26,13 @@
          published 0.1.0 and 0.2.0 binaries did. The property belongs here rather than in the
          release workflow so that any publish, from anywhere, produces the one file it promises. -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- Compresses what the single file bundles. Measured on 2026-11-01: 159 MB down to 71 MB, for
+         a start-up time lost in the noise (about 1 s either way, warm cache) and about 80 MB more
+         private memory, since compressed assemblies are inflated into memory instead of being
+         mapped from the file. Halving the download matters twice: once by hand, once for every
+         built-in update. release.yml reads the update-channel stamp from the uncompressed
+         assembly in obj/ for that reason: it can no longer be found in the executable's bytes. -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <!-- RemoteDeck speaks English and French. Without this, every package's satellite assemblies
          ride along: measured on 2026-09-05, thirteen cultures (cs, de, es, fr, it, ja, ko, pl,
          pt-BR, ru, tr, zh-Hans, zh-Hant), 18 MB of *.resources.dll bundled into the single file

@@ -88,9 +88,9 @@ jobs:
       # looks for an update, so the users of this release would never be offered the next one, and
       # nothing anywhere would say so. It is an assembly attribute, AssemblyMetadata("UpdateChannel",
       # "release"), which the compiler stores in RemoteDeck.dll as a fixed byte sequence: prolog 01 00,
-      # each string prefixed with its length, no named arguments (00 00). The single file does not
-      # compress what it bundles (EnableCompressionInSingleFile is not set), so the sequence is in
-      # the .exe as is. Looking for the whole blob, not the two words, keeps a stray string from
+      # each string prefixed with its length, no named arguments (00 00). The single file compresses
+      # what it bundles, so the sequence is looked for in the assembly the publish bundled rather
+      # than in the .exe. Looking for the whole blob, not the two words, keeps a stray string from
       # passing for the stamp.
       - name: Refuse to ship a binary that is not on the release channel
         shell: pwsh
@@ -99,12 +99,20 @@ jobs:
                            @(7) + [Text.Encoding]::UTF8.GetBytes('release') + @(0, 0)
           # Latin-1 maps each byte to one character, so a string search is a byte search.
           $latin1 = [Text.Encoding]::Latin1
-          $exe = $latin1.GetString([IO.File]::ReadAllBytes("$PWD/publish/RemoteDeck.exe"))
-          if ($exe.IndexOf($latin1.GetString($blob), [StringComparison]::Ordinal) -lt 0) {
-            Write-Host '::error::RemoteDeck.exe does not carry AssemblyMetadata("UpdateChannel", "release"): it would never look for an update.'
+          # The single file is compressed (EnableCompressionInSingleFile), so the attribute's bytes
+          # are not in RemoteDeck.exe as such: the check reads the assembly the publish just bundled,
+          # the one in obj/ for this configuration and runtime.
+          $assembly = "$PWD/src/RemoteDeck.App/obj/Release/net10.0-windows/win-x64/RemoteDeck.dll"
+          if (-not (Test-Path $assembly)) {
+            Write-Host "::error::$assembly not found: the update-channel check cannot read the bundled assembly."
             exit 1
           }
-          Write-Host 'RemoteDeck.exe carries the release update channel.'
+          $dll = $latin1.GetString([IO.File]::ReadAllBytes($assembly))
+          if ($dll.IndexOf($latin1.GetString($blob), [StringComparison]::Ordinal) -lt 0) {
+            Write-Host '::error::RemoteDeck.dll does not carry AssemblyMetadata("UpdateChannel", "release"): the executable would never look for an update.'
+            exit 1
+          }
+          Write-Host 'The bundled RemoteDeck.dll carries the release update channel.'
 
       # The release attaches publish/RemoteDeck.exe and nothing else, so a publish that leaves
       # anything beside it ships a binary that cannot start: native libraries are not bundled

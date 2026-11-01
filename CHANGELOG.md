@@ -2,6 +2,15 @@
 
 All notable changes to RemoteDeck are recorded here. Dates are ISO 8601.
 
+## Unreleased
+
+### Smaller download
+
+- **RemoteDeck.exe is now about 71 MB instead of 159 MB**: the single file compresses what it
+  bundles. Start-up time is unchanged; RemoteDeck uses about 80 MB more memory, because the
+  compressed parts are unpacked into memory instead of being read from the file. The built-in
+  update downloads less in the same proportion.
+
 ## 0.9.0 — 2026-10-31
 
 RemoteDeck updates itself from GitHub, the connection editor reads at a glance, and groups have a colour.
